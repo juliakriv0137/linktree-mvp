@@ -26,14 +26,20 @@ type BlockRow = {
   is_visible: boolean;
 };
 
-export default async function PublicPage({ params }: PageProps) {
+export default async function PublicPage({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  const { username } = await params;
+
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
   // 1) Получаем сайт по username (slug)
   const { data: site } = await supabase
     .from("sites")
     .select("*")
-    .eq("slug", params.username)
+    .eq("slug", username)
     .single<SiteRow>();
 
   if (!site) return notFound();
@@ -53,7 +59,8 @@ export default async function PublicPage({ params }: PageProps) {
   const filteredBlocks = blocks.filter((b) => b.type !== "links");
 
   return (
-    <SiteShell themeKey={site.theme_key} backgroundStyle={site.background_style}>
+    <SiteShell themeKey={site.theme_key} backgroundStyle={site.background_style as any}
+>
       <div className="space-y-6">
         {filteredBlocks.map((block) => {
           switch (block.type) {

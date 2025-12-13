@@ -9,3 +9,4 @@ dist
 # backups / temp
 *.bak
 supabase/.temp/
+.vercel

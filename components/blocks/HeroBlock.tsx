@@ -7,7 +7,7 @@ export default function HeroBlock({
   return (
     <section
       style={{
-        backgroundImage: background ? \`url(\${background})\` : undefined,
+        backgroundImage: background ? `url(${background})` : undefined,
       }}
       className="p-8 text-center rounded-xl"
     >

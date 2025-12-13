@@ -742,7 +742,7 @@ export default function DashboardPage() {
   const [site, setSite] = useState<SiteRow | null>(null);
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState<null | "hero" | "links">(null);
+  const [creating, setCreating] = useState<null | "hero" | "links" | "image" | "text" | "divider">(null);
 
   async function refreshAll() {
     setError(null);
@@ -800,6 +800,7 @@ export default function DashboardPage() {
     } catch (e: any) {
       setError(e?.message ?? String(e));
       // fallback reload
+      if (!site) return;
       const bs = await loadBlocks(site.id);
       setBlocks(bs);
     }
