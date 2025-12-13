@@ -913,79 +913,147 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <div className="text-xs text-white/50">Theme</div>
-                <select
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                  value={site?.theme_key ?? "midnight"}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const theme_key = e.target.value;
-                    try {
-                      await updateSiteTheme(site.id, { theme_key });
-                      setSite({ ...site, theme_key });
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                  disabled={!site || loading}
-                >
-                  {THEMES.map((t) => (
-  <option key={t.key} value={t.key}>
-    {t.label}
-  </option>
-))}
+  <div className="space-y-1">
+    <div className="text-xs text-white/50">Theme</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+      value={site?.theme_key ?? "midnight"}
+      onChange={async (e) => {
+        if (!site) return;
+        const theme_key = e.target.value;
+        try {
+          await updateSiteTheme(site.id, { theme_key });
+          setSite({ ...site, theme_key });
+        } catch (err: any) {
+          setError(err?.message ?? String(err));
+        }
+      }}
+      disabled={!site || loading}
+    >
+      {THEMES.map((t) => (
+        <option key={t.key} value={t.key}>
+          {t.label}
+        </option>
+      ))}
+    </select>
+  </div>
 
-                </select>
-              </div>
+  <div className="space-y-1">
+    <div className="text-xs text-white/50">Background</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+      value={site?.background_style ?? "solid"}
+      onChange={async (e) => {
+        if (!site) return;
+        const background_style = e.target.value;
+        try {
+          await updateSiteTheme(site.id, { background_style });
+          setSite({ ...site, background_style });
+        } catch (err: any) {
+          setError(err?.message ?? String(err));
+        }
+      }}
+      disabled={!site || loading}
+    >
+      <option value="solid">Solid</option>
+      <option value="gradient">Gradient</option>
+      <option value="dots">Dots</option>
+    </select>
+  </div>
 
-              <div className="space-y-1">
-                <div className="text-xs text-white/50">Background</div>
-                <select
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                  value={site?.background_style ?? "solid"}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const background_style = e.target.value;
-                    try {
-                      await updateSiteTheme(site.id, { background_style });
-                      setSite({ ...site, background_style });
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                  disabled={!site || loading}
-                >
-                  <option value="solid">Solid</option>
-                  <option value="gradient">Gradient</option>
-                  <option value="dots">Dots</option>
-                </select>
-              </div>
+  <div className="space-y-1">
+    <div className="text-xs text-white/50">Buttons</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+      value={site?.button_style ?? "solid"}
+      onChange={async (e) => {
+        if (!site) return;
+        const button_style = e.target.value;
+        try {
+          await updateSiteTheme(site.id, { button_style });
+          setSite({ ...site, button_style });
+        } catch (err: any) {
+          setError(err?.message ?? String(err));
+        }
+      }}
+      disabled={!site || loading}
+    >
+      <option value="solid">Solid</option>
+      <option value="outline">Outline</option>
+      <option value="soft">Soft</option>
+    </select>
+  </div>
 
-              <div className="space-y-1">
-                <div className="text-xs text-white/50">Buttons</div>
-                <select
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                  value={site?.button_style ?? "solid"}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const button_style = e.target.value;
-                    try {
-                      await updateSiteTheme(site.id, { button_style });
-                      setSite({ ...site, button_style });
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                  disabled={!site || loading}
-                >
-                  <option value="solid">Solid</option>
-                  <option value="outline">Outline</option>
-                  <option value="soft">Soft</option>
-                </select>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+  <div className="space-y-1">
+    <div className="text-xs text-white/50">Font</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+      value={(site as any)?.font_scale ?? "md"}
+      onChange={async (e) => {
+        if (!site) return;
+        const font_scale = e.target.value;
+        try {
+          await updateSiteTheme(site.id, { font_scale } as any);
+          setSite({ ...(site as any), font_scale } as any);
+        } catch (err: any) {
+          setError(err?.message ?? String(err));
+        }
+      }}
+      disabled={!site || loading}
+    >
+      <option value="sm">Small</option>
+      <option value="md">Medium</option>
+      <option value="lg">Large</option>
+    </select>
+  </div>
+
+  <div className="space-y-1">
+    <div className="text-xs text-white/50">Radius</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+      value={(site as any)?.button_radius ?? "2xl"}
+      onChange={async (e) => {
+        if (!site) return;
+        const button_radius = e.target.value;
+        try {
+          await updateSiteTheme(site.id, { button_radius } as any);
+          setSite({ ...(site as any), button_radius } as any);
+        } catch (err: any) {
+          setError(err?.message ?? String(err));
+        }
+      }}
+      disabled={!site || loading}
+    >
+      <option value="md">MD</option>
+      <option value="xl">XL</option>
+      <option value="2xl">2XL</option>
+      <option value="full">Full</option>
+    </select>
+  </div>
+
+  <div className="space-y-1">
+    <div className="text-xs text-white/50">Card</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+      value={(site as any)?.card_style ?? "card"}
+      onChange={async (e) => {
+        if (!site) return;
+        const card_style = e.target.value;
+        try {
+          await updateSiteTheme(site.id, { card_style } as any);
+          setSite({ ...(site as any), card_style } as any);
+        } catch (err: any) {
+          setError(err?.message ?? String(err));
+        }
+      }}
+      disabled={!site || loading}
+    >
+      <option value="card">Card</option>
+      <option value="plain">Plain</option>
+    </select>
+  </div>
+</div>
+<div className="rounded-2xl border border-white/10 bg-white/5 p-4">
   <div className="text-xs text-white/50 mb-3">Live preview</div>
 
   <div className="overflow-hidden rounded-2xl border border-white/10">
@@ -1012,6 +1080,7 @@ export default function DashboardPage() {
     </SiteShell>
   </div>
 </div>
+
 
             <div className="text-xs text-white/40">
               Changes save instantly. Open your public page to see updates.
