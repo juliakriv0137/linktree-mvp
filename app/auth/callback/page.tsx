@@ -1,112 +1,60 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-function parseHashTokens(hash: string) {
-  // hash приходит вида: "#access_token=...&refresh_token=...&expires_in=..."
-  const h = hash.startsWith("#") ? hash.slice(1) : hash;
-  const params = new URLSearchParams(h);
-
-  const access_token = params.get("access_token");
-  const refresh_token = params.get("refresh_token");
-
-  return { access_token, refresh_token };
-}
-
-export default function AuthCallbackPage() {
+function CallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [status, setStatus] = useState<string>("Callback loaded (client).");
-  const [details, setDetails] = useState<any>(null);
+
+  const [status, setStatus] = useState<
+    "init" | "setting_session" | "redirecting" | "error"
+  >("init");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
       try {
-        setStatus("Reading URL...");
+        setStatus("init");
 
+        // Supabase magic link (PKCE) обычно возвращает либо:
+        // 1) код в query: ?code=...
+        // 2) токены в hash: #access_token=...&refresh_token=...
         const code = searchParams.get("code");
-        const hash = window.location.hash || "";
-        const { access_token, refresh_token } = parseHashTokens(hash);
 
-        setDetails({
-          url: window.location.href,
-          codePresent: Boolean(code),
-          hashPresent: Boolean(hash),
-          hasAccessToken: Boolean(access_token),
-          hasRefreshToken: Boolean(refresh_token),
-        });
-
-        // 1) Если PKCE / code flow
+        // Если есть code — Supabase сам обменяет его на сессию (PKCE).
         if (code) {
-          setStatus("Exchanging code for session...");
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
+          setStatus("setting_session");
+          const { error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
 
-          setStatus("Session created via code exchange.");
-          setDetails((prev: any) => ({ ...prev, session: data.session }));
+          if (exchangeError) throw exchangeError;
+        } else if (typeof window !== "undefined" && window.location.hash) {
+          // Фоллбек для случаев, когда токены пришли в hash
+          const hash = window.location.hash.replace(/^#/, "");
+          const params = new URLSearchParams(hash);
 
-          // подчистим URL от code
-          const cleanUrl = new URL(window.location.href);
-          cleanUrl.searchParams.delete("code");
-          window.history.replaceState({}, document.title, cleanUrl.toString());
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
 
-          router.replace("/dashboard");
-          return;
-        }
-
-        // 2) Если implicit flow с токенами в hash
-        if (access_token && refresh_token) {
-          setStatus("Setting session from hash tokens...");
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          if (error) throw error;
-
-          setStatus("Session created via setSession(hash tokens).");
-          setDetails((prev: any) => ({ ...prev, session: data.session }));
-
-          // подчистим hash, чтобы не оставлять токены в адресной строке
-          if (window.location.hash) {
-            window.history.replaceState(
-              {},
-              document.title,
-              window.location.pathname + window.location.search
-            );
+          if (access_token && refresh_token) {
+            setStatus("setting_session");
+            const { error: setSessionError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (setSessionError) throw setSessionError;
           }
-
-          router.replace("/dashboard");
-          return;
         }
 
-        // 3) Если ничего не пришло — покажем сессию, вдруг она уже есть
-        setStatus("No code/tokens in URL. Checking existing session...");
-        const { data } = await supabase.auth.getSession();
-        setDetails((prev: any) => ({ ...prev, existingSession: data.session }));
-
-        if (data.session) {
-          setStatus("Existing session found. Redirecting to /dashboard...");
-          router.replace("/dashboard");
-          return;
-        }
-
-        setStatus("No session. Redirecting to /login...");
-        router.replace("/login");
+        setStatus("redirecting");
+        router.replace("/dashboard");
       } catch (e: any) {
-        console.error("Auth callback error:", e);
-        setStatus("ERROR in callback. See details below.");
-        setDetails((prev: any) => ({
-          ...prev,
-          error: {
-            message: e?.message ?? String(e),
-            name: e?.name,
-            status: e?.status,
-          },
-        }));
+        setStatus("error");
+        setError(e?.message ?? "Unknown error");
       }
     };
 
@@ -114,13 +62,46 @@ export default function AuthCallbackPage() {
   }, [router, searchParams, supabase]);
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      <h1 className="text-xl font-semibold">Auth Callback</h1>
-      <p className="mt-2 text-sm opacity-80">{status}</p>
-
-      <pre className="mt-4 overflow-auto rounded-lg border p-4 text-xs">
-        {JSON.stringify(details, null, 2)}
-      </pre>
+    <div className="min-h-[60vh] flex items-center justify-center px-6">
+      <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-6">
+        {status !== "error" ? (
+          <>
+            <div className="text-lg font-semibold">Signing you in…</div>
+            <div className="mt-2 text-sm text-white/70">
+              {status === "init" && "Initializing…"}
+              {status === "setting_session" && "Creating session…"}
+              {status === "redirecting" && "Redirecting to dashboard…"}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-lg font-semibold text-red-400">
+              Sign-in failed
+            </div>
+            <div className="mt-2 text-sm text-white/70 break-words">{error}</div>
+            <button
+              className="mt-4 inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm hover:bg-white/15"
+              onClick={() => router.replace("/login")}
+            >
+              Back to login
+            </button>
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex items-center justify-center">
+          Loading…
+        </div>
+      }
+    >
+      <CallbackInner />
+    </Suspense>
   );
 }
