@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
@@ -12,17 +13,27 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const { show, Toast } = useToast();
+  const router = useRouter();
 
   async function sendMagicLink(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
     try {
-      const redirectTo = `${window.location.origin}/dashboard`;
+      // Важно: редиректим НЕ на /dashboard, а на /auth/callback
+      const origin = window.location.origin;
+      const emailRedirectTo = `${origin}/auth/callback?next=/dashboard`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo,
+          shouldCreateUser: true,
+        },
       });
+
       if (error) throw error;
+
       show("Magic link sent. Check your email.", "success");
     } catch (err: any) {
       show(err?.message ?? "Failed to send magic link", "error");
