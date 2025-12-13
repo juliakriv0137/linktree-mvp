@@ -4,20 +4,30 @@ import { env } from "@/lib/env";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
 
-
-
-
 type PageProps = {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 };
 
 type SiteRow = {
   id: string;
   slug: string;
   name: string | null;
-  theme_key: string;
-  button_style: string;
-  background_style: string;
+  theme_key: string | null;
+  button_style: string | null;
+  background_style: string | null;
+
+  // advanced theme fields (optional)
+  font_scale?: string | null;
+  button_radius?: string | null;
+  card_style?: string | null;
+
+  // custom colors (optional)
+  bg_color?: string | null;
+  text_color?: string | null;
+  muted_color?: string | null;
+  border_color?: string | null;
+  button_color?: string | null;
+  button_text_color?: string | null;
 };
 
 type BlockRow = {
@@ -29,11 +39,7 @@ type BlockRow = {
   is_visible: boolean;
 };
 
-export default async function PublicPage({
-  params,
-}: {
-  params: Promise<{ username: string }>;
-}) {
+export default async function PublicPage({ params }: PageProps) {
   const { username } = await params;
 
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
@@ -48,27 +54,35 @@ export default async function PublicPage({
   if (!site) return notFound();
 
   // 2) Получаем блоки сайта
-  const { data: rawBlocks } = await supabase
+  const { data: rawBlocks } = (await supabase
     .from("site_blocks")
     .select("*")
     .eq("site_id", site.id)
     .eq("is_visible", true)
-    .order("position") as { data: BlockRow[] | null };
+    .order("position")) as { data: BlockRow[] | null };
 
   const blocks = rawBlocks ?? [];
 
-  // ✅ FIX: показываем только первый links-блок (даже если в БД их несколько)
+  // ✅ показываем только первый links-блок (даже если в БД их несколько)
   const firstLinks = blocks.find((b) => b.type === "links");
   const filteredBlocks = blocks.filter((b) => b.type !== "links");
 
   return (
     <SiteShell
-      themeKey={site.theme_key}
-      backgroundStyle={site.background_style as any}
-      buttonStyle={(site as any).button_style}
-      fontScale={(site as any).font_scale ?? "md"}
-      buttonRadius={(site as any).button_radius ?? "2xl"}
-      cardStyle={(site as any).card_style ?? "card"}
+      themeKey={site.theme_key ?? "midnight"}
+      backgroundStyle={(site.background_style ?? "solid") as any}
+      buttonStyle={(site.button_style ?? "solid") as any}
+      fontScale={(site.font_scale ?? "md") as any}
+      buttonRadius={(site.button_radius ?? "2xl") as any}
+      cardStyle={(site.card_style ?? "card") as any}
+      themeOverrides={{
+        bg_color: site.bg_color ?? null,
+        text_color: site.text_color ?? null,
+        muted_color: site.muted_color ?? null,
+        border_color: site.border_color ?? null,
+        button_color: site.button_color ?? null,
+        button_text_color: site.button_text_color ?? null,
+      }}
     >
       <div
         style={{
@@ -86,7 +100,7 @@ export default async function PublicPage({
                 const title = block.content?.title ?? site.name ?? site.slug;
                 const subtitle = block.content?.subtitle ?? "";
                 const letter = String(title).trim()?.[0]?.toUpperCase() ?? "?";
-  
+
                 return (
                   <section key={block.id} className="text-center">
                     <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 mb-4 flex items-center justify-center text-xl">
@@ -99,7 +113,7 @@ export default async function PublicPage({
                   </section>
                 );
               }
-  
+
               case "text": {
                 const text = block.content?.text ?? "";
                 if (!text) return null;
@@ -112,7 +126,7 @@ export default async function PublicPage({
                   </section>
                 );
               }
-  
+
               case "image": {
                 const url = block.content?.url ?? "";
                 if (!url) return null;
@@ -124,7 +138,7 @@ export default async function PublicPage({
                     : shape === "rounded"
                     ? "h-24 w-24 rounded-2xl object-cover border border-white/10"
                     : "h-24 w-24 rounded-none object-cover border border-white/10";
-  
+
                 return (
                   <section key={block.id} className="flex justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -132,7 +146,7 @@ export default async function PublicPage({
                   </section>
                 );
               }
-  
+
               case "divider": {
                 return (
                   <div key={block.id} className="my-4 flex justify-center">
@@ -140,12 +154,12 @@ export default async function PublicPage({
                   </div>
                 );
               }
-  
+
               default:
                 return null;
             }
           })}
-  
+
           {/* ✅ Links (один блок) */}
           {firstLinks && (
             <section className="space-y-3 pt-2">
@@ -158,14 +172,14 @@ export default async function PublicPage({
                       key={idx}
                       href={url}
                       label={title}
-                      buttonStyle={(site as any).button_style}
+                      buttonStyle={(site.button_style ?? "solid") as any}
                     />
                   );
                 }
               )}
             </section>
           )}
-  
+
           <footer className="text-center text-xs text-neutral-500 pt-6">
             Powered by Mini-Site Builder
           </footer>

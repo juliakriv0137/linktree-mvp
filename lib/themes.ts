@@ -3,6 +3,9 @@ export type ThemeKey = "midnight" | "rose" | "emerald" | "light";
 export type ButtonStyle = "solid" | "outline" | "soft";
 export type BackgroundStyle = "solid" | "gradient" | "dots";
 
+/**
+ * CSS variables (RGB triplets "r g b")
+ */
 export type ThemeVars = {
   "--bg": string;
   "--card": string;
@@ -11,6 +14,7 @@ export type ThemeVars = {
   "--border": string;
   "--primary": string;
   "--primary-2": string;
+  "--button-text": string;
 };
 
 export type ThemeDefinition = {
@@ -31,6 +35,7 @@ export const THEMES: ThemeDefinition[] = [
       "--border": "32 38 52",
       "--primary": "99 102 241",
       "--primary-2": "139 92 246",
+      "--button-text": "255 255 255",
     },
   },
   {
@@ -44,6 +49,7 @@ export const THEMES: ThemeDefinition[] = [
       "--border": "46 34 52",
       "--primary": "236 72 153",
       "--primary-2": "168 85 247",
+      "--button-text": "255 255 255",
     },
   },
   {
@@ -57,6 +63,7 @@ export const THEMES: ThemeDefinition[] = [
       "--border": "30 52 40",
       "--primary": "16 185 129",
       "--primary-2": "34 197 94",
+      "--button-text": "255 255 255",
     },
   },
   {
@@ -70,6 +77,7 @@ export const THEMES: ThemeDefinition[] = [
       "--border": "226 232 240",
       "--primary": "79 70 229",
       "--primary-2": "236 72 153",
+      "--button-text": "255 255 255",
     },
   },
 ];
@@ -83,4 +91,61 @@ export function getTheme(key: string | null | undefined): ThemeDefinition {
 
 export function cssVarsFromTheme(key: string | null | undefined): ThemeVars {
   return getTheme(key).vars;
+}
+
+/* -------------------- Custom overrides from Site -------------------- */
+
+function hexToRgbTriplet(hex: string | null | undefined): string | null {
+  if (!hex) return null;
+
+  const raw = hex.trim();
+
+  // already "r g b"
+  if (/^\d+\s+\d+\s+\d+$/.test(raw)) return raw;
+
+  const match = raw.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!match) return null;
+
+  let value = match[1];
+  if (value.length === 3) {
+    value = value
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+
+  if ([r, g, b].some((v) => Number.isNaN(v))) return null;
+  return `${r} ${g} ${b}`;
+}
+
+export type ThemeOverrides = Partial<{
+  bg_color: string | null;
+  text_color: string | null;
+  muted_color: string | null;
+  border_color: string | null;
+  button_color: string | null;
+  button_text_color: string | null;
+}>;
+
+export function cssVarsFromSiteTheme(
+  themeKey: string | null | undefined,
+  overrides?: ThemeOverrides | null,
+): ThemeVars {
+  const base = cssVarsFromTheme(themeKey);
+
+  return {
+    "--bg": hexToRgbTriplet(overrides?.bg_color) ?? base["--bg"],
+    "--card": base["--card"],
+    "--text": hexToRgbTriplet(overrides?.text_color) ?? base["--text"],
+    "--muted": hexToRgbTriplet(overrides?.muted_color) ?? base["--muted"],
+    "--border": hexToRgbTriplet(overrides?.border_color) ?? base["--border"],
+    "--primary": hexToRgbTriplet(overrides?.button_color) ?? base["--primary"],
+    "--primary-2": base["--primary-2"],
+    "--button-text":
+      hexToRgbTriplet(overrides?.button_text_color) ?? base["--button-text"],
+  };
 }

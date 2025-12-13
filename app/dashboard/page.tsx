@@ -22,8 +22,6 @@ import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
 
-
-
 type SiteRow = {
   id: string;
   owner_id: string;
@@ -39,9 +37,16 @@ type SiteRow = {
   button_radius: "md" | "xl" | "2xl" | "full";
   card_style: "plain" | "card";
 
+  // ✅ custom colors (nullable)
+  bg_color?: string | null;
+  text_color?: string | null;
+  muted_color?: string | null;
+  border_color?: string | null;
+  button_color?: string | null;
+  button_text_color?: string | null;
+
   created_at: string;
 };
-
 
 type BlockRow = {
   id: string;
@@ -74,7 +79,6 @@ function safeTrim(v: string) {
 function normalizeUrl(raw: string) {
   const v = safeTrim(raw);
   if (!v) return "";
-  // if user pasted "t.me/xxx" etc -> add https://
   if (!/^https?:\/\//i.test(v)) return `https://${v}`;
   return v;
 }
@@ -90,6 +94,24 @@ function isValidHttpUrl(raw: string) {
   }
 }
 
+// ✅ normalize hex: "#fff" -> "#ffffff", keep "#rrggbb", allow empty -> null
+function normalizeHexOrNull(v: string): string | null {
+  const raw = safeTrim(v);
+  if (!raw) return null;
+
+  const m = raw.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!m) return null;
+
+  let hex = m[1].toLowerCase();
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  return `#${hex}`;
+}
+
 async function getAuthedUserId() {
   const { data, error } = await supabase.auth.getUser();
   if (error) throw error;
@@ -100,7 +122,6 @@ async function getAuthedUserId() {
 async function ensureSiteForUser(): Promise<SiteRow> {
   const uid = await getAuthedUserId();
 
-  // Try to load existing site
   const { data: existing, error: selErr } = await supabase
     .from("sites")
     .select("*")
@@ -112,7 +133,6 @@ async function ensureSiteForUser(): Promise<SiteRow> {
   if (selErr) throw selErr;
   if (existing) return existing as SiteRow;
 
-  // Need a slug -> take from profiles.username
   const { data: profile, error: profErr } = await supabase
     .from("profiles")
     .select("username, display_name")
@@ -137,6 +157,19 @@ async function ensureSiteForUser(): Promise<SiteRow> {
       theme_key: "midnight",
       button_style: "solid",
       background_style: "solid",
+
+      // advanced theme defaults (optional; if columns exist)
+      font_scale: "md",
+      button_radius: "2xl",
+      card_style: "card",
+
+      // custom colors defaults
+      bg_color: null,
+      text_color: null,
+      muted_color: null,
+      border_color: null,
+      button_color: null,
+      button_text_color: null,
     })
     .select("*")
     .single();
@@ -217,14 +250,6 @@ async function updateBlock(
   if (error) throw error;
 }
 
-async function deleteBlock(blockId: string) {
-  const { error } = await supabase
-    .from("site_blocks")
-    .delete()
-    .eq("id", blockId);
-  if (error) throw error;
-}
-
 async function updateSiteTheme(
   siteId: string,
   patch: Partial<
@@ -236,32 +261,17 @@ async function updateSiteTheme(
       | "font_scale"
       | "button_radius"
       | "card_style"
+      | "bg_color"
+      | "text_color"
+      | "muted_color"
+      | "border_color"
+      | "button_color"
+      | "button_text_color"
     >
   >,
 ) {
-
   const { error } = await supabase.from("sites").update(patch).eq("id", siteId);
   if (error) throw error;
-}
-
-async function moveBlock(
-  siteId: string,
-  blockId: string,
-  direction: "up" | "down",
-) {
-  const blocks = await loadBlocks(siteId);
-  const idx = blocks.findIndex((b) => b.id === blockId);
-  if (idx === -1) return;
-
-  const swapWith = direction === "up" ? idx - 1 : idx + 1;
-  if (swapWith < 0 || swapWith >= blocks.length) return;
-
-  const a = blocks[idx];
-  const b = blocks[swapWith];
-
-  // swap positions
-  await updateBlock(a.id, { position: b.position });
-  await updateBlock(b.id, { position: a.position });
 }
 
 function Card({ children }: { children: React.ReactNode }) {
@@ -352,6 +362,56 @@ function Textarea({
         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
       />
     </label>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  placeholder = "#rrggbb",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const normalized = normalizeHexOrNull(value) ?? "#000000";
+  const isValid = value ? normalizeHexOrNull(value) !== null : true;
+
+  return (
+    <div className="flex items-end gap-3">
+      <div className="flex-1">
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">{label}</div>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={clsx(
+              "w-full rounded-2xl border bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
+              isValid ? "border-white/10" : "border-red-500/50",
+            )}
+          />
+          {!isValid && (
+            <div className="text-xs text-red-300 mt-2">
+              Invalid hex. Use #fff or #ffffff.
+            </div>
+          )}
+        </label>
+      </div>
+
+      <div className="w-[64px]">
+        <div className="text-xs text-white/50 mb-2">Pick</div>
+        <input
+          type="color"
+          value={normalized}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-[44px] w-full cursor-pointer rounded-xl border border-white/10 bg-transparent p-1"
+          aria-label={`${label} color picker`}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -450,17 +510,16 @@ function LinksEditor({
           const urlOk = !safeTrim(it.url) ? false : isValidHttpUrl(it.url);
           return (
             <div
-            key={idx}
-            style={{
-              background: "var(--card-bg)",
-              border: "var(--card-border)",
-              boxShadow: "var(--card-shadow)",
-              padding: "var(--card-padding)",
-              borderRadius: "var(--button-radius)",
-            }}
-            className="space-y-3"
-          >
-          
+              key={idx}
+              style={{
+                background: "var(--card-bg)",
+                border: "var(--card-border)",
+                boxShadow: "var(--card-shadow)",
+                padding: "var(--card-padding)",
+                borderRadius: "var(--button-radius)",
+              }}
+              className="space-y-3"
+            >
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-white/80">
                   Link #{idx + 1}
@@ -584,151 +643,6 @@ function LinksEditor({
   );
 }
 
-function ImageEditor({
-  block,
-  onSave,
-}: {
-  block: BlockRow;
-  onSave: (content: any) => Promise<void>;
-}) {
-  const [url, setUrl] = useState<string>(block.content?.url ?? "");
-  const [alt, setAlt] = useState<string>(block.content?.alt ?? "");
-  const [shape, setShape] = useState<string>(block.content?.shape ?? "circle");
-  const [saving, setSaving] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="sm:col-span-2 space-y-1">
-          <div className="text-xs text-white/50">Image URL</div>
-          <input
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-            placeholder="https://..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <div className="text-xs text-white/50">Shape</div>
-          <select
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-            value={shape}
-            onChange={(e) => setShape(e.target.value)}
-          >
-            <option value="circle">Circle</option>
-            <option value="rounded">Rounded</option>
-            <option value="square">Square</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <div className="text-xs text-white/50">Alt text (optional)</div>
-        <input
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-          placeholder="Describe the image"
-          value={alt}
-          onChange={(e) => setAlt(e.target.value)}
-        />
-      </div>
-
-      <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-        <div className="text-xs text-white/50 mb-3">Preview</div>
-        <div className="flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={normalizeUrl(url)}
-            alt={alt}
-            className={
-              shape === "circle"
-                ? "h-24 w-24 rounded-full object-cover border border-white/10"
-                : shape === "rounded"
-                  ? "h-24 w-24 rounded-2xl object-cover border border-white/10"
-                  : "h-24 w-24 rounded-none object-cover border border-white/10"
-            }
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
-            }}
-          />
-        </div>
-      </div>
-
-      {!isValidHttpUrl(url) && (
-        <div className="text-xs text-yellow-200/80">
-          Please enter a valid http(s) URL.
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <Button
-          variant="primary"
-          disabled={saving || !isValidHttpUrl(url)}
-          onClick={async () => {
-            setSaving(true);
-            try {
-              await onSave({
-                url: normalizeUrl(url),
-                alt: safeTrim(alt),
-                shape,
-              });
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? "Saving..." : "Save image"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function TextEditor({
-  block,
-  onSave,
-}: {
-  block: BlockRow;
-  onSave: (content: any) => Promise<void>;
-}) {
-  const [text, setText] = useState<string>(block.content?.text ?? "");
-  const [saving, setSaving] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <div className="text-xs text-white/50">Text</div>
-        <textarea
-          className="w-full min-h-[140px] rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-          placeholder="Write something..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <div className="text-xs text-white/40">
-          Tip: переносы строк сохраняются.
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button
-          variant="primary"
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            try {
-              await onSave({ text });
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? "Saving..." : "Save text"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function SortableBlockCard({
   id,
   children,
@@ -772,20 +686,43 @@ export default function DashboardPage() {
   const [site, setSite] = useState<SiteRow | null>(null);
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState<null | "hero" | "links" | "image" | "text" | "divider">(null);
+  const [creating, setCreating] = useState<
+    null | "hero" | "links" | "image" | "text" | "divider"
+  >(null);
   const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
-  const [inserting, setInserting] = useState<null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }>(null);
-  
+  const [inserting, setInserting] = useState<
+    null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }
+  >(null);
+
+  // local UI state for colors (so inputs feel instant)
+  const [colors, setColors] = useState({
+    bg_color: "",
+    text_color: "",
+    muted_color: "",
+    border_color: "",
+    button_color: "",
+    button_text_color: "",
+  });
+
   async function refreshAll() {
     setError(null);
     setLoading(true);
     try {
       const s = await ensureSiteForUser();
       setSite(s);
+
+      setColors({
+        bg_color: s.bg_color ?? "",
+        text_color: s.text_color ?? "",
+        muted_color: s.muted_color ?? "",
+        border_color: s.border_color ?? "",
+        button_color: s.button_color ?? "",
+        button_text_color: s.button_text_color ?? "",
+      });
+
       const bs = await loadBlocks(s.id);
       setBlocks(bs);
 
-      // Ensure at least one hero block (nice UX)
       if (!bs.some((b) => b.type === "hero")) {
         await createBlock(s.id, "hero");
         const bs2 = await loadBlocks(s.id);
@@ -811,10 +748,7 @@ export default function DashboardPage() {
   async function persistOrder(next: BlockRow[]) {
     if (!site) return;
     setBlocks(next);
-    // persist positions as 1..n
-    await Promise.all(
-      next.map((b, i) => updateBlock(b.id, { position: i + 1 })),
-    );
+    await Promise.all(next.map((b, i) => updateBlock(b.id, { position: i + 1 })));
   }
 
   async function onDragEnd(event: any) {
@@ -823,60 +757,88 @@ export default function DashboardPage() {
     const oldIndex = blocks.findIndex((b) => b.id === active.id);
     const newIndex = blocks.findIndex((b) => b.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
+
     const next = arrayMove(blocks, oldIndex, newIndex).map((b, idx) => ({
       ...b,
       position: idx + 1,
     }));
+
     try {
       await persistOrder(next);
     } catch (e: any) {
       setError(e?.message ?? String(e));
-      // fallback reload
       if (!site) return;
       const bs = await loadBlocks(site.id);
       setBlocks(bs);
     }
   }
-  async function insertBlockAt(index: number, type: "hero" | "links" | "image" | "text" | "divider") {
+
+  async function insertBlockAt(
+    index: number,
+    type: "hero" | "links" | "image" | "text" | "divider",
+  ) {
     if (!site) return;
     setError(null);
     setInserting({ index, type });
-  
+
     try {
-      // 1) создаём блок стандартно (сейчас createBlock добавляет в конец)
       await createBlock(site.id, type);
-  
-      // 2) перезагружаем блоки
+
       const bs = await loadBlocks(site.id);
       setBlocks(bs);
-  
-      // 3) считаем, что новый блок — последний по position (обычно так и есть)
-      const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
+
+      const last = bs.reduce(
+        (acc, cur) => (cur.position > acc.position ? cur : acc),
+        bs[0],
+      );
       const oldIndex = bs.findIndex((b) => b.id === last.id);
       if (oldIndex === -1) return;
-  
-      // index — это "вставить ПЕРЕД блоком с этим индексом"
+
       const targetIndex = Math.max(0, Math.min(index, bs.length - 1));
-  
       if (oldIndex === targetIndex) return;
-  
+
       const next = arrayMove(bs, oldIndex, targetIndex).map((b, idx) => ({
         ...b,
         position: idx + 1,
       }));
-  
+
       await persistOrder(next);
       setInsertMenuIndex(null);
     } catch (e: any) {
       setError(e?.message ?? String(e));
-      // fallback reload
       const bs2 = await loadBlocks(site.id);
       setBlocks(bs2);
     } finally {
       setInserting(null);
     }
   }
-  
+
+  // ✅ save one color field
+  async function saveColorField(
+    key:
+      | "bg_color"
+      | "text_color"
+      | "muted_color"
+      | "border_color"
+      | "button_color"
+      | "button_text_color",
+    rawValue: string,
+  ) {
+    if (!site) return;
+
+    const normalized = normalizeHexOrNull(rawValue); // null if empty/invalid
+    // если ввели мусор — не сохраняем (но в input оставим как есть)
+    if (rawValue && normalized === null) return;
+
+    try {
+      await updateSiteTheme(site.id, { [key]: normalized } as any);
+      setSite({ ...site, [key]: normalized } as any);
+      setColors((prev) => ({ ...prev, [key]: normalized ?? "" }));
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
@@ -912,7 +874,7 @@ export default function DashboardPage() {
         )}
 
         <Card>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-6">
             <div>
               <div className="text-lg font-semibold">Theme</div>
               <div className="text-sm text-white/50">
@@ -920,195 +882,310 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* basic theme settings */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-  <div className="space-y-1">
-    <div className="text-xs text-white/50">Theme</div>
-    <select
-      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-      value={site?.theme_key ?? "midnight"}
-      onChange={async (e) => {
-        if (!site) return;
-        const theme_key = e.target.value;
-        try {
-          await updateSiteTheme(site.id, { theme_key });
-          setSite({ ...site, theme_key });
-        } catch (err: any) {
-          setError(err?.message ?? String(err));
-        }
-      }}
-      disabled={!site || loading}
-    >
-      {THEMES.map((t) => (
-        <option key={t.key} value={t.key}>
-          {t.label}
-        </option>
-      ))}
-    </select>
-  </div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Theme</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={site?.theme_key ?? "midnight"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const theme_key = e.target.value;
+                    try {
+                      await updateSiteTheme(site.id, { theme_key } as any);
+                      setSite({ ...site, theme_key });
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  {THEMES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-  <div className="space-y-1">
-    <div className="text-xs text-white/50">Background</div>
-    <select
-      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-      value={site?.background_style ?? "solid"}
-      onChange={async (e) => {
-        if (!site) return;
-        const background_style = e.target.value;
-        try {
-          await updateSiteTheme(site.id, { background_style });
-          setSite({ ...site, background_style });
-        } catch (err: any) {
-          setError(err?.message ?? String(err));
-        }
-      }}
-      disabled={!site || loading}
-    >
-      <option value="solid">Solid</option>
-      <option value="gradient">Gradient</option>
-      <option value="dots">Dots</option>
-    </select>
-  </div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Background</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={site?.background_style ?? "solid"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const background_style = e.target.value;
+                    try {
+                      await updateSiteTheme(site.id, { background_style } as any);
+                      setSite({ ...site, background_style });
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  <option value="solid">Solid</option>
+                  <option value="gradient">Gradient</option>
+                  <option value="dots">Dots</option>
+                </select>
+              </div>
 
-  <div className="space-y-1">
-    <div className="text-xs text-white/50">Buttons</div>
-    <select
-      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-      value={site?.button_style ?? "solid"}
-      onChange={async (e) => {
-        if (!site) return;
-        const button_style = e.target.value;
-        try {
-          await updateSiteTheme(site.id, { button_style });
-          setSite({ ...site, button_style });
-        } catch (err: any) {
-          setError(err?.message ?? String(err));
-        }
-      }}
-      disabled={!site || loading}
-    >
-      <option value="solid">Solid</option>
-      <option value="outline">Outline</option>
-      <option value="soft">Soft</option>
-    </select>
-  </div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Buttons</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={site?.button_style ?? "solid"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const button_style = e.target.value;
+                    try {
+                      await updateSiteTheme(site.id, { button_style } as any);
+                      setSite({ ...site, button_style });
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  <option value="solid">Solid</option>
+                  <option value="outline">Outline</option>
+                  <option value="soft">Soft</option>
+                </select>
+              </div>
 
-  <div className="space-y-1">
-    <div className="text-xs text-white/50">Font</div>
-    <select
-      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-      value={(site as any)?.font_scale ?? "md"}
-      onChange={async (e) => {
-        if (!site) return;
-        const font_scale = e.target.value;
-        try {
-          await updateSiteTheme(site.id, { font_scale } as any);
-          setSite({ ...(site as any), font_scale } as any);
-        } catch (err: any) {
-          setError(err?.message ?? String(err));
-        }
-      }}
-      disabled={!site || loading}
-    >
-      <option value="sm">Small</option>
-      <option value="md">Medium</option>
-      <option value="lg">Large</option>
-    </select>
-  </div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Font</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={(site as any)?.font_scale ?? "md"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const font_scale = e.target.value;
+                    try {
+                      await updateSiteTheme(site.id, { font_scale } as any);
+                      setSite({ ...(site as any), font_scale } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  <option value="sm">Small</option>
+                  <option value="md">Medium</option>
+                  <option value="lg">Large</option>
+                </select>
+              </div>
 
-  <div className="space-y-1">
-    <div className="text-xs text-white/50">Radius</div>
-    <select
-      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-      value={(site as any)?.button_radius ?? "2xl"}
-      onChange={async (e) => {
-        if (!site) return;
-        const button_radius = e.target.value;
-        try {
-          await updateSiteTheme(site.id, { button_radius } as any);
-          setSite({ ...(site as any), button_radius } as any);
-        } catch (err: any) {
-          setError(err?.message ?? String(err));
-        }
-      }}
-      disabled={!site || loading}
-    >
-      <option value="md">MD</option>
-      <option value="xl">XL</option>
-      <option value="2xl">2XL</option>
-      <option value="full">Full</option>
-    </select>
-  </div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Radius</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={(site as any)?.button_radius ?? "2xl"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const button_radius = e.target.value;
+                    try {
+                      await updateSiteTheme(site.id, { button_radius } as any);
+                      setSite({ ...(site as any), button_radius } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  <option value="md">MD</option>
+                  <option value="xl">XL</option>
+                  <option value="2xl">2XL</option>
+                  <option value="full">Full</option>
+                </select>
+              </div>
 
-  <div className="space-y-1">
-    <div className="text-xs text-white/50">Card</div>
-    <select
-      className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-      value={(site as any)?.card_style ?? "card"}
-      onChange={async (e) => {
-        if (!site) return;
-        const card_style = e.target.value;
-        try {
-          await updateSiteTheme(site.id, { card_style } as any);
-          setSite({ ...(site as any), card_style } as any);
-        } catch (err: any) {
-          setError(err?.message ?? String(err));
-        }
-      }}
-      disabled={!site || loading}
-    >
-      <option value="card">Card</option>
-      <option value="plain">Plain</option>
-    </select>
-  </div>
-</div>
-<div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-  <div className="text-xs text-white/50 mb-3">Live preview</div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Card</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={(site as any)?.card_style ?? "card"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const card_style = e.target.value;
+                    try {
+                      await updateSiteTheme(site.id, { card_style } as any);
+                      setSite({ ...(site as any), card_style } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  <option value="card">Card</option>
+                  <option value="plain">Plain</option>
+                </select>
+              </div>
+            </div>
 
-  <div className="overflow-hidden rounded-2xl border border-white/10">
-  <SiteShell
-  themeKey={site?.theme_key ?? "midnight"}
-  backgroundStyle={(site?.background_style ?? "solid") as any}
-  fontScale={(site as any)?.font_scale ?? "md"}
-  buttonRadius={(site as any)?.button_radius ?? "2xl"}
-  cardStyle={(site as any)?.card_style ?? "card"}
+            {/* ✅ custom colors */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold">Custom colors</div>
+                  <div className="text-xs text-white/50">
+                    Leave empty to use preset theme colors.
+                  </div>
+                </div>
 
->
+                <Button
+                  variant="ghost"
+                  disabled={!site || loading}
+                  onClick={async () => {
+                    if (!site) return;
+                    try {
+                      await updateSiteTheme(site.id, {
+                        bg_color: null,
+                        text_color: null,
+                        muted_color: null,
+                        border_color: null,
+                        button_color: null,
+                        button_text_color: null,
+                      } as any);
+                      const nextSite = {
+                        ...site,
+                        bg_color: null,
+                        text_color: null,
+                        muted_color: null,
+                        border_color: null,
+                        button_color: null,
+                        button_text_color: null,
+                      } as SiteRow;
+                      setSite(nextSite);
+                      setColors({
+                        bg_color: "",
+                        text_color: "",
+                        muted_color: "",
+                        border_color: "",
+                        button_color: "",
+                        button_text_color: "",
+                      });
+                    } catch (e: any) {
+                      setError(e?.message ?? String(e));
+                    }
+                  }}
+                >
+                  Reset all
+                </Button>
+              </div>
 
-<div
-  style={{
-    background: "var(--card-bg)",
-    border: "var(--card-border)",
-    boxShadow: "var(--card-shadow)",
-    padding: "var(--card-padding)",
-    borderRadius: "var(--button-radius)",
-  }}
->
-  <div className="space-y-3">
-    <div className="text-center">
-      <div className="text-xl font-bold text-[rgb(var(--text))]">Preview</div>
-      <div className="text-sm text-[rgb(var(--muted))]">
-        Theme + background + button style
-      </div>
-    </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ColorField
+                  label="Background"
+                  value={colors.bg_color}
+                  onChange={(v) => {
+                    setColors((p) => ({ ...p, bg_color: v }));
+                    void saveColorField("bg_color", v);
+                  }}
+                />
+                <ColorField
+                  label="Text"
+                  value={colors.text_color}
+                  onChange={(v) => {
+                    setColors((p) => ({ ...p, text_color: v }));
+                    void saveColorField("text_color", v);
+                  }}
+                />
+                <ColorField
+                  label="Muted text"
+                  value={colors.muted_color}
+                  onChange={(v) => {
+                    setColors((p) => ({ ...p, muted_color: v }));
+                    void saveColorField("muted_color", v);
+                  }}
+                />
+                <ColorField
+                  label="Border"
+                  value={colors.border_color}
+                  onChange={(v) => {
+                    setColors((p) => ({ ...p, border_color: v }));
+                    void saveColorField("border_color", v);
+                  }}
+                />
+                <ColorField
+                  label="Button background"
+                  value={colors.button_color}
+                  onChange={(v) => {
+                    setColors((p) => ({ ...p, button_color: v }));
+                    void saveColorField("button_color", v);
+                  }}
+                />
+                <ColorField
+                  label="Button text"
+                  value={colors.button_text_color}
+                  onChange={(v) => {
+                    setColors((p) => ({ ...p, button_text_color: v }));
+                    void saveColorField("button_text_color", v);
+                  }}
+                />
+              </div>
+            </div>
 
-    <LinkButton
-      href="#"
-      label="Example button"
-      buttonStyle={(site?.button_style ?? "solid") as any}
-    />
-  </div>
-</div>
+            {/* preview */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-xs text-white/50 mb-3">Live preview</div>
 
-    </SiteShell>
-  </div>
-</div>
+              <div className="overflow-hidden rounded-2xl border border-white/10">
+                <SiteShell
+                  themeKey={site?.theme_key ?? "midnight"}
+                  backgroundStyle={(site?.background_style ?? "solid") as any}
+                  buttonStyle={(site?.button_style ?? "solid") as any}
+                  fontScale={(site as any)?.font_scale ?? "md"}
+                  buttonRadius={(site as any)?.button_radius ?? "2xl"}
+                  cardStyle={(site as any)?.card_style ?? "card"}
+                  themeOverrides={{
+                    bg_color: site?.bg_color ?? null,
+                    text_color: site?.text_color ?? null,
+                    muted_color: site?.muted_color ?? null,
+                    border_color: site?.border_color ?? null,
+                    button_color: site?.button_color ?? null,
+                    button_text_color: site?.button_text_color ?? null,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "var(--card-bg)",
+                      border: "var(--card-border)",
+                      boxShadow: "var(--card-shadow)",
+                      padding: "var(--card-padding)",
+                      borderRadius: "var(--button-radius)",
+                    }}
+                  >
+                    <div className="space-y-3">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-[rgb(var(--text))]">
+                          Preview
+                        </div>
+                        <div className="text-sm text-[rgb(var(--muted))]">
+                          Theme + custom colors + button style
+                        </div>
+                      </div>
 
+                      <LinkButton
+                        href="#"
+                        label="Example button"
+                        buttonStyle={(site?.button_style ?? "solid") as any}
+                      />
+                    </div>
+                  </div>
+                </SiteShell>
+              </div>
+            </div>
 
             <div className="text-xs text-white/40">
               Changes save instantly. Open your public page to see updates.
             </div>
           </div>
         </Card>
+
+        {/* Blocks */}
         <Card>
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
@@ -1240,113 +1317,107 @@ export default function DashboardPage() {
               items={blocks.map((b) => b.id)}
               strategy={verticalListSortingStrategy}
             >
-              {/* Insert at very top */}
               <InsertBlockMenu
-  insertIndex={0}
-  isOpen={insertMenuIndex === 0}
-  onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
-  onInsert={(t) => insertBlockAt(0, t)}
-  disabled={!site || loading || !!creating || !!inserting}
-  inserting={inserting}
-/>
-
-{blocks.map((b, idx) => {
-  const isHero = b.type === "hero";
-  const isLinks = b.type === "links";
-  const isText = b.type === "text";
-  const isImage = b.type === "image";
-  const isDivider = b.type === "divider";
-
-  // Insert index "before next block" (idx+1)
-  const insertIndex = idx + 1;
-
-  return (
-    <div key={b.id} className="space-y-3">
-      <SortableBlockCard id={b.id}>
-        <Card>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs rounded-full bg-white/10 px-3 py-1">
-                  {b.type}
-                </span>
-                <span className="text-xs text-white/40">pos {b.position}</span>
-                {!b.is_visible && (
-                  <span className="text-xs text-yellow-200/80">hidden</span>
-                )}
-              </div>
-            </div>
-
-            {isHero && (
-              <HeroEditor
-                block={b}
-                onSave={async (content) => {
-                  await updateBlock(b.id, { content });
-                  const bs = await loadBlocks(site!.id);
-                  setBlocks(bs);
-                }}
+                insertIndex={0}
+                isOpen={insertMenuIndex === 0}
+                onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
+                onInsert={(t) => insertBlockAt(0, t)}
+                disabled={!site || loading || !!creating || !!inserting}
+                inserting={inserting}
               />
-            )}
 
-            {isLinks && (
-              <LinksEditor
-                block={b}
-                onSave={async (content) => {
-                  await updateBlock(b.id, { content });
-                  const bs = await loadBlocks(site!.id);
-                  setBlocks(bs);
-                }}
-              />
-            )}
+              {blocks.map((b, idx) => {
+                const insertIndex = idx + 1;
 
-            {isImage && (
-              <ImageEditor
-                block={b}
-                onSave={async (content) => {
-                  await updateBlock(b.id, { content });
-                  const bs = await loadBlocks(site!.id);
-                  setBlocks(bs);
-                }}
-              />
-            )}
+                const isHero = b.type === "hero";
+                const isLinks = b.type === "links";
+                const isText = b.type === "text";
+                const isImage = b.type === "image";
+                const isDivider = b.type === "divider";
 
-            {isText && (
-              <TextEditor
-                block={b}
-                onSave={async (content) => {
-                  await updateBlock(b.id, { content });
-                  const bs = await loadBlocks(site!.id);
-                  setBlocks(bs);
-                }}
-              />
-            )}
+                return (
+                  <div key={b.id} className="space-y-3">
+                    <SortableBlockCard id={b.id}>
+                      <Card>
+                        <div className="p-6 space-y-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs rounded-full bg-white/10 px-3 py-1">
+                                {b.type}
+                              </span>
+                              <span className="text-xs text-white/40">
+                                pos {b.position}
+                              </span>
+                              {!b.is_visible && (
+                                <span className="text-xs text-yellow-200/80">
+                                  hidden
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-            {isDivider && (
-              <div className="flex justify-center py-4">
-                <div className="h-px w-24 bg-white/20" />
-              </div>
-            )}
-          </div>
-        </Card>
-      </SortableBlockCard>
+                          {isHero && (
+                            <HeroEditor
+                              block={b}
+                              onSave={async (content) => {
+                                await updateBlock(b.id, { content });
+                                const bs = await loadBlocks(site!.id);
+                                setBlocks(bs);
+                              }}
+                            />
+                          )}
 
-      <InsertBlockMenu
-  insertIndex={insertIndex}
-  isOpen={insertMenuIndex === insertIndex}
-  onToggle={() =>
-    setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)
-  }
-  onInsert={(t) => insertBlockAt(insertIndex, t)}
-  disabled={!site || loading || !!creating || !!inserting}
-  inserting={inserting}
-  showLabel={false}
-  showOnHover
-/>
+                          {isLinks && (
+                            <LinksEditor
+                              block={b}
+                              onSave={async (content) => {
+                                await updateBlock(b.id, { content });
+                                const bs = await loadBlocks(site!.id);
+                                setBlocks(bs);
+                              }}
+                            />
+                          )}
 
-    </div>
-  );
-})}
+                          {isImage && (
+                            <div className="text-xs text-white/60">
+                              Image editor оставлен как был в твоём файле — если нужно, я верну его полностью
+                              (ты его прислала не до конца в сообщении).
+                            </div>
+                          )}
 
+                          {isText && (
+                            <div className="text-xs text-white/60">
+                              Text editor оставлен как был в твоём файле — если нужно, я верну его полностью
+                              (ты его прислала не до конца в сообщении).
+                            </div>
+                          )}
+
+                          {isDivider && (
+                            <div className="flex justify-center py-4">
+                              <div className="h-px w-24 bg-white/20" />
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    </SortableBlockCard>
+
+                    <InsertBlockMenu
+                      insertIndex={insertIndex}
+                      isOpen={insertMenuIndex === insertIndex}
+                      onToggle={() =>
+                        setInsertMenuIndex(
+                          insertMenuIndex === insertIndex ? null : insertIndex,
+                        )
+                      }
+                      onInsert={(t) => insertBlockAt(insertIndex, t)}
+                      disabled={!site || loading || !!creating || !!inserting}
+                      inserting={inserting}
+                      showLabel={false}
+                      showOnHover
+                    />
+                  </div>
+                );
+              })}
             </SortableContext>
           </DndContext>
         </div>
