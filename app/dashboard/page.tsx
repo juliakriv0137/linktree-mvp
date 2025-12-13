@@ -18,6 +18,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/lib/supabaseClient";
 import InsertBlockMenu from "@/components/InsertBlockMenu";
+import { THEMES } from "@/lib/themes";
+import { SiteShell } from "@/components/site/SiteShell";
+import { LinkButton } from "@/components/site/LinkButton";
+
 
 
 type SiteRow = {
@@ -910,9 +914,12 @@ export default function DashboardPage() {
                   }}
                   disabled={!site || loading}
                 >
-                  <option value="midnight">Midnight</option>
-                  <option value="rose">Rose</option>
-                  <option value="emerald">Emerald</option>
+                  {THEMES.map((t) => (
+  <option key={t.key} value={t.key}>
+    {t.label}
+  </option>
+))}
+
                 </select>
               </div>
 
@@ -962,6 +969,33 @@ export default function DashboardPage() {
                 </select>
               </div>
             </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+  <div className="text-xs text-white/50 mb-3">Live preview</div>
+
+  <div className="overflow-hidden rounded-2xl border border-white/10">
+    <SiteShell
+      themeKey={site?.theme_key ?? "midnight"}
+      backgroundStyle={(site?.background_style ?? "solid") as any}
+    >
+      <div className="space-y-3">
+        <div className="text-center">
+          <div className="text-xl font-bold text-[rgb(var(--text))]">
+            Preview
+          </div>
+          <div className="text-sm text-[rgb(var(--muted))]">
+            Theme + background + button style
+          </div>
+        </div>
+
+        <LinkButton
+          href="#"
+          label="Example button"
+          buttonStyle={(site?.button_style ?? "solid") as any}
+        />
+      </div>
+    </SiteShell>
+  </div>
+</div>
 
             <div className="text-xs text-white/40">
               Changes save instantly. Open your public page to see updates.
