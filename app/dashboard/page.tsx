@@ -743,7 +743,9 @@ export default function DashboardPage() {
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState<null | "hero" | "links" | "image" | "text" | "divider">(null);
-
+  const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
+  const [inserting, setInserting] = useState<null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }>(null);
+  
   async function refreshAll() {
     setError(null);
     setLoading(true);
@@ -805,7 +807,46 @@ export default function DashboardPage() {
       setBlocks(bs);
     }
   }
-
+  async function insertBlockAt(index: number, type: "hero" | "links" | "image" | "text" | "divider") {
+    if (!site) return;
+    setError(null);
+    setInserting({ index, type });
+  
+    try {
+      // 1) создаём блок стандартно (сейчас createBlock добавляет в конец)
+      await createBlock(site.id, type);
+  
+      // 2) перезагружаем блоки
+      const bs = await loadBlocks(site.id);
+      setBlocks(bs);
+  
+      // 3) считаем, что новый блок — последний по position (обычно так и есть)
+      const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
+      const oldIndex = bs.findIndex((b) => b.id === last.id);
+      if (oldIndex === -1) return;
+  
+      // index — это "вставить ПЕРЕД блоком с этим индексом"
+      const targetIndex = Math.max(0, Math.min(index, bs.length - 1));
+  
+      if (oldIndex === targetIndex) return;
+  
+      const next = arrayMove(bs, oldIndex, targetIndex).map((b, idx) => ({
+        ...b,
+        position: idx + 1,
+      }));
+  
+      await persistOrder(next);
+      setInsertMenuIndex(null);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+      // fallback reload
+      const bs2 = await loadBlocks(site.id);
+      setBlocks(bs2);
+    } finally {
+      setInserting(null);
+    }
+  }
+  
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
@@ -1056,87 +1097,157 @@ export default function DashboardPage() {
               items={blocks.map((b) => b.id)}
               strategy={verticalListSortingStrategy}
             >
-              {blocks.map((b) => {
-                const isHero = b.type === "hero";
-                const isLinks = b.type === "links";
-                const isText = b.type === "text";
-                const isImage = b.type === "image";
-                const isDivider = b.type === "divider";
+              {/* Insert at very top */}
+<div className="flex justify-center">
+  <div className="relative">
+    <button
+      type="button"
+      className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 hover:bg-white/10"
+      onClick={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
+      disabled={!site || loading || !!creating || !!inserting}
+      title="Insert block"
+    >
+      <span className="text-base leading-none">＋</span>
+      <span className="hidden sm:inline">Add block</span>
+    </button>
 
-                return (
-                  <SortableBlockCard key={b.id} id={b.id}>
-                    <Card>
-                      <div className="p-6 space-y-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs rounded-full bg-white/10 px-3 py-1">
-                              {b.type}
-                            </span>
-                            <span className="text-xs text-white/40">
-                              pos {b.position}
-                            </span>
-                            {!b.is_visible && (
-                              <span className="text-xs text-yellow-200/80">
-                                hidden
-                              </span>
-                            )}
-                          </div>
-                        </div>
+    {insertMenuIndex === 0 && (
+      <div className="absolute left-1/2 z-50 mt-2 w-44 -translate-x-1/2 rounded-2xl border border-white/10 bg-black p-2 shadow-xl">
+        {(["hero", "links", "image", "text", "divider"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            className="w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
+            onClick={() => insertBlockAt(0, t)}
+            disabled={!site || loading || !!creating || !!inserting}
+          >
+            {inserting?.index === 0 && inserting?.type === t ? "Adding..." : `+ ${t}`}
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
 
-                        {isHero && (
-                          <HeroEditor
-                            block={b}
-                            onSave={async (content) => {
-                              await updateBlock(b.id, { content });
-                              const bs = await loadBlocks(site!.id);
-                              setBlocks(bs);
-                            }}
-                          />
-                        )}
+{blocks.map((b, idx) => {
+  const isHero = b.type === "hero";
+  const isLinks = b.type === "links";
+  const isText = b.type === "text";
+  const isImage = b.type === "image";
+  const isDivider = b.type === "divider";
 
-                        {isLinks && (
-                          <LinksEditor
-                            block={b}
-                            onSave={async (content) => {
-                              await updateBlock(b.id, { content });
-                              const bs = await loadBlocks(site!.id);
-                              setBlocks(bs);
-                            }}
-                          />
-                        )}
+  // Insert index "before next block" (idx+1)
+  const insertIndex = idx + 1;
 
-                        {isImage && (
-                          <ImageEditor
-                            block={b}
-                            onSave={async (content) => {
-                              await updateBlock(b.id, { content });
-                              const bs = await loadBlocks(site!.id);
-                              setBlocks(bs);
-                            }}
-                          />
-                        )}
+  return (
+    <div key={b.id} className="space-y-3">
+      <SortableBlockCard id={b.id}>
+        <Card>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs rounded-full bg-white/10 px-3 py-1">
+                  {b.type}
+                </span>
+                <span className="text-xs text-white/40">pos {b.position}</span>
+                {!b.is_visible && (
+                  <span className="text-xs text-yellow-200/80">hidden</span>
+                )}
+              </div>
+            </div>
 
-                        {isText && (
-                          <TextEditor
-                            block={b}
-                            onSave={async (content) => {
-                              await updateBlock(b.id, { content });
-                              const bs = await loadBlocks(site!.id);
-                              setBlocks(bs);
-                            }}
-                          />
-                        )}
+            {isHero && (
+              <HeroEditor
+                block={b}
+                onSave={async (content) => {
+                  await updateBlock(b.id, { content });
+                  const bs = await loadBlocks(site!.id);
+                  setBlocks(bs);
+                }}
+              />
+            )}
 
-                        {isDivider && (
-                          <div className="flex justify-center py-4">
-                            <div className="h-px w-24 bg-white/20" />
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  </SortableBlockCard>
-                );
-              })}
+            {isLinks && (
+              <LinksEditor
+                block={b}
+                onSave={async (content) => {
+                  await updateBlock(b.id, { content });
+                  const bs = await loadBlocks(site!.id);
+                  setBlocks(bs);
+                }}
+              />
+            )}
+
+            {isImage && (
+              <ImageEditor
+                block={b}
+                onSave={async (content) => {
+                  await updateBlock(b.id, { content });
+                  const bs = await loadBlocks(site!.id);
+                  setBlocks(bs);
+                }}
+              />
+            )}
+
+            {isText && (
+              <TextEditor
+                block={b}
+                onSave={async (content) => {
+                  await updateBlock(b.id, { content });
+                  const bs = await loadBlocks(site!.id);
+                  setBlocks(bs);
+                }}
+              />
+            )}
+
+            {isDivider && (
+              <div className="flex justify-center py-4">
+                <div className="h-px w-24 bg-white/20" />
+              </div>
+            )}
+          </div>
+        </Card>
+      </SortableBlockCard>
+
+      {/* Insert between blocks */}
+      <div className="flex justify-center">
+        <div className="relative">
+          <button
+            type="button"
+            className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 hover:bg-white/10"
+            onClick={() =>
+              setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)
+            }
+            disabled={!site || loading || !!creating || !!inserting}
+            title="Insert block"
+          >
+            <span className="text-base leading-none">＋</span>
+            <span className="hidden sm:inline">Add block</span>
+          </button>
+
+          {insertMenuIndex === insertIndex && (
+            <div className="absolute left-1/2 z-50 mt-2 w-44 -translate-x-1/2 rounded-2xl border border-white/10 bg-black p-2 shadow-xl">
+              {(["hero", "links", "image", "text", "divider"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
+                  onClick={() => insertBlockAt(insertIndex, t)}
+                  disabled={!site || loading || !!creating || !!inserting}
+                >
+                  {inserting?.index === insertIndex && inserting?.type === t
+                    ? "Adding..."
+                    : `+ ${t}`}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+})}
+
             </SortableContext>
           </DndContext>
         </div>
