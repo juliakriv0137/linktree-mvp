@@ -450,9 +450,17 @@ function LinksEditor({
           const urlOk = !safeTrim(it.url) ? false : isValidHttpUrl(it.url);
           return (
             <div
-              key={idx}
-              className="rounded-2xl border border-white/10 bg-black/20 p-4 space-y-3"
-            >
+            key={idx}
+            style={{
+              background: "var(--card-bg)",
+              border: "var(--card-border)",
+              boxShadow: "var(--card-shadow)",
+              padding: "var(--card-padding)",
+              borderRadius: "var(--button-radius)",
+            }}
+            className="space-y-3"
+          >
+          
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-white/80">
                   Link #{idx + 1}
@@ -1062,24 +1070,35 @@ export default function DashboardPage() {
   backgroundStyle={(site?.background_style ?? "solid") as any}
   fontScale={(site as any)?.font_scale ?? "md"}
   buttonRadius={(site as any)?.button_radius ?? "2xl"}
+  cardStyle={(site as any)?.card_style ?? "card"}
+
 >
 
-      <div className="space-y-3">
-        <div className="text-center">
-          <div className="text-xl font-bold text-[rgb(var(--text))]">
-            Preview
-          </div>
-          <div className="text-sm text-[rgb(var(--muted))]">
-            Theme + background + button style
-          </div>
-        </div>
-
-        <LinkButton
-          href="#"
-          label="Example button"
-          buttonStyle={(site?.button_style ?? "solid") as any}
-        />
+<div
+  style={{
+    background: "var(--card-bg)",
+    border: "var(--card-border)",
+    boxShadow: "var(--card-shadow)",
+    padding: "var(--card-padding)",
+    borderRadius: "var(--button-radius)",
+  }}
+>
+  <div className="space-y-3">
+    <div className="text-center">
+      <div className="text-xl font-bold text-[rgb(var(--text))]">Preview</div>
+      <div className="text-sm text-[rgb(var(--muted))]">
+        Theme + background + button style
       </div>
+    </div>
+
+    <LinkButton
+      href="#"
+      label="Example button"
+      buttonStyle={(site?.button_style ?? "solid") as any}
+    />
+  </div>
+</div>
+
     </SiteShell>
   </div>
 </div>

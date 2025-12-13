@@ -7,6 +7,8 @@ type Props = {
   themeKey?: string | null;
   backgroundStyle?: BackgroundStyle;
   buttonRadius?: "md" | "xl" | "2xl" | "full" | null;
+  cardStyle?: "card" | "plain" | null;
+
 
 
   // ✅ step 1: font scale
@@ -30,6 +32,7 @@ export function SiteShell({
   buttonStyle, 
   children,
   buttonRadius,
+  cardStyle,
 }: Props) {
   const vars = cssVarsFromTheme(themeKey);
 
@@ -63,6 +66,13 @@ export function SiteShell({
             ? radiusMap[buttonRadius]
             : radiusMap["2xl"];
         
+            const isCard = (cardStyle ?? "card") === "card";
+
+            const cardBg = isCard ? "rgb(var(--bg))" : "transparent";
+            const cardBorder = isCard ? "1px solid rgb(var(--border))" : "0px";
+            const cardShadow = isCard ? "0 10px 30px rgba(0,0,0,0.20)" : "none";
+            const cardPadding = isCard ? "16px" : "0px";
+             
         return (
           <div
             style={{
@@ -70,6 +80,11 @@ export function SiteShell({
               fontSize: rootFontSizePx,
               ["--font-scale" as any]: scale,
               ["--button-radius" as any]: resolvedRadius,
+              ["--card-bg" as any]: cardBg,
+["--card-border" as any]: cardBorder,
+["--card-shadow" as any]: cardShadow,
+["--card-padding" as any]: cardPadding,
+
             }}
             className={`min-h-screen ${bgClass}`}
           >

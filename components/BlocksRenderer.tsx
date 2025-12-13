@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Block } from "@/lib/blocks";
 
 type Props = {
@@ -10,11 +11,25 @@ export default function BlocksRenderer({ blocks }: Props) {
   return (
     <div className="flex flex-col gap-4">
       {blocks.map((block) => {
+        const wrap = (node: React.ReactNode) => (
+          <div
+            key={block.id}
+            style={{
+              background: "var(--card-bg)",
+              border: "var(--card-border)",
+              boxShadow: "var(--card-shadow)",
+              padding: "var(--card-padding)",
+              borderRadius: "var(--button-radius)",
+            }}
+          >
+            {node}
+          </div>
+        );
+
         switch (block.type) {
           case "heading":
-            return (
+            return wrap(
               <h1
-                key={block.id}
                 className={`font-bold ${
                   block.size === "xl"
                     ? "text-4xl"
@@ -28,9 +43,8 @@ export default function BlocksRenderer({ blocks }: Props) {
             );
 
           case "text":
-            return (
+            return wrap(
               <p
-                key={block.id}
                 className={`text-gray-300 text-${block.align ?? "center"}`}
               >
                 {block.text}
@@ -38,12 +52,11 @@ export default function BlocksRenderer({ blocks }: Props) {
             );
 
           case "button":
-            return (
+            return wrap(
               <a
-                key={block.id}
                 href={block.url}
                 target="_blank"
-                className={`rounded-xl px-4 py-3 text-center font-medium transition ${
+                className={`px-4 py-3 text-center font-medium transition ${
                   block.style === "secondary"
                     ? "bg-neutral-700 hover:bg-neutral-600"
                     : "bg-white text-black hover:bg-gray-200"
@@ -54,9 +67,8 @@ export default function BlocksRenderer({ blocks }: Props) {
             );
 
           case "image":
-            return (
+            return wrap(
               <img
-                key={block.id}
                 src={block.url}
                 alt={block.alt ?? ""}
                 style={{ borderRadius: block.radius ?? 12 }}
