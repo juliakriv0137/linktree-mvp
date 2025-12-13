@@ -30,11 +30,18 @@ type SiteRow = {
   slug: string;
   name: string | null;
   theme: any;
+
   theme_key: string;
-  button_style: string;
   background_style: string;
+  button_style: string;
+
+  font_scale: "sm" | "md" | "lg";
+  button_radius: "md" | "xl" | "2xl" | "full";
+  card_style: "plain" | "card";
+
   created_at: string;
 };
+
 
 type BlockRow = {
   id: string;
@@ -221,9 +228,18 @@ async function deleteBlock(blockId: string) {
 async function updateSiteTheme(
   siteId: string,
   patch: Partial<
-    Pick<SiteRow, "theme_key" | "button_style" | "background_style">
+    Pick<
+      SiteRow,
+      | "theme_key"
+      | "background_style"
+      | "button_style"
+      | "font_scale"
+      | "button_radius"
+      | "card_style"
+    >
   >,
 ) {
+
   const { error } = await supabase.from("sites").update(patch).eq("id", siteId);
   if (error) throw error;
 }
