@@ -1061,6 +1061,7 @@ export default function DashboardPage() {
   themeKey={site?.theme_key ?? "midnight"}
   backgroundStyle={(site?.background_style ?? "solid") as any}
   fontScale={(site as any)?.font_scale ?? "md"}
+  buttonRadius={(site as any)?.button_radius ?? "2xl"}
 >
 
       <div className="space-y-3">

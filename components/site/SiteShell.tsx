@@ -6,6 +6,8 @@ type BackgroundStyle = "solid" | "gradient" | "dots";
 type Props = {
   themeKey?: string | null;
   backgroundStyle?: BackgroundStyle;
+  buttonRadius?: "md" | "xl" | "2xl" | "full" | null;
+
 
   // ✅ step 1: font scale
   fontScale?: "sm" | "md" | "lg" | number | null;
@@ -25,8 +27,9 @@ export function SiteShell({
   themeKey,
   backgroundStyle = "solid",
   fontScale,
-  buttonStyle, // intentionally unused for now
+  buttonStyle, 
   children,
+  buttonRadius,
 }: Props) {
   const vars = cssVarsFromTheme(themeKey);
 
@@ -48,6 +51,17 @@ export function SiteShell({
         : scaleFromKey;
     
         const rootFontSizePx = `${16 * scale}px`;
+        const radiusMap: Record<string, string> = {
+          md: "0.375rem",
+          xl: "0.75rem",
+          "2xl": "1rem",
+          full: "9999px",
+        };
+        
+        const resolvedRadius =
+          buttonRadius && radiusMap[buttonRadius]
+            ? radiusMap[buttonRadius]
+            : radiusMap["2xl"];
         
         return (
           <div
@@ -55,6 +69,7 @@ export function SiteShell({
               ...(vars as React.CSSProperties),
               fontSize: rootFontSizePx,
               ["--font-scale" as any]: scale,
+              ["--button-radius" as any]: resolvedRadius,
             }}
             className={`min-h-screen ${bgClass}`}
           >
