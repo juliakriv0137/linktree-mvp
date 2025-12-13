@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/env";
 
-export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
