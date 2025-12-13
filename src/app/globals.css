@@ -1,0 +1,35 @@
+
+:root {
+  --bg: 10 12 16;
+  --card: 16 19 26;
+  --text: 244 246 250;
+  --muted: 167 174 189;
+  --border: 32 38 52;
+  --primary: 99 102 241;
+  --primary-2: 139 92 246;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+}
+
+/* === THEME VARIABLES === */
+:root {
+  --bg: 10 12 16;
+  --card: 16 19 26;
+  --text: 244 246 250;
+  --muted: 167 174 189;
+  --border: 32 38 52;
+  --primary: 99 102 241;
+  --primary-2: 139 92 246;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--text));
+}

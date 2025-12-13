@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100;
+}
