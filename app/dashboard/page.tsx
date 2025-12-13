@@ -17,6 +17,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/lib/supabaseClient";
+import InsertBlockMenu from "@/components/InsertBlockMenu";
+
 
 type SiteRow = {
   id: string;
@@ -1098,36 +1100,14 @@ export default function DashboardPage() {
               strategy={verticalListSortingStrategy}
             >
               {/* Insert at very top */}
-<div className="flex justify-center">
-  <div className="relative">
-    <button
-      type="button"
-      className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 hover:bg-white/10"
-      onClick={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
-      disabled={!site || loading || !!creating || !!inserting}
-      title="Insert block"
-    >
-      <span className="text-base leading-none">＋</span>
-      <span className="hidden sm:inline">Add block</span>
-    </button>
-
-    {insertMenuIndex === 0 && (
-      <div className="absolute left-1/2 z-50 mt-2 w-44 -translate-x-1/2 rounded-2xl border border-white/10 bg-black p-2 shadow-xl">
-        {(["hero", "links", "image", "text", "divider"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            className="w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
-            onClick={() => insertBlockAt(0, t)}
-            disabled={!site || loading || !!creating || !!inserting}
-          >
-            {inserting?.index === 0 && inserting?.type === t ? "Adding..." : `+ ${t}`}
-          </button>
-        ))}
-      </div>
-    )}
-  </div>
-</div>
+              <InsertBlockMenu
+  insertIndex={0}
+  isOpen={insertMenuIndex === 0}
+  onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
+  onInsert={(t) => insertBlockAt(0, t)}
+  disabled={!site || loading || !!creating || !!inserting}
+  inserting={inserting}
+/>
 
 {blocks.map((b, idx) => {
   const isHero = b.type === "hero";
@@ -1209,41 +1189,16 @@ export default function DashboardPage() {
         </Card>
       </SortableBlockCard>
 
-      {/* Insert between blocks */}
-      <div className="flex justify-center">
-        <div className="relative">
-          <button
-            type="button"
-            className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 hover:bg-white/10"
-            onClick={() =>
-              setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)
-            }
-            disabled={!site || loading || !!creating || !!inserting}
-            title="Insert block"
-          >
-            <span className="text-base leading-none">＋</span>
-            <span className="hidden sm:inline">Add block</span>
-          </button>
-
-          {insertMenuIndex === insertIndex && (
-            <div className="absolute left-1/2 z-50 mt-2 w-44 -translate-x-1/2 rounded-2xl border border-white/10 bg-black p-2 shadow-xl">
-              {(["hero", "links", "image", "text", "divider"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
-                  onClick={() => insertBlockAt(insertIndex, t)}
-                  disabled={!site || loading || !!creating || !!inserting}
-                >
-                  {inserting?.index === insertIndex && inserting?.type === t
-                    ? "Adding..."
-                    : `+ ${t}`}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      <InsertBlockMenu
+  insertIndex={insertIndex}
+  isOpen={insertMenuIndex === insertIndex}
+  onToggle={() =>
+    setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)
+  }
+  onInsert={(t) => insertBlockAt(insertIndex, t)}
+  disabled={!site || loading || !!creating || !!inserting}
+  inserting={inserting}
+/>
     </div>
   );
 })}
