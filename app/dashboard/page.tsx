@@ -1198,7 +1198,10 @@ export default function DashboardPage() {
   onInsert={(t) => insertBlockAt(insertIndex, t)}
   disabled={!site || loading || !!creating || !!inserting}
   inserting={inserting}
+  showLabel={false}
+  showOnHover
 />
+
     </div>
   );
 })}
