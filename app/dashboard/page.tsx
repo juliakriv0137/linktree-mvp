@@ -1057,10 +1057,12 @@ export default function DashboardPage() {
   <div className="text-xs text-white/50 mb-3">Live preview</div>
 
   <div className="overflow-hidden rounded-2xl border border-white/10">
-    <SiteShell
-      themeKey={site?.theme_key ?? "midnight"}
-      backgroundStyle={(site?.background_style ?? "solid") as any}
-    >
+  <SiteShell
+  themeKey={site?.theme_key ?? "midnight"}
+  backgroundStyle={(site?.background_style ?? "solid") as any}
+  fontScale={(site as any)?.font_scale ?? "md"}
+>
+
       <div className="space-y-3">
         <div className="text-center">
           <div className="text-xl font-bold text-[rgb(var(--text))]">

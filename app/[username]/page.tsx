@@ -4,6 +4,9 @@ import { env } from "@/lib/env";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
 
+
+
+
 type PageProps = {
   params: { username: string };
 };
@@ -59,8 +62,14 @@ export default async function PublicPage({
   const filteredBlocks = blocks.filter((b) => b.type !== "links");
 
   return (
-    <SiteShell themeKey={site.theme_key} backgroundStyle={site.background_style as any}
+    <SiteShell
+  themeKey={site.theme_key}
+  backgroundStyle={site.background_style as any}
+  buttonStyle={(site as any).button_style}
+  fontScale={(site as any).font_scale ?? 1}
 >
+
+
       <div className="space-y-6">
         {filteredBlocks.map((block) => {
           switch (block.type) {
