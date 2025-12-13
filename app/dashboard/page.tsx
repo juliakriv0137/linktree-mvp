@@ -168,7 +168,7 @@ async function ensureSiteForUser(): Promise<SiteRow> {
       button_style: "solid",
       background_style: "solid",
 
-      // advanced theme defaults (optional; if columns exist)
+      // advanced theme defaults
       font_scale: "md",
       button_radius: "2xl",
       card_style: "card",
@@ -232,10 +232,8 @@ async function createBlock(
           : type === "divider"
             ? ({ style: "line" } as any)
             : ({
-                items: [
-                  { title: "Telegram", url: "https://t.me/yourname" },
-                  { title: "Instagram", url: "https://instagram.com/yourname" },
-                ],
+                // ✅ FIX: при создании Links блока — 1 кнопка, не 2
+                items: [{ title: "Telegram", url: "https://t.me/yourname" }],
               } satisfies LinksContent);
 
   const { error } = await supabase.from("site_blocks").insert({
@@ -257,6 +255,11 @@ async function updateBlock(
     .from("site_blocks")
     .update(patch)
     .eq("id", blockId);
+  if (error) throw error;
+}
+
+async function deleteBlock(blockId: string) {
+  const { error } = await supabase.from("site_blocks").delete().eq("id", blockId);
   if (error) throw error;
 }
 
@@ -294,33 +297,24 @@ function Card({ children }: { children: React.ReactNode }) {
 
 function Button({
   children,
-  onClick,
-  disabled,
   variant = "primary",
-  type = "button",
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "ghost" | "danger";
-  type?: "button" | "submit";
 }) {
   const base =
-    "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-white/30";
+    "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-40";
+
   const styles =
     variant === "primary"
-      ? "bg-white text-black hover:bg-white/90 disabled:opacity-40"
+      ? "bg-white text-black hover:bg-white/90"
       : variant === "danger"
-        ? "bg-red-600 text-white hover:bg-red-500 disabled:opacity-40"
-        : "bg-white/10 text-white hover:bg-white/15 disabled:opacity-40";
+        ? "bg-red-600 text-white hover:bg-red-500"
+        : "bg-white/10 text-white hover:bg-white/15";
 
   return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={clsx(base, styles)}
-    >
+    <button {...props} className={clsx(base, styles, className)}>
       {children}
     </button>
   );
@@ -495,6 +489,7 @@ function LinksEditor({
   onSave: (next: LinksContent) => Promise<void>;
 }) {
   const initial = (block.content ?? {}) as LinksContent;
+
   const [items, setItems] = useState<Array<{ title: string; url: string }>>(
     (initial.items ?? []).map((x) => ({
       title: x.title ?? "",
@@ -510,9 +505,33 @@ function LinksEditor({
     );
   }, [block.id, block.content]);
 
-  const hasInvalid = useMemo(() => {
-    return items.some((x) => !safeTrim(x.title) || !isValidHttpUrl(x.url));
+  function rowIsEmpty(row: { title: string; url: string }) {
+    return !safeTrim(row.title) && !safeTrim(row.url);
+  }
+
+  function rowIsPartial(row: { title: string; url: string }) {
+    const t = safeTrim(row.title);
+    const u = safeTrim(row.url);
+    return (t && !u) || (!t && u);
+  }
+
+  function rowIsValid(row: { title: string; url: string }) {
+    const t = safeTrim(row.title);
+    const u = safeTrim(row.url);
+    return !!t && isValidHttpUrl(u);
+  }
+
+  const effectiveRows = useMemo(() => {
+    return items.filter((r) => !rowIsEmpty(r));
   }, [items]);
+
+  const hasInvalid = useMemo(() => {
+    return effectiveRows.some((r) => !rowIsValid(r));
+  }, [effectiveRows]);
+
+  const hasPartials = useMemo(() => {
+    return effectiveRows.some((r) => rowIsPartial(r));
+  }, [effectiveRows]);
 
   return (
     <div className="space-y-4">
@@ -520,7 +539,16 @@ function LinksEditor({
 
       <div className="space-y-3">
         {items.map((it, idx) => {
-          const urlOk = !safeTrim(it.url) ? false : isValidHttpUrl(it.url);
+          const empty = rowIsEmpty(it);
+          const partial = rowIsPartial(it);
+          const valid = rowIsValid(it);
+
+          const urlOk = empty
+            ? true
+            : safeTrim(it.url)
+              ? isValidHttpUrl(it.url)
+              : false;
+
           return (
             <div
               key={idx}
@@ -533,41 +561,15 @@ function LinksEditor({
               }}
               className="space-y-3"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-white/80">
-                  Link #{idx + 1}
+                  Button #{idx + 1}
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      if (idx === 0) return;
-                      setItems((prev) => {
-                        const next = [...prev];
-                        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-                        return next;
-                      });
-                    }}
-                    disabled={idx === 0}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      if (idx === items.length - 1) return;
-                      setItems((prev) => {
-                        const next = [...prev];
-                        [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-                        return next;
-                      });
-                    }}
-                    disabled={idx === items.length - 1}
-                  >
-                    ↓
-                  </Button>
+
+                <div className="flex items-center gap-2">
                   <Button
                     variant="danger"
+                    aria-label="Delete link button"
                     onClick={() =>
                       setItems((prev) => prev.filter((_, i) => i !== idx))
                     }
@@ -602,12 +604,26 @@ function LinksEditor({
                   placeholder="https://..."
                   className={clsx(
                     "w-full rounded-2xl border bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
-                    urlOk ? "border-white/10" : "border-red-500/50",
+                    empty || urlOk ? "border-white/10" : "border-red-500/50",
                   )}
                 />
-                {!urlOk && safeTrim(it.url) && (
+
+                {!empty && !urlOk && safeTrim(it.url) && (
                   <div className="text-xs text-red-300 mt-2">
                     URL must be http(s). Example: https://t.me/yourname
+                  </div>
+                )}
+
+                {!empty && partial && (
+                  <div className="text-xs text-yellow-200/80 mt-2">
+                    Fill both fields (text + URL) or clear the row — otherwise it
+                    won’t be saved.
+                  </div>
+                )}
+
+                {!empty && !partial && valid && (
+                  <div className="text-xs text-emerald-200/70 mt-2">
+                    Looks good — will be saved.
                   </div>
                 )}
               </label>
@@ -616,26 +632,42 @@ function LinksEditor({
         })}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           variant="ghost"
           onClick={() => setItems((prev) => [...prev, { title: "", url: "" }])}
         >
-          + Add link
+          + Add button
+        </Button>
+
+        <Button
+          variant="ghost"
+          onClick={() => setItems((prev) => prev.filter((r) => !rowIsEmpty(r)))}
+          disabled={items.every((r) => !rowIsEmpty(r))}
+          aria-label="Remove empty rows"
+        >
+          Clear empty
         </Button>
 
         <Button
           variant="primary"
-          disabled={saving || items.length === 0 || hasInvalid}
+          disabled={saving || hasInvalid}
           onClick={async () => {
             setSaving(true);
             try {
               const cleaned = items
                 .map((x) => ({
                   title: safeTrim(x.title),
-                  url: normalizeUrl(x.url),
+                  url: safeTrim(x.url),
                 }))
-                .filter((x) => x.title && x.url);
+                // keep only non-empty rows
+                .filter((x) => x.title || x.url)
+                // keep only valid rows (text + valid url)
+                .filter((x) => x.title && isValidHttpUrl(x.url))
+                .map((x) => ({
+                  title: x.title,
+                  url: normalizeUrl(x.url),
+                }));
 
               await onSave({ items: cleaned });
             } finally {
@@ -649,14 +681,21 @@ function LinksEditor({
 
       <div className="text-xs text-white/40">
         Tip: можно вставлять{" "}
-        <span className="text-white/60">t.me/username</span> — мы добавим
-        https:// автоматически.
+        <span className="text-white/60">t.me/username</span> — мы добавим https://
+        автоматически.
       </div>
+
+      {hasPartials && (
+        <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-100/90">
+          Some rows are partially filled. They won’t be saved until both fields
+          are valid.
+        </div>
+      )}
     </div>
   );
 }
 
-/** ✅ NEW: Image editor (fix A.1) */
+/** ✅ Image editor */
 function ImageEditor({
   block,
   onSave,
@@ -740,21 +779,20 @@ function ImageEditor({
         <div className="text-xs text-white/50">Preview</div>
 
         {urlOk ? (
-  <div className="mx-auto w-full max-w-[360px] aspect-square overflow-hidden">
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img
-      src={normalizeUrl(url)}
-      alt={alt || "Image preview"}
-      className="h-full w-full object-cover"
-      style={{ borderRadius: previewRadius }}
-    />
-  </div>
-) : (
-  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">
-    Add a valid image URL to see preview.
-  </div>
-)}
-
+          <div className="mx-auto w-full max-w-[360px] aspect-square overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={normalizeUrl(url)}
+              alt={alt || "Image preview"}
+              className="h-full w-full object-cover"
+              style={{ borderRadius: previewRadius }}
+            />
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">
+            Add a valid image URL to see preview.
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -762,6 +800,8 @@ function ImageEditor({
           variant="primary"
           disabled={saving || !urlOk}
           onClick={async () => {
+            if (!isValidHttpUrl(url)) return;
+
             setSaving(true);
             try {
               await onSave({
@@ -781,7 +821,7 @@ function ImageEditor({
   );
 }
 
-/** ✅ NEW: Text editor (fix A.1) */
+/** ✅ Text editor */
 function TextEditor({
   block,
   onSave,
@@ -859,7 +899,6 @@ function SortableBlockCard({
         {...attributes}
         {...listeners}
         aria-label="Drag to reorder"
-        title="Drag to reorder"
       >
         ⠿
       </div>
@@ -881,7 +920,6 @@ export default function DashboardPage() {
     null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }
   >(null);
 
-  // local UI state for colors (so inputs feel instant)
   const [colors, setColors] = useState({
     bg_color: "",
     text_color: "",
@@ -1000,7 +1038,6 @@ export default function DashboardPage() {
     }
   }
 
-  // ✅ save one color field
   async function saveColorField(
     key:
       | "bg_color"
@@ -1013,8 +1050,7 @@ export default function DashboardPage() {
   ) {
     if (!site) return;
 
-    const normalized = normalizeHexOrNull(rawValue); // null if empty/invalid
-    // если ввели мусор — не сохраняем (но в input оставим как есть)
+    const normalized = normalizeHexOrNull(rawValue);
     if (rawValue && normalized === null) return;
 
     try {
@@ -1023,6 +1059,44 @@ export default function DashboardPage() {
       setColors((prev) => ({ ...prev, [key]: normalized ?? "" }));
     } catch (e: any) {
       setError(e?.message ?? String(e));
+    }
+  }
+
+  async function toggleVisibility(block: BlockRow) {
+    if (!site) return;
+    setError(null);
+
+    try {
+      await updateBlock(block.id, { is_visible: !block.is_visible });
+      const bs = await loadBlocks(site.id);
+      setBlocks(bs);
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
+  }
+
+  async function removeBlock(block: BlockRow) {
+    if (!site) return;
+
+    const ok = window.confirm("Delete this block? This cannot be undone.");
+    if (!ok) return;
+
+    setError(null);
+
+    try {
+      await deleteBlock(block.id);
+
+      const bs = await loadBlocks(site.id);
+      const normalized = bs.map((b, idx) => ({ ...b, position: idx + 1 }));
+      setBlocks(normalized);
+
+      await Promise.all(
+        normalized.map((b) => updateBlock(b.id, { position: b.position })),
+      );
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+      const bs2 = await loadBlocks(site.id);
+      setBlocks(bs2);
     }
   }
 
@@ -1069,7 +1143,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* basic theme settings */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <div className="text-xs text-white/50">Theme</div>
@@ -1212,7 +1285,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* ✅ custom colors */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -1315,7 +1387,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* preview */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-xs text-white/50 mb-3">Live preview</div>
 
@@ -1507,7 +1578,9 @@ export default function DashboardPage() {
               <InsertBlockMenu
                 insertIndex={0}
                 isOpen={insertMenuIndex === 0}
-                onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
+                onToggle={() =>
+                  setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)
+                }
                 onInsert={(t) => insertBlockAt(0, t)}
                 disabled={!site || loading || !!creating || !!inserting}
                 inserting={inserting}
@@ -1526,20 +1599,45 @@ export default function DashboardPage() {
                   <div key={b.id} className="space-y-3">
                     <SortableBlockCard id={b.id}>
                       <Card>
-                        <div className="p-6 space-y-4">
+                        <div
+                          className={clsx(
+                            "p-6 space-y-4",
+                            !b.is_visible && "opacity-60",
+                          )}
+                        >
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
                               <span className="text-xs rounded-full bg-white/10 px-3 py-1">
                                 {b.type}
                               </span>
+
                               <span className="text-xs text-white/40">
                                 pos {b.position}
                               </span>
+
                               {!b.is_visible && (
                                 <span className="text-xs text-yellow-200/80">
                                   hidden
                                 </span>
                               )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                onClick={() => toggleVisibility(b)}
+                                disabled={!site || loading}
+                              >
+                                {b.is_visible ? "Hide" : "Show"}
+                              </Button>
+
+                              <Button
+                                variant="danger"
+                                onClick={() => removeBlock(b)}
+                                disabled={!site || loading}
+                              >
+                                Delete
+                              </Button>
                             </div>
                           </div>
 
@@ -1565,7 +1663,6 @@ export default function DashboardPage() {
                             />
                           )}
 
-                          {/* ✅ FIXED: Image editor */}
                           {isImage && (
                             <ImageEditor
                               block={b}
@@ -1577,7 +1674,6 @@ export default function DashboardPage() {
                             />
                           )}
 
-                          {/* ✅ FIXED: Text editor */}
                           {isText && (
                             <TextEditor
                               block={b}

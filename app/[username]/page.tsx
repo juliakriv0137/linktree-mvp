@@ -4,24 +4,19 @@ import { env } from "@/lib/env";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
 
-type PageProps = {
-  params: Promise<{ username: string }>;
-};
-
 type SiteRow = {
   id: string;
   slug: string;
   name: string | null;
-  theme_key: string | null;
-  button_style: string | null;
-  background_style: string | null;
 
-  // advanced theme fields (optional)
-  font_scale?: string | null;
-  button_radius?: string | null;
-  card_style?: string | null;
+  theme_key: string;
+  background_style: string;
+  button_style: string;
 
-  // custom colors (optional)
+  font_scale?: "sm" | "md" | "lg";
+  button_radius?: "md" | "xl" | "2xl" | "full";
+  card_style?: "plain" | "card";
+
   bg_color?: string | null;
   text_color?: string | null;
   muted_color?: string | null;
@@ -33,156 +28,176 @@ type SiteRow = {
 type BlockRow = {
   id: string;
   site_id: string;
-  type: string;
+  type: "hero" | "links" | "image" | "text" | "divider";
   content: any;
   position: number;
   is_visible: boolean;
 };
 
-export default async function PublicPage({ params }: PageProps) {
+function safeTrim(v: any) {
+  return String(v ?? "").trim();
+}
+
+function normalizeUrl(raw: any) {
+  const v = safeTrim(raw);
+  if (!v) return "";
+  if (!/^https?:\/\//i.test(v)) return `https://${v}`;
+  return v;
+}
+
+export default async function PublicPage({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
   const { username } = await params;
 
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
-  // 1) Получаем сайт по username (slug)
-  const { data: site } = await supabase
+  // 1) site by slug
+  const { data: site, error: siteErr } = await supabase
     .from("sites")
     .select("*")
     .eq("slug", username)
-    .single<SiteRow>();
+    .maybeSingle();
 
+  if (siteErr) throw siteErr;
   if (!site) return notFound();
 
-  // 2) Получаем блоки сайта
-  const { data: rawBlocks } = (await supabase
+  // 2) blocks
+  const { data: blocks, error: blocksErr } = await supabase
     .from("site_blocks")
     .select("*")
     .eq("site_id", site.id)
-    .eq("is_visible", true)
-    .order("position")) as { data: BlockRow[] | null };
+    .order("position", { ascending: true });
 
-  const blocks = rawBlocks ?? [];
+  if (blocksErr) throw blocksErr;
 
-  // ✅ показываем только первый links-блок (даже если в БД их несколько)
-  const firstLinks = blocks.find((b) => b.type === "links");
-  const filteredBlocks = blocks.filter((b) => b.type !== "links");
+  const visibleBlocks = (blocks ?? []).filter((b: BlockRow) => b.is_visible);
 
   return (
     <SiteShell
-      themeKey={site.theme_key ?? "midnight"}
-      backgroundStyle={(site.background_style ?? "solid") as any}
-      buttonStyle={(site.button_style ?? "solid") as any}
-      fontScale={(site.font_scale ?? "md") as any}
-      buttonRadius={(site.button_radius ?? "2xl") as any}
-      cardStyle={(site.card_style ?? "card") as any}
+      themeKey={(site as SiteRow).theme_key ?? "midnight"}
+      backgroundStyle={((site as SiteRow).background_style ?? "solid") as any}
+      buttonStyle={((site as SiteRow).button_style ?? "solid") as any}
+      fontScale={((site as SiteRow).font_scale ?? "md") as any}
+      buttonRadius={((site as SiteRow).button_radius ?? "2xl") as any}
+      cardStyle={((site as SiteRow).card_style ?? "card") as any}
       themeOverrides={{
-        bg_color: site.bg_color ?? null,
-        text_color: site.text_color ?? null,
-        muted_color: site.muted_color ?? null,
-        border_color: site.border_color ?? null,
-        button_color: site.button_color ?? null,
-        button_text_color: site.button_text_color ?? null,
+        bg_color: (site as SiteRow).bg_color ?? null,
+        text_color: (site as SiteRow).text_color ?? null,
+        muted_color: (site as SiteRow).muted_color ?? null,
+        border_color: (site as SiteRow).border_color ?? null,
+        button_color: (site as SiteRow).button_color ?? null,
+        button_text_color: (site as SiteRow).button_text_color ?? null,
       }}
     >
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-      >
-        <div className="space-y-6">
-          {filteredBlocks.map((block) => {
-            switch (block.type) {
-              case "hero": {
-                const title = block.content?.title ?? site.name ?? site.slug;
-                const subtitle = block.content?.subtitle ?? "";
-                const letter = String(title).trim()?.[0]?.toUpperCase() ?? "?";
-
+      <div className="mx-auto w-full max-w-md px-4 py-10">
+        <div
+          style={{
+            background: "var(--card-bg)",
+            border: "var(--card-border)",
+            boxShadow: "var(--card-shadow)",
+            padding: "var(--card-padding)",
+            borderRadius: "var(--button-radius)",
+          }}
+        >
+          <div className="space-y-6">
+            {visibleBlocks.map((b: BlockRow) => {
+              if (b.type === "divider") {
                 return (
-                  <section key={block.id} className="text-center">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-neutral-800 mb-4 flex items-center justify-center text-xl">
-                      {letter}
-                    </div>
-                    <h1 className="text-2xl font-bold">{title}</h1>
-                    {!!subtitle && (
-                      <p className="text-neutral-400 mt-2">{subtitle}</p>
-                    )}
-                  </section>
-                );
-              }
-
-              case "text": {
-                const text = block.content?.text ?? "";
-                if (!text) return null;
-                return (
-                  <section
-                    key={block.id}
-                    className="text-center text-neutral-200 whitespace-pre-wrap"
-                  >
-                    {text}
-                  </section>
-                );
-              }
-
-              case "image": {
-                const url = block.content?.url ?? "";
-                if (!url) return null;
-                const alt = block.content?.alt ?? "";
-                const shape = block.content?.shape ?? "circle";
-                const cls =
-                  shape === "circle"
-                    ? "h-24 w-24 rounded-full object-cover border border-white/10"
-                    : shape === "rounded"
-                    ? "h-24 w-24 rounded-2xl object-cover border border-white/10"
-                    : "h-24 w-24 rounded-none object-cover border border-white/10";
-
-                return (
-                  <section key={block.id} className="flex justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={alt} className={cls} />
-                  </section>
-                );
-              }
-
-              case "divider": {
-                return (
-                  <div key={block.id} className="my-4 flex justify-center">
+                  <div key={b.id} className="flex justify-center py-2">
                     <div className="h-px w-24 bg-white/20" />
                   </div>
                 );
               }
 
-              default:
-                return null;
-            }
-          })}
+              if (b.type === "hero") {
+                const title = safeTrim(b.content?.title) || " ";
+                const subtitle = safeTrim(b.content?.subtitle);
 
-          {/* ✅ Links (один блок) */}
-          {firstLinks && (
-            <section className="space-y-3 pt-2">
-              {(firstLinks.content?.items ?? []).map(
-                (item: { title?: string; url?: string }, idx: number) => {
-                  const title = item?.title ?? `Link ${idx + 1}`;
-                  const url = item?.url ?? "#";
-                  return (
-                    <LinkButton
-                      key={idx}
-                      href={url}
-                      label={title}
-                      buttonStyle={(site.button_style ?? "solid") as any}
+                return (
+                  <div key={b.id} className="text-center space-y-2">
+                    <div className="text-3xl font-bold text-[rgb(var(--text))]">
+                      {title}
+                    </div>
+                    {subtitle ? (
+                      <div className="text-sm text-[rgb(var(--muted))]">
+                        {subtitle}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              if (b.type === "image") {
+                const url = normalizeUrl(b.content?.url);
+                const alt = safeTrim(b.content?.alt) || "Image";
+                const shape = b.content?.shape as "circle" | "rounded" | "square";
+                const radius =
+                  shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+
+                if (!url) return null;
+
+                return (
+                  <div key={b.id} className="flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={alt}
+                      className="h-28 w-28 object-cover"
+                      style={{ borderRadius: radius }}
                     />
-                  );
-                }
-              )}
-            </section>
-          )}
+                  </div>
+                );
+              }
 
-          <footer className="text-center text-xs text-neutral-500 pt-6">
-            Powered by Mini-Site Builder
-          </footer>
+              if (b.type === "text") {
+                const text = safeTrim(b.content?.text);
+                if (!text) return null;
+
+                return (
+                  <div
+                    key={b.id}
+                    className="text-base text-[rgb(var(--text))] whitespace-pre-wrap"
+                  >
+                    {text}
+                  </div>
+                );
+              }
+
+              if (b.type === "links") {
+                const itemsRaw = Array.isArray(b.content?.items) ? b.content.items : [];
+                const items = itemsRaw
+                  .map((x: any) => ({
+                    title: safeTrim(x?.title),
+                    url: normalizeUrl(x?.url),
+                  }))
+                  .filter((x: any) => x.title && x.url);
+
+                if (items.length === 0) return null;
+
+                return (
+                  <div key={b.id} className="flex flex-col gap-3">
+                    {items.map((it: any, i: number) => (
+                      <LinkButton
+                        key={`${b.id}-${i}`}
+                        href={it.url}
+                        label={it.title}
+                        buttonStyle={((site as SiteRow).button_style ?? "solid") as any}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+
+              return null;
+            })}
+
+            <div className="pt-2 text-center text-xs text-white/35">
+              Powered by Mini-Site Builder
+            </div>
+          </div>
         </div>
       </div>
     </SiteShell>
