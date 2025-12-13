@@ -1,76 +1,126 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-function parseHashParams(hash: string) {
+function parseHashTokens(hash: string) {
+  // hash приходит вида: "#access_token=...&refresh_token=...&expires_in=..."
   const h = hash.startsWith("#") ? hash.slice(1) : hash;
   const params = new URLSearchParams(h);
-  const obj: Record<string, string> = {};
-  for (const [k, v] of params.entries()) obj[k] = v;
-  return obj;
+
+  const access_token = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+
+  return { access_token, refresh_token };
 }
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [status, setStatus] = useState<string>("Callback loaded (client).");
+  const [details, setDetails] = useState<any>(null);
+
   useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
+    const run = async () => {
       try {
-        // 1) Сначала проверим, нет ли ошибки в hash (#error=...)
-        const hashObj = parseHashParams(window.location.hash || "");
-        const err = hashObj.error || searchParams.get("error") || "";
-        const errDesc =
-          hashObj.error_description || searchParams.get("error_description") || "";
+        setStatus("Reading URL...");
 
-        if (err) {
-          const msg = errDesc ? decodeURIComponent(errDesc.replace(/\+/g, " ")) : err;
-          router.replace(`/login?error=${encodeURIComponent(msg)}`);
+        const code = searchParams.get("code");
+        const hash = window.location.hash || "";
+        const { access_token, refresh_token } = parseHashTokens(hash);
+
+        setDetails({
+          url: window.location.href,
+          codePresent: Boolean(code),
+          hashPresent: Boolean(hash),
+          hasAccessToken: Boolean(access_token),
+          hasRefreshToken: Boolean(refresh_token),
+        });
+
+        // 1) Если PKCE / code flow
+        if (code) {
+          setStatus("Exchanging code for session...");
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+
+          setStatus("Session created via code exchange.");
+          setDetails((prev: any) => ({ ...prev, session: data.session }));
+
+          // подчистим URL от code
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete("code");
+          window.history.replaceState({}, document.title, cleanUrl.toString());
+
+          router.replace("/dashboard");
           return;
         }
 
-        // 2) Дадим supabase-js обработать токены из URL (detectSessionInUrl=true)
-        //    и сохраним сессию в storage
-        const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        // 2) Если implicit flow с токенами в hash
+        if (access_token && refresh_token) {
+          setStatus("Setting session from hash tokens...");
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (error) throw error;
 
-        // Иногда нужно чуть подождать, чтобы состояние синхронизировалось
-        // (особенно после перехода по magic link)
-        if (!data.session) {
-          // пробуем ещё раз коротко
-          await new Promise((r) => setTimeout(r, 300));
-          const retry = await supabase.auth.getSession();
-          if (retry.error) throw retry.error;
+          setStatus("Session created via setSession(hash tokens).");
+          setDetails((prev: any) => ({ ...prev, session: data.session }));
+
+          // подчистим hash, чтобы не оставлять токены в адресной строке
+          if (window.location.hash) {
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname + window.location.search
+            );
+          }
+
+          router.replace("/dashboard");
+          return;
         }
 
-        if (cancelled) return;
+        // 3) Если ничего не пришло — покажем сессию, вдруг она уже есть
+        setStatus("No code/tokens in URL. Checking existing session...");
+        const { data } = await supabase.auth.getSession();
+        setDetails((prev: any) => ({ ...prev, existingSession: data.session }));
 
-        const next = searchParams.get("next") || "/dashboard";
-        router.replace(next);
+        if (data.session) {
+          setStatus("Existing session found. Redirecting to /dashboard...");
+          router.replace("/dashboard");
+          return;
+        }
+
+        setStatus("No session. Redirecting to /login...");
+        router.replace("/login");
       } catch (e: any) {
-        const msg = e?.message ?? "Auth callback failed";
-        router.replace(`/login?error=${encodeURIComponent(msg)}`);
+        console.error("Auth callback error:", e);
+        setStatus("ERROR in callback. See details below.");
+        setDetails((prev: any) => ({
+          ...prev,
+          error: {
+            message: e?.message ?? String(e),
+            name: e?.name,
+            status: e?.status,
+          },
+        }));
       }
-    }
+    };
 
     run();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, searchParams]);
+  }, [router, searchParams, supabase]);
 
   return (
-    <main className="mx-auto max-w-md px-4 py-10">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-center">
-        <div className="text-lg font-semibold">Signing you in…</div>
-        <div className="mt-2 text-sm text-zinc-400">
-          Please wait, redirecting to your dashboard.
-        </div>
-      </div>
-    </main>
+    <div className="mx-auto max-w-2xl p-6">
+      <h1 className="text-xl font-semibold">Auth Callback</h1>
+      <p className="mt-2 text-sm opacity-80">{status}</p>
+
+      <pre className="mt-4 overflow-auto rounded-lg border p-4 text-xs">
+        {JSON.stringify(details, null, 2)}
+      </pre>
+    </div>
   );
 }
