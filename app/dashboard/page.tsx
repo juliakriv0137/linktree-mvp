@@ -68,6 +68,16 @@ type LinksContent = {
   items?: Array<{ title?: string; url?: string }>;
 };
 
+type ImageContent = {
+  url?: string;
+  alt?: string;
+  shape?: "circle" | "rounded" | "square";
+};
+
+type TextContent = {
+  text?: string;
+};
+
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
 }
@@ -216,9 +226,9 @@ async function createBlock(
             url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
             alt: "Profile image",
             shape: "circle",
-          } as any)
+          } satisfies ImageContent)
         : type === "text"
-          ? ({ text: "Your text here" } as any)
+          ? ({ text: "Your text here" } satisfies TextContent)
           : type === "divider"
             ? ({ style: "line" } as any)
             : ({
@@ -345,11 +355,13 @@ function Textarea({
   value,
   onChange,
   placeholder,
+  rows = 3,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  rows?: number;
 }) {
   return (
     <label className="block">
@@ -358,7 +370,7 @@ function Textarea({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        rows={3}
+        rows={rows}
         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
       />
     </label>
@@ -448,6 +460,7 @@ function HeroEditor({
         value={subtitle}
         onChange={setSubtitle}
         placeholder="Short bio / tagline"
+        rows={3}
       />
 
       <div className="flex gap-2">
@@ -638,6 +651,180 @@ function LinksEditor({
         Tip: можно вставлять{" "}
         <span className="text-white/60">t.me/username</span> — мы добавим
         https:// автоматически.
+      </div>
+    </div>
+  );
+}
+
+/** ✅ NEW: Image editor (fix A.1) */
+function ImageEditor({
+  block,
+  onSave,
+}: {
+  block: BlockRow;
+  onSave: (next: ImageContent) => Promise<void>;
+}) {
+  const initial = (block.content ?? {}) as ImageContent;
+
+  const [url, setUrl] = useState<string>(initial.url ?? "");
+  const [alt, setAlt] = useState<string>(initial.alt ?? "");
+  const [shape, setShape] = useState<ImageContent["shape"]>(
+    (initial.shape as any) ?? "circle",
+  );
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const c = (block.content ?? {}) as ImageContent;
+    setUrl(c.url ?? "");
+    setAlt(c.alt ?? "");
+    setShape((c.shape as any) ?? "circle");
+  }, [block.id, block.content]);
+
+  const urlOk = !safeTrim(url) ? false : isValidHttpUrl(url);
+
+  const previewRadius =
+    shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+
+  return (
+    <div className="space-y-4">
+      <div className="text-xs text-white/50">Image block</div>
+
+      <label className="block">
+        <div className="text-sm text-white/80 mb-2">Image URL</div>
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://..."
+          className={clsx(
+            "w-full rounded-2xl border bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
+            urlOk ? "border-white/10" : "border-red-500/50",
+          )}
+        />
+        {!urlOk && safeTrim(url) && (
+          <div className="text-xs text-red-300 mt-2">
+            URL must be http(s). Example: https://images.unsplash.com/...
+          </div>
+        )}
+      </label>
+
+      <Input
+        label="Alt text"
+        value={alt}
+        onChange={setAlt}
+        placeholder="Describe the image (optional)"
+      />
+
+      <label className="block">
+        <div className="text-sm text-white/80 mb-2">Shape</div>
+        <select
+          className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+          value={shape ?? "circle"}
+          onChange={(e) => setShape(e.target.value as any)}
+        >
+          <option value="circle">Circle</option>
+          <option value="rounded">Rounded</option>
+          <option value="square">Square</option>
+        </select>
+      </label>
+
+      <div
+        style={{
+          background: "var(--card-bg)",
+          border: "var(--card-border)",
+          boxShadow: "var(--card-shadow)",
+          padding: "var(--card-padding)",
+          borderRadius: "var(--button-radius)",
+        }}
+        className="space-y-3"
+      >
+        <div className="text-xs text-white/50">Preview</div>
+
+        {urlOk ? (
+  <div className="mx-auto w-full max-w-[360px] aspect-square overflow-hidden">
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img
+      src={normalizeUrl(url)}
+      alt={alt || "Image preview"}
+      className="h-full w-full object-cover"
+      style={{ borderRadius: previewRadius }}
+    />
+  </div>
+) : (
+  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">
+    Add a valid image URL to see preview.
+  </div>
+)}
+
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          variant="primary"
+          disabled={saving || !urlOk}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await onSave({
+                url: normalizeUrl(url),
+                alt: safeTrim(alt),
+                shape: shape ?? "circle",
+              });
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {saving ? "Saving..." : "Save image"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** ✅ NEW: Text editor (fix A.1) */
+function TextEditor({
+  block,
+  onSave,
+}: {
+  block: BlockRow;
+  onSave: (next: TextContent) => Promise<void>;
+}) {
+  const initial = (block.content ?? {}) as TextContent;
+  const [text, setText] = useState<string>(initial.text ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const c = (block.content ?? {}) as TextContent;
+    setText(c.text ?? "");
+  }, [block.id, block.content]);
+
+  return (
+    <div className="space-y-4">
+      <div className="text-xs text-white/50">Text block</div>
+
+      <Textarea
+        label="Text"
+        value={text}
+        onChange={setText}
+        placeholder="Write something..."
+        rows={6}
+      />
+
+      <div className="flex gap-2">
+        <Button
+          variant="primary"
+          disabled={saving || !safeTrim(text)}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await onSave({ text: safeTrim(text) });
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {saving ? "Saving..." : "Save text"}
+        </Button>
       </div>
     </div>
   );
@@ -1378,18 +1565,28 @@ export default function DashboardPage() {
                             />
                           )}
 
+                          {/* ✅ FIXED: Image editor */}
                           {isImage && (
-                            <div className="text-xs text-white/60">
-                              Image editor оставлен как был в твоём файле — если нужно, я верну его полностью
-                              (ты его прислала не до конца в сообщении).
-                            </div>
+                            <ImageEditor
+                              block={b}
+                              onSave={async (content) => {
+                                await updateBlock(b.id, { content });
+                                const bs = await loadBlocks(site!.id);
+                                setBlocks(bs);
+                              }}
+                            />
                           )}
 
+                          {/* ✅ FIXED: Text editor */}
                           {isText && (
-                            <div className="text-xs text-white/60">
-                              Text editor оставлен как был в твоём файле — если нужно, я верну его полностью
-                              (ты его прислала не до конца в сообщении).
-                            </div>
+                            <TextEditor
+                              block={b}
+                              onSave={async (content) => {
+                                await updateBlock(b.id, { content });
+                                const bs = await loadBlocks(site!.id);
+                                setBlocks(bs);
+                              }}
+                            />
                           )}
 
                           {isDivider && (
