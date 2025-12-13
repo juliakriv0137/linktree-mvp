@@ -10,3 +10,7 @@ dist
 *.bak
 supabase/.temp/
 .vercel
+
+# env files
+.env*.local
+.env.production.local
