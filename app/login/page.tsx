@@ -7,7 +7,6 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { useToast } from "@/components/Toast";
-import { env } from "@/lib/env";
 
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
@@ -18,7 +17,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const redirectTo = `${env.NEXT_PUBLIC_SITE_URL}/dashboard`;
+      const redirectTo = `${window.location.origin}/dashboard`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: redirectTo },
