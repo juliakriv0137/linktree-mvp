@@ -28,6 +28,8 @@ type SiteRow = {
   slug: string;
   name: string | null;
   theme: any;
+  layout_width: "compact" | "wide" | "full";
+
 
   theme_key: string;
   background_style: string;
@@ -62,7 +64,12 @@ type HeroContent = {
   title?: string;
   subtitle?: string;
   avatar?: string | null;
+
+  title_size?: "sm" | "md" | "lg";
+  subtitle_size?: "sm" | "md" | "lg";
+  align?: "left" | "center" | "right";
 };
+
 
 type LinksContent = {
   items?: Array<{ title?: string; url?: string }>;
@@ -76,7 +83,10 @@ type ImageContent = {
 
 type TextContent = {
   text?: string;
+  size?: "sm" | "md" | "lg";
+  align?: "left" | "center" | "right";
 };
+
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -167,6 +177,8 @@ async function ensureSiteForUser(): Promise<SiteRow> {
       theme_key: "midnight",
       button_style: "solid",
       background_style: "solid",
+      layout_width: "compact",
+
 
       // advanced theme defaults
       font_scale: "md",
@@ -280,6 +292,8 @@ async function updateSiteTheme(
       | "border_color"
       | "button_color"
       | "button_text_color"
+      | "layout_width"
+
     >
   >,
 ) {
@@ -429,15 +443,33 @@ function HeroEditor({
   onSave: (next: HeroContent) => Promise<void>;
 }) {
   const initial = (block.content ?? {}) as HeroContent;
+
   const [title, setTitle] = useState(initial.title ?? "");
   const [subtitle, setSubtitle] = useState(initial.subtitle ?? "");
+  const [titleSize, setTitleSize] = useState<HeroContent["title_size"]>(
+    initial.title_size ?? "lg",
+  );
+  const [subtitleSize, setSubtitleSize] = useState<HeroContent["subtitle_size"]>(
+    initial.subtitle_size ?? "md",
+  );
+  const [align, setAlign] = useState<HeroContent["align"]>(initial.align ?? "center");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const c = (block.content ?? {}) as HeroContent;
     setTitle(c.title ?? "");
     setSubtitle(c.subtitle ?? "");
+    setTitleSize((c.title_size as any) ?? "lg");
+    setSubtitleSize((c.subtitle_size as any) ?? "md");
+    setAlign((c.align as any) ?? "center");
   }, [block.id, block.content]);
+
+  const titleClass =
+    titleSize === "sm" ? "text-xl" : titleSize === "md" ? "text-2xl" : "text-3xl";
+  const subtitleClass =
+    subtitleSize === "sm" ? "text-sm" : subtitleSize === "lg" ? "text-lg" : "text-base";
+  const alignClass =
+    align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
   return (
     <div className="space-y-4">
@@ -449,6 +481,7 @@ function HeroEditor({
         onChange={setTitle}
         placeholder="Your name / brand"
       />
+
       <Textarea
         label="Subtitle"
         value={subtitle}
@@ -456,6 +489,75 @@ function HeroEditor({
         placeholder="Short bio / tagline"
         rows={3}
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">Title size</div>
+          <select
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            value={titleSize ?? "lg"}
+            onChange={(e) => setTitleSize(e.target.value as any)}
+          >
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">Subtitle size</div>
+          <select
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            value={subtitleSize ?? "md"}
+            onChange={(e) => setSubtitleSize(e.target.value as any)}
+          >
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">Align</div>
+          <select
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            value={align ?? "center"}
+            onChange={(e) => setAlign(e.target.value as any)}
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
+      </div>
+
+      {/* preview */}
+      <div
+        style={{
+          background: "var(--card-bg)",
+          border: "var(--card-border)",
+          boxShadow: "var(--card-shadow)",
+          padding: "var(--card-padding)",
+          borderRadius: "var(--button-radius)",
+        }}
+        className="space-y-2"
+      >
+        <div className="text-xs text-white/50">Preview</div>
+        <div className={`space-y-1 ${alignClass}`}>
+          <div className={`${titleClass} font-bold text-[rgb(var(--text))]`}>
+            {safeTrim(title) ? title : "Your title…"}
+          </div>
+          {safeTrim(subtitle) ? (
+            <div className={`${subtitleClass} text-[rgb(var(--muted))]`}>
+              {subtitle}
+            </div>
+          ) : (
+            <div className={`${subtitleClass} text-[rgb(var(--muted))] opacity-60`}>
+              Your subtitle…
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="flex gap-2">
         <Button
@@ -468,6 +570,9 @@ function HeroEditor({
                 title: safeTrim(title),
                 subtitle: safeTrim(subtitle),
                 avatar: null,
+                title_size: titleSize ?? "lg",
+                subtitle_size: subtitleSize ?? "md",
+                align: align ?? "center",
               });
             } finally {
               setSaving(false);
@@ -480,6 +585,7 @@ function HeroEditor({
     </div>
   );
 }
+
 
 function LinksEditor({
   block,
@@ -830,13 +936,24 @@ function TextEditor({
   onSave: (next: TextContent) => Promise<void>;
 }) {
   const initial = (block.content ?? {}) as TextContent;
+
   const [text, setText] = useState<string>(initial.text ?? "");
+  const [size, setSize] = useState<TextContent["size"]>(initial.size ?? "md");
+  const [align, setAlign] = useState<TextContent["align"]>(initial.align ?? "left");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const c = (block.content ?? {}) as TextContent;
     setText(c.text ?? "");
+    setSize((c.size as any) ?? "md");
+    setAlign((c.align as any) ?? "left");
   }, [block.id, block.content]);
+
+  const sizeClass =
+    size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
+
+  const alignClass =
+    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
 
   return (
     <div className="space-y-4">
@@ -850,6 +967,51 @@ function TextEditor({
         rows={6}
       />
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">Text size</div>
+          <select
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            value={size ?? "md"}
+            onChange={(e) => setSize(e.target.value as any)}
+          >
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">Align</div>
+          <select
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            value={align ?? "left"}
+            onChange={(e) => setAlign(e.target.value as any)}
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
+      </div>
+
+      {/* preview прямо в редакторе */}
+      <div
+        style={{
+          background: "var(--card-bg)",
+          border: "var(--card-border)",
+          boxShadow: "var(--card-shadow)",
+          padding: "var(--card-padding)",
+          borderRadius: "var(--button-radius)",
+        }}
+        className="space-y-2"
+      >
+        <div className="text-xs text-white/50">Preview</div>
+        <div className={`${sizeClass} ${alignClass} text-[rgb(var(--text))] whitespace-pre-wrap`}>
+          {safeTrim(text) ? text : "Your text preview…"}
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <Button
           variant="primary"
@@ -857,7 +1019,11 @@ function TextEditor({
           onClick={async () => {
             setSaving(true);
             try {
-              await onSave({ text: safeTrim(text) });
+              await onSave({
+                text: safeTrim(text),
+                size: size ?? "md",
+                align: align ?? "left",
+              });
             } finally {
               setSaving(false);
             }
@@ -869,6 +1035,7 @@ function TextEditor({
     </div>
   );
 }
+
 
 function SortableBlockCard({
   id,
@@ -1168,6 +1335,30 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
+
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Layout</div>
+                <select
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  value={(site as any)?.layout_width ?? "compact"}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const layout_width = e.target.value as any;
+                    try {
+                      await updateSiteTheme(site.id, { layout_width } as any);
+                      setSite({ ...(site as any), layout_width } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                  disabled={!site || loading}
+                >
+                  <option value="compact">Compact</option>
+                  <option value="wide">Wide</option>
+                  <option value="full">Full</option>
+                </select>
+              </div>
+
 
               <div className="space-y-1">
                 <div className="text-xs text-white/50">Background</div>

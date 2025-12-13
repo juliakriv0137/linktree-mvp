@@ -93,7 +93,10 @@ export function SiteShell({
       }
       className={`min-h-screen ${bgClass}`}
     >
-      <div className="mx-auto w-full max-w-md px-4 py-10">{children}</div>
+      <div className="w-full">
+  {children}
+</div>
+
     </div>
   );
 }
