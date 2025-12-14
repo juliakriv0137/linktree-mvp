@@ -31,6 +31,8 @@ type BlockRow = {
   id: string;
   site_id: string;
   type: "hero" | "links" | "image" | "text" | "divider";
+  variant?: string | null;
+  style?: Record<string, unknown> | null;
   content: any;
   position: number;
   is_visible: boolean;
