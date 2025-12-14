@@ -1,40 +1,54 @@
-import Link from "next/link";
+"use client";
+
+import React from "react";
 
 type ButtonStyle = "solid" | "outline" | "soft";
+
+function clsx(...xs: Array<string | false | null | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
 
 export function LinkButton({
   href,
   label,
-  buttonStyle = "solid",
+  buttonStyle,
+  className,
 }: {
   href: string;
   label: string;
-  buttonStyle?: ButtonStyle;
+  buttonStyle: ButtonStyle;
+  className?: string;
 }) {
   const base =
-    "w-full inline-flex items-center justify-center px-4 py-3 text-sm font-medium transition active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--primary)/0.35)]";
+    "inline-flex items-center justify-center font-semibold transition select-none " +
+    "focus:outline-none focus:ring-2 focus:ring-white/25 " +
+    "active:scale-[0.99]";
 
-  // ВАЖНО: радиус берём из CSS var, а не из Tailwind класса
-  const radiusStyle: React.CSSProperties = {
-    borderRadius: "var(--button-radius)",
-  };
+  // ВАЖНО: фикс ширины кнопки, чтобы выравнивание работало.
+  // Кнопка не w-full — она ограничена, и контейнер решает left/center/right.
+  const width = "w-[min(360px,100%)]";
 
-  const variant =
-    buttonStyle === "outline"
-      ? "border border-[rgb(var(--border))] bg-transparent hover:bg-[rgb(var(--text)/0.06)] text-[rgb(var(--text))]"
-      : buttonStyle === "soft"
-      ? "border border-[rgb(var(--border))] bg-[rgb(var(--primary)/0.14)] hover:bg-[rgb(var(--primary)/0.22)] text-[rgb(var(--text))]"
-      : "border border-transparent bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary)/0.88)] text-[rgb(var(--button-text))]";
+  const padding = "px-5 py-3 text-sm";
+
+  const solid = "bg-[rgb(var(--primary))] text-[rgb(var(--button-text))] hover:opacity-95";
+  const outline =
+    "bg-transparent text-[rgb(var(--text))] border border-[rgb(var(--border))] hover:bg-white/5";
+  const soft = "bg-white/8 text-[rgb(var(--text))] hover:bg-white/12";
+
+  const styleClass =
+    buttonStyle === "outline" ? outline : buttonStyle === "soft" ? soft : solid;
 
   return (
-    <Link
+    <a
       href={href}
       target="_blank"
-      rel="noopener noreferrer"
-      style={radiusStyle}
-      className={`${base} ${variant}`}
+      rel="noreferrer"
+      className={clsx(base, width, padding, styleClass, className)}
+      style={{
+        borderRadius: "var(--button-radius)",
+      }}
     >
       {label}
-    </Link>
+    </a>
   );
 }

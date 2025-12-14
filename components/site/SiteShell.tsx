@@ -11,6 +11,8 @@ function clampNumber(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+export type LayoutWidth = "compact" | "wide" | "full";
+
 type Props = {
   children: React.ReactNode;
   themeKey?: string | null;
@@ -20,6 +22,7 @@ type Props = {
   buttonRadius?: "md" | "xl" | "2xl" | "full" | number | null;
   cardStyle?: "plain" | "card";
   themeOverrides?: ThemeOverrides | null;
+  layoutWidth?: LayoutWidth;
 };
 
 export function SiteShell({
@@ -30,6 +33,7 @@ export function SiteShell({
   buttonRadius = "2xl",
   cardStyle = "card",
   themeOverrides,
+  layoutWidth = "compact",
 }: Props) {
   const vars = cssVarsFromSiteTheme(themeKey, themeOverrides);
 
@@ -93,10 +97,10 @@ export function SiteShell({
       }
       className={`min-h-screen ${bgClass}`}
     >
-      <div className="w-full">
-  {children}
-</div>
-
+      {/* group + data-layout-width нужны, чтобы LinksBlock мог нормализовать ширину в wide/full */}
+      <div className="group w-full" data-layout-width={layoutWidth}>
+        {children}
+      </div>
     </div>
   );
 }

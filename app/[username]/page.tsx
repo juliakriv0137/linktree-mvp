@@ -18,7 +18,6 @@ type SiteRow = {
   card_style?: "plain" | "card";
 
   layout_width?: "compact" | "wide" | "full";
-  
 
   bg_color?: string | null;
   text_color?: string | null;
@@ -51,20 +50,14 @@ function normalizeUrl(raw: any) {
 function layoutToContainerClasses(
   layout: "compact" | "wide" | "full" | null | undefined,
 ) {
-  // compact = linktree-like (narrow)
-  if (layout === "compact" || !layout) {
-    return "mx-auto w-full max-w-md px-4 py-10";
+  if (layout === "full") {
+    return "mx-auto w-full max-w-7xl px-6 sm:px-10 lg:px-14 py-12";
   }
-
-  // wide = centered page (wider)
   if (layout === "wide") {
-    return "mx-auto w-full max-w-3xl px-6 sm:px-10 py-10";
+    return "mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-14 py-12";
   }
-
-  // full = truly full width (widest)
-  return "w-full max-w-none px-4 sm:px-10 lg:px-16 py-10";
+  return "mx-auto w-full max-w-lg px-4 py-10";
 }
-
 
 function fontScaleToCss(fontScale: SiteRow["font_scale"]) {
   if (fontScale === "sm") return "0.95rem";
@@ -72,7 +65,13 @@ function fontScaleToCss(fontScale: SiteRow["font_scale"]) {
   return "1rem";
 }
 
-
+function justifyClassFromAlign(align: "left" | "center" | "right") {
+  return align === "left"
+    ? "justify-start"
+    : align === "right"
+      ? "justify-end"
+      : "justify-center";
+}
 
 export default async function PublicPage({
   params,
@@ -106,8 +105,25 @@ export default async function PublicPage({
 
   const visibleBlocks = (blocks ?? []).filter((b: BlockRow) => b.is_visible);
 
-  const containerClass = layoutToContainerClasses(s.layout_width ?? "compact");
+  const layoutWidth = (s.layout_width ?? "compact") as "compact" | "wide" | "full";
+  const containerClass = layoutToContainerClasses(layoutWidth);
   const fontSize = fontScaleToCss(s.font_scale ?? "md");
+
+  // “блок links” как у сайта: ограничиваем максимальную ширину области,
+  // относительно которой работает left/center/right
+  const linksBlockWidthClass =
+  layoutWidth === "full"
+    ? "mx-auto w-full max-w-5xl"
+    : layoutWidth === "wide"
+      ? "mx-auto w-full max-w-4xl"
+      : "mx-auto w-full max-w-md";
+
+
+  // Ширина “карточки кнопки” (LinkButton внутри = w-full)
+  // В wide/full делаем “сайтовую” ширину; в compact — на всю ширину контейнера
+  const buttonRowWidthClass =
+  layoutWidth === "full" || layoutWidth === "wide" ? "w-[320px] max-w-full" : "w-full";
+
 
   return (
     <SiteShell
@@ -117,6 +133,7 @@ export default async function PublicPage({
       fontScale={(s.font_scale ?? "md") as any}
       buttonRadius={(s.button_radius ?? "2xl") as any}
       cardStyle={(s.card_style ?? "card") as any}
+      layoutWidth={layoutWidth}
       themeOverrides={{
         bg_color: s.bg_color ?? null,
         text_color: s.text_color ?? null,
@@ -126,7 +143,7 @@ export default async function PublicPage({
         button_text_color: s.button_text_color ?? null,
       }}
     >
-      {/* ✅ Fallback font scale: если SiteShell вдруг не применил */}
+      {/* Fallback font scale */}
       <div style={{ fontSize }}>
         <div className={containerClass}>
           <div
@@ -153,24 +170,16 @@ export default async function PublicPage({
                   const subtitle = safeTrim(b.content?.subtitle);
 
                   const titleSize =
-                    (b.content?.title_size as "sm" | "md" | "lg" | undefined) ??
-                    "lg";
+                    (b.content?.title_size as "sm" | "md" | "lg" | undefined) ?? "lg";
                   const subtitleSize =
                     (b.content?.subtitle_size as "sm" | "md" | "lg" | undefined) ??
                     "md";
                   const align =
-                    (b.content?.align as
-                      | "left"
-                      | "center"
-                      | "right"
-                      | undefined) ?? "center";
+                    (b.content?.align as "left" | "center" | "right" | undefined) ??
+                    "center";
 
                   const titleClass =
-                    titleSize === "sm"
-                      ? "text-xl"
-                      : titleSize === "md"
-                        ? "text-2xl"
-                        : "text-3xl";
+                    titleSize === "sm" ? "text-xl" : titleSize === "md" ? "text-2xl" : "text-3xl";
 
                   const subtitleClass =
                     subtitleSize === "sm"
@@ -180,21 +189,13 @@ export default async function PublicPage({
                         : "text-base";
 
                   const alignClass =
-                    align === "left"
-                      ? "text-left"
-                      : align === "right"
-                        ? "text-right"
-                        : "text-center";
+                    align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
                   return (
                     <div key={b.id} className={`${alignClass} space-y-2`}>
-                      <div className={`${titleClass} font-bold text-[rgb(var(--text))]`}>
-                        {title}
-                      </div>
+                      <div className={`${titleClass} font-bold text-[rgb(var(--text))]`}>{title}</div>
                       {subtitle ? (
-                        <div className={`${subtitleClass} text-[rgb(var(--muted))]`}>
-                          {subtitle}
-                        </div>
+                        <div className={`${subtitleClass} text-[rgb(var(--muted))]`}>{subtitle}</div>
                       ) : null}
                     </div>
                   );
@@ -205,8 +206,7 @@ export default async function PublicPage({
                   const alt = safeTrim(b.content?.alt) || "Image";
                   const shape = (b.content?.shape as "circle" | "rounded" | "square") ?? "circle";
 
-                  const radius =
-                    shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+                  const radius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
 
                   if (!url) return null;
 
@@ -227,28 +227,14 @@ export default async function PublicPage({
                   const text = safeTrim(b.content?.text);
                   if (!text) return null;
 
-                  const size =
-                    (b.content?.size as "sm" | "md" | "lg" | undefined) ?? "md";
+                  const size = (b.content?.size as "sm" | "md" | "lg" | undefined) ?? "md";
                   const align =
-                    (b.content?.align as
-                      | "left"
-                      | "center"
-                      | "right"
-                      | undefined) ?? "left";
+                    (b.content?.align as "left" | "center" | "right" | undefined) ?? "left";
 
-                  const sizeClass =
-                    size === "sm"
-                      ? "text-sm"
-                      : size === "lg"
-                        ? "text-lg"
-                        : "text-base";
+                  const sizeClass = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
 
                   const alignClass =
-                    align === "center"
-                      ? "text-center"
-                      : align === "right"
-                        ? "text-right"
-                        : "text-left";
+                    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
 
                   return (
                     <div
@@ -266,21 +252,40 @@ export default async function PublicPage({
                     .map((x: any) => ({
                       title: safeTrim(x?.title),
                       url: normalizeUrl(x?.url),
+                      // поддерживаем и вариант "align на блоке", и вариант "align в каждой кнопке"
+                      // (если у тебя в items уже есть align — он будет работать)
+                      align: (x?.align as "left" | "center" | "right" | undefined) ?? null,
                     }))
                     .filter((x: any) => x.title && x.url);
 
                   if (!items.length) return null;
 
+                  const blockAlign =
+                    (b.content?.align as "left" | "center" | "right" | undefined) ?? "center";
+
                   return (
-                    <div key={b.id} className="flex flex-col gap-3">
-                      {items.map((it: any, i: number) => (
-                        <LinkButton
-                          key={`${b.id}-${i}`}
-                          href={it.url}
-                          label={it.title}
-                          buttonStyle={(s.button_style ?? "solid") as any}
-                        />
-                      ))}
+                    <div key={b.id} className="w-full">
+                      {/* ограничиваем ширину “области блока links” как у сайта */}
+                      <div className={linksBlockWidthClass}>
+                        <div className="space-y-4">
+                          {items.map((it: any, i: number) => {
+                            const a = (it.align as "left" | "center" | "right" | null) ?? blockAlign;
+                            const justifyClass = justifyClassFromAlign(a);
+
+                            return (
+                              <div key={`${b.id}-${i}`} className={`flex w-full ${justifyClass}`}>
+                                <div className={buttonRowWidthClass}>
+                                  <LinkButton
+                                    href={it.url}
+                                    label={it.title}
+                                    buttonStyle={(s.button_style ?? "solid") as any}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   );
                 }
