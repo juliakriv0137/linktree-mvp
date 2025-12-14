@@ -1,0 +1,51 @@
+import * as React from "react";
+import { BlockRegistry } from "@/lib/blocks/registry";
+
+export type SiteBlockRow = {
+  id: string;
+  site_id: string;
+  type: string;
+  variant?: string | null;
+  style?: Record<string, unknown> | null;
+  content: Record<string, unknown> | null;
+  sort_order: number;
+  is_hidden?: boolean | null;
+};
+
+export type BlocksRendererSiteCtx = {
+  layout_width?: "compact" | "wide" | "full" | string | null;
+  button_style?: "solid" | "outline" | "soft" | string | null;
+};
+
+export type BlocksRendererProps = {
+  blocks: SiteBlockRow[];
+  mode: "public" | "preview";
+  site?: BlocksRendererSiteCtx;
+};
+
+export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
+  const sorted = React.useMemo(() => {
+    return [...blocks]
+      .filter((b) => !b.is_hidden)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }, [blocks]);
+
+  return (
+    <>
+      {sorted.map((block) => {
+        const entry = BlockRegistry[block.type];
+        if (!entry) {
+          return (
+            <div key={block.id} className="rounded-xl border p-3 text-sm opacity-70">
+              Unknown block type: <span className="font-mono">{block.type}</span>
+            </div>
+          );
+        }
+
+        const Comp = entry.render;
+
+        return <Comp key={block.id} block={block} mode={mode} site={site} />;
+      })}
+    </>
+  );
+}
