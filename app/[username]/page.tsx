@@ -122,7 +122,10 @@ export default async function PublicPage({
   // Ширина “карточки кнопки” (LinkButton внутри = w-full)
   // В wide/full делаем “сайтовую” ширину; в compact — на всю ширину контейнера
   const buttonRowWidthClass =
-  layoutWidth === "full" || layoutWidth === "wide" ? "w-[320px] max-w-full" : "w-full";
+  layoutWidth === "compact"
+    ? "w-[280px] max-w-full"
+    : "w-[320px] max-w-full";
+
 
 
   return (
@@ -270,19 +273,19 @@ export default async function PublicPage({
                         <div className="space-y-4">
                           {items.map((it: any, i: number) => {
                             const a = (it.align as "left" | "center" | "right" | null) ?? blockAlign;
-                            const justifyClass = justifyClassFromAlign(a);
+                            const rowAlignClass =
+  a === "left" ? "mr-auto" : a === "right" ? "ml-auto" : "mx-auto";
 
-                            return (
-                              <div key={`${b.id}-${i}`} className={`flex w-full ${justifyClass}`}>
-                                <div className={buttonRowWidthClass}>
-                                  <LinkButton
-                                    href={it.url}
-                                    label={it.title}
-                                    buttonStyle={(s.button_style ?? "solid") as any}
-                                  />
-                                </div>
-                              </div>
-                            );
+return (
+  <div key={`${b.id}-${i}`} className={`${buttonRowWidthClass} ${rowAlignClass}`}>
+    <LinkButton
+      href={it.url}
+      label={it.title}
+      buttonStyle={(s.button_style ?? "solid") as any}
+    />
+  </div>
+);
+
                           })}
                         </div>
                       </div>

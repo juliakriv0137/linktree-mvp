@@ -674,28 +674,7 @@ function LinksEditor({
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-white/50">Links block</div>
-
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "16px",
-          borderRadius: "var(--button-radius)",
-        }}
-        className="space-y-3"
-      >
-        <div className="text-sm text-white/80">Buttons alignment</div>
-        <div className="flex flex-wrap gap-2">
-          <AlignButton value="left" label="Left" />
-          <AlignButton value="center" label="Center" />
-          <AlignButton value="right" label="Right" />
-        </div>
-        <div className="text-xs text-white/40">
-          Это выравнивание всего блока кнопок. У каждой кнопки можно переопределить отдельно.
-        </div>
-      </div>
+      
 
       <div className="space-y-3">
         {items.map((it, idx) => {
@@ -860,9 +839,7 @@ function LinksEditor({
         </Button>
       </div>
 
-      <div className="text-xs text-white/40">
-        Tip: можно вставлять <span className="text-white/60">t.me/username</span> — мы добавим https:// автоматически.
-      </div>
+     
 
       {hasPartials && (
         <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-100/90">
@@ -1125,19 +1102,21 @@ function SortableBlockRow({
       >
         <div className="flex items-center gap-2">
           {/* drag handle */}
-          <div
-            className="flex items-center justify-center rounded-xl border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/70"
-            {...attributes}
-            {...listeners}
-            aria-label="Drag to reorder"
-            title="Drag to reorder"
-            onPointerDown={(e) => {
-              // важно: не даём клику выбрать блок, когда тащим
-              e.stopPropagation();
-            }}
-          >
-            ⠿
-          </div>
+<div
+  className="flex items-center justify-center rounded-xl border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/70 cursor-grab active:cursor-grabbing"
+  {...attributes}
+  {...listeners}
+  aria-label="Drag to reorder"
+  title="Drag to reorder"
+  onClick={(e) => {
+    // чтобы клик по ручке не выбирал блок
+    e.stopPropagation();
+  }}
+>
+  ⠿
+</div>
+
+
   
           {/* clickable area to select */}
           <button
@@ -1157,9 +1136,10 @@ function SortableBlockRow({
   
           {/* actions */}
           <div className="flex items-center gap-2">
-            <IconButton title={block.is_visible ? "Hide" : "Show"} onClick={onToggleVisible} disabled={disabled}>
-              {block.is_visible ? "🙈" : "👁️"}
-            </IconButton>
+          <IconButton title={block.is_visible ? "Hide" : "Show"} onClick={onToggleVisible} disabled={disabled}>
+  {block.is_visible ? "🙈" : "👁️"}
+</IconButton>
+
             <IconButton title="Delete" onClick={onDelete} disabled={disabled}>
               🗑️
             </IconButton>
@@ -1587,7 +1567,8 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-[1400px] px-4 py-6">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_380px]">
           {/* LEFT: Blocks list */}
-          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden">
+          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
+
             <div className="p-4 border-b border-white/10">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -1726,42 +1707,42 @@ export default function DashboardPage() {
           </Card>
 
           {/* RIGHT: Inspector (Theme + selected block editor) */}
-          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold">Inspector</div>
-                <div className="text-xs text-white/50 mt-1">Edit theme or selected block.</div>
-              </div>
+          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
+  {/* HEADER — НЕ скроллится */}
+  <div className="shrink-0 p-4 border-b border-white/10 bg-black/20">
+    <div>
+      <div className="text-sm font-semibold">Inspector</div>
+      <div className="text-xs text-white/50 mt-1">Edit theme or selected block.</div>
+    </div>
 
-              <div className="flex items-center gap-2">
-  <button
-    type="button"
-    onClick={() => setInspectorTab("block")}
-    className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold border transition",
-      inspectorTab === "block"
-        ? "border-white/25 bg-white/10 text-white"
-        : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
-    )}
-  >
-    Block
-  </button>
+    <div className="mt-3 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setInspectorTab("block")}
+        className={clsx(
+          "rounded-full px-3 py-2 text-xs font-semibold border transition",
+          inspectorTab === "block"
+            ? "border-white/25 bg-white/10 text-white"
+            : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
+        )}
+      >
+        Block
+      </button>
 
-  <button
-    type="button"
-    onClick={() => setInspectorTab("theme")}
-    className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold border transition",
-      inspectorTab === "theme"
-        ? "border-white/25 bg-white/10 text-white"
-        : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
-    )}
-  >
-    Theme
-  </button>
-</div>
-
-            </div>
+      <button
+        type="button"
+        onClick={() => setInspectorTab("theme")}
+        className={clsx(
+          "rounded-full px-3 py-2 text-xs font-semibold border transition",
+          inspectorTab === "theme"
+            ? "border-white/25 bg-white/10 text-white"
+            : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
+        )}
+      >
+        Theme
+      </button>
+    </div>
+  </div>
 
             <div className="p-4 lg:h-[calc(100%-56px)] lg:overflow-auto space-y-4">
               {/* Theme */}

@@ -22,7 +22,9 @@ export default function LoginPage() {
     try {
       // Важно: редиректим НЕ на /dashboard, а на /auth/callback
       const origin = window.location.origin;
-      const emailRedirectTo = `${origin}/auth/callback?next=/dashboard`;
+const emailRedirectTo = `${origin}/auth/callback`;
+
+
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
