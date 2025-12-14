@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
+import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/lib/supabaseClient";
 import InsertBlockMenu from "@/components/InsertBlockMenu";
@@ -1694,9 +1695,14 @@ export default function DashboardPage() {
                     }}
                   >
                     <div className="space-y-4">
-                      {blocks.map((b) => (
-                        <PreviewBlock key={b.id} block={b} buttonStyle={(site?.button_style ?? "solid") as any} />
-                      ))}
+                      <BlocksRenderer
+                        blocks={(blocks.filter((b) => b.is_visible) as any) ?? []}
+                        mode="preview"
+                        site={{
+                          layout_width: (site as any)?.layout_width ?? "compact",
+                          button_style: (site?.button_style ?? "solid") as any,
+                        }}
+                      />
                     </div>
                   </SiteShell>
                 </div>
