@@ -25,6 +25,7 @@ import { LinkButton } from "@/components/site/LinkButton";
 import { HeroEditor } from "@/components/dashboard/editors/HeroEditor";
 import { LinksEditor } from "@/components/dashboard/editors/LinksEditor";
 import { ImageEditor } from "@/components/dashboard/editors/ImageEditor";
+import { TextEditor } from "@/components/dashboard/editors/TextEditor";
 
 
 
@@ -489,110 +490,6 @@ function ColorField({
           className="h-[44px] w-full cursor-pointer rounded-xl border border-white/10 bg-transparent p-1"
           aria-label={`${label} color picker`}
         />
-      </div>
-    </div>
-  );
-}
-
-/** Block Editors (same logic) */
-
-
-
-
-
-function TextEditor({
-  block,
-  onSave,
-}: {
-  block: BlockRow;
-  onSave: (next: TextContent) => Promise<void>;
-}) {
-  const initial = (block.content ?? {}) as TextContent;
-
-  const [text, setText] = useState<string>(initial.text ?? "");
-  const [size, setSize] = useState<TextContent["size"]>(initial.size ?? "md");
-  const [align, setAlign] = useState<TextContent["align"]>(initial.align ?? "left");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const c = (block.content ?? {}) as TextContent;
-    setText(c.text ?? "");
-    setSize((c.size as any) ?? "md");
-    setAlign((c.align as any) ?? "left");
-  }, [block.id, block.content]);
-
-  const sizeClass = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
-  const alignClass = align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
-
-  return (
-    <div className="space-y-4">
-      <div className="text-xs text-white/50">Text block</div>
-
-      <Textarea label="Text" value={text} onChange={setText} placeholder="Write something..." rows={6} />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label className="block">
-          <div className="text-sm text-white/80 mb-2">Text size</div>
-          <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-            value={size ?? "md"}
-            onChange={(e) => setSize(e.target.value as any)}
-          >
-            <option value="sm">Small</option>
-            <option value="md">Medium</option>
-            <option value="lg">Large</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <div className="text-sm text-white/80 mb-2">Align</div>
-          <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-            value={align ?? "left"}
-            onChange={(e) => setAlign(e.target.value as any)}
-          >
-            <option value="left">Left</option>
-            <option value="center">Center</option>
-            <option value="right">Right</option>
-          </select>
-        </label>
-      </div>
-
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-        className="space-y-2"
-      >
-        <div className="text-xs text-white/50">Preview</div>
-        <div className={`${sizeClass} ${alignClass} text-[rgb(var(--text))] whitespace-pre-wrap`}>
-          {safeTrim(text) ? text : "Your text preview…"}
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant="primary"
-          disabled={saving || !safeTrim(text)}
-          onClick={async () => {
-            setSaving(true);
-            try {
-              await onSave({
-                text: safeTrim(text),
-                size: size ?? "md",
-                align: (align as any) ?? "left",
-              });
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? "Saving..." : "Save text"}
-        </Button>
       </div>
     </div>
   );
@@ -1634,7 +1531,7 @@ export default function DashboardPage() {
                     />
                   ) : selectedBlock.type === "text" ? (
                     <TextEditor
-                      block={selectedBlock}
+                    block={selectedBlock as any}
                       onSave={async (content) => {
                         await updateBlock(selectedBlock.id, { content });
                         const bs = await loadBlocks(site!.id);
