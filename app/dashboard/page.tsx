@@ -24,6 +24,7 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
 import { HeroEditor } from "@/components/dashboard/editors/HeroEditor";
 import { LinksEditor } from "@/components/dashboard/editors/LinksEditor";
+import { ImageEditor } from "@/components/dashboard/editors/ImageEditor";
 
 
 
@@ -498,120 +499,6 @@ function ColorField({
 
 
 
-function ImageEditor({
-  block,
-  onSave,
-}: {
-  block: BlockRow;
-  onSave: (next: ImageContent) => Promise<void>;
-}) {
-  const initial = (block.content ?? {}) as ImageContent;
-
-  const [url, setUrl] = useState<string>(initial.url ?? "");
-  const [alt, setAlt] = useState<string>(initial.alt ?? "");
-  const [shape, setShape] = useState<ImageContent["shape"]>((initial.shape as any) ?? "circle");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const c = (block.content ?? {}) as ImageContent;
-    setUrl(c.url ?? "");
-    setAlt(c.alt ?? "");
-    setShape((c.shape as any) ?? "circle");
-  }, [block.id, block.content]);
-
-  const urlOk = !safeTrim(url) ? false : isValidHttpUrl(url);
-
-  const previewRadius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
-
-  return (
-    <div className="space-y-4">
-      <div className="text-xs text-white/50">Image block</div>
-
-      <label className="block">
-        <div className="text-sm text-white/80 mb-2">Image URL</div>
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://..."
-          className={clsx(
-            "w-full rounded-2xl border bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
-            urlOk ? "border-white/10" : "border-red-500/50",
-          )}
-        />
-        {!urlOk && safeTrim(url) && (
-          <div className="text-xs text-red-300 mt-2">URL must be http(s). Example: https://images.unsplash.com/...</div>
-        )}
-      </label>
-
-      <Input label="Alt text" value={alt} onChange={setAlt} placeholder="Describe the image (optional)" />
-
-      <label className="block">
-        <div className="text-sm text-white/80 mb-2">Shape</div>
-        <select
-          className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-          value={shape ?? "circle"}
-          onChange={(e) => setShape(e.target.value as any)}
-        >
-          <option value="circle">Circle</option>
-          <option value="rounded">Rounded</option>
-          <option value="square">Square</option>
-        </select>
-      </label>
-
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-        className="space-y-3"
-      >
-        <div className="text-xs text-white/50">Preview</div>
-
-        {urlOk ? (
-          <div className="mx-auto w-full max-w-[360px] aspect-square overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={normalizeUrl(url)}
-              alt={alt || "Image preview"}
-              className="h-full w-full object-cover"
-              style={{ borderRadius: previewRadius }}
-            />
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">
-            Add a valid image URL to see preview.
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          variant="primary"
-          disabled={saving || !urlOk}
-          onClick={async () => {
-            if (!isValidHttpUrl(url)) return;
-
-            setSaving(true);
-            try {
-              await onSave({
-                url: normalizeUrl(url),
-                alt: safeTrim(alt),
-                shape: shape ?? "circle",
-              });
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? "Saving..." : "Save image"}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function TextEditor({
   block,
