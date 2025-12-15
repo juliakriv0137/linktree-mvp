@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -15,13 +16,15 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
 import { CSS } from "@dnd-kit/utilities";
-import { supabase } from "@/lib/supabaseClient";
+
+import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
 import InsertBlockMenu from "@/components/InsertBlockMenu";
 import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
+import { supabase } from "@/lib/supabaseClient";
+
 import {
   HeroEditor,
   LinksEditor,
@@ -29,10 +32,6 @@ import {
   TextEditor,
   DividerEditor,
 } from "@/components/dashboard/editors";
-
-
-
-
 
 type SiteRow = {
   id: string;
@@ -82,22 +81,17 @@ type HeroContent = {
   align?: "left" | "center" | "right";
   vertical_align?: "top" | "center" | "bottom";
 
-
   // split hero extras
   image_side?: "left" | "right";
   image_size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-    // background hero extras
-    bg_overlay?: "soft" | "medium" | "strong";
-      // background hero extras
-      bg_radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
+  // background hero extras
+  bg_overlay?: "soft" | "medium" | "strong";
+  bg_radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   bg_height?: "sm" | "md" | "lg" | "xl";
 
-
+  // image ratio
   image_ratio?: "auto" | "square" | "4:3" | "16:9" | "3:4" | "9:16";
-
-
-  
 
   // buttons (optional)
   primary_button_title?: string;
@@ -122,6 +116,8 @@ type TextContent = {
   size?: "sm" | "md" | "lg";
   align?: "left" | "center" | "right";
 };
+
+type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style">>;
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -271,7 +267,8 @@ async function createBlock(siteId: string, type: "hero" | "links" | "image" | "t
           : type === "divider"
             ? ({ style: "line" } as any)
             : ({
-                items: [{ title: "Telegram", url: "https://t.me/yourname" }],
+                items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
+                align: "center",
               } satisfies LinksContent);
 
   const { error } = await supabase.from("site_blocks").insert({
@@ -285,10 +282,7 @@ async function createBlock(siteId: string, type: "hero" | "links" | "image" | "t
   if (error) throw error;
 }
 
-async function updateBlock(
-  blockId: string,
-  patch: Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style">>,
-) {
+async function updateBlock(blockId: string, patch: BlockPatch) {
   const { error } = await supabase.from("site_blocks").update(patch).eq("id", blockId);
   if (error) throw error;
 }
@@ -324,13 +318,7 @@ async function updateSiteTheme(
 }
 
 /** UI primitives (dashboard only) */
-function Card({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div
       className={clsx(
@@ -391,64 +379,11 @@ function IconButton({
       }}
       className={clsx(
         "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition",
-        disabled
-          ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5"
-          : "border-white/10 bg-white/5 hover:bg-white/10",
+        disabled ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5" : "border-white/10 bg-white/5 hover:bg-white/10",
       )}
     >
       {children}
     </button>
-  );
-}
-
-function Input({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm text-white/80 mb-2">{label}</div>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
-      />
-    </label>
-  );
-}
-
-function Textarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-  rows = 3,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  rows?: number;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm text-white/80 mb-2">{label}</div>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
-      />
-    </label>
   );
 }
 
@@ -480,9 +415,7 @@ function ColorField({
               isValid ? "border-white/10" : "border-red-500/50",
             )}
           />
-          {!isValid && (
-            <div className="text-xs text-red-300 mt-2">Invalid hex. Use #fff or #ffffff.</div>
-          )}
+          {!isValid && <div className="text-xs text-red-300 mt-2">Invalid hex. Use #fff or #ffffff.</div>}
         </label>
       </div>
 
@@ -516,9 +449,7 @@ function SortableBlockRow({
   onDelete: () => void;
   disabled: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: block.id,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -531,9 +462,7 @@ function SortableBlockRow({
       <div
         className={clsx(
           "w-full rounded-2xl border px-3 py-3 text-left transition",
-          selected
-            ? "border-white/25 bg-white/10"
-            : "border-white/10 bg-white/5 hover:bg-white/10",
+          selected ? "border-white/25 bg-white/10" : "border-white/10 bg-white/5 hover:bg-white/10",
           !block.is_visible && "opacity-70",
         )}
       >
@@ -544,9 +473,7 @@ function SortableBlockRow({
             {...listeners}
             aria-label="Drag to reorder"
             title="Drag to reorder"
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
+            onClick={(e) => e.stopPropagation()}
           >
             ⠿
           </div>
@@ -581,14 +508,8 @@ function SortableBlockRow({
   );
 }
 
-/** Preview renderer (center column) */
-function PreviewBlock({
-  block,
-  buttonStyle,
-}: {
-  block: BlockRow;
-  buttonStyle: any;
-}) {
+/** (legacy) preview helper left here (harmless), but the preview now uses BlocksRenderer */
+function PreviewBlock({ block, buttonStyle }: { block: BlockRow; buttonStyle: any }) {
   if (!block.is_visible) return null;
 
   if (block.type === "divider") {
@@ -601,15 +522,12 @@ function PreviewBlock({
 
   if (block.type === "hero") {
     const c = (block.content ?? {}) as HeroContent;
-
     const title = safeTrim(c.title ?? "");
     const subtitle = safeTrim(c.subtitle ?? "");
     const align = (c.align ?? "center") as "left" | "center" | "right";
 
-    const titleClass =
-      c.title_size === "sm" ? "text-xl" : c.title_size === "md" ? "text-2xl" : "text-3xl";
-    const subtitleClass =
-      c.subtitle_size === "sm" ? "text-sm" : c.subtitle_size === "lg" ? "text-lg" : "text-base";
+    const titleClass = c.title_size === "sm" ? "text-xl" : c.title_size === "md" ? "text-2xl" : "text-3xl";
+    const subtitleClass = c.subtitle_size === "sm" ? "text-sm" : c.subtitle_size === "lg" ? "text-lg" : "text-base";
     const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
     return (
@@ -623,10 +541,7 @@ function PreviewBlock({
         }}
         className="space-y-2 min-w-0"
       >
-        <div
-          className={clsx("space-y-1", alignClass, "min-w-0")}
-          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-        >
+        <div className={clsx("space-y-1", alignClass, "min-w-0")} style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
           <div className={clsx(titleClass, "font-bold text-[rgb(var(--text))]")}>{title || "Your title"}</div>
           {subtitle ? (
             <div className={clsx(subtitleClass, "text-[rgb(var(--muted))]")}>{subtitle}</div>
@@ -642,8 +557,7 @@ function PreviewBlock({
     const c = (block.content ?? {}) as TextContent;
     const text = safeTrim(c.text ?? "");
     const sizeClass = c.size === "sm" ? "text-sm" : c.size === "lg" ? "text-lg" : "text-base";
-    const alignClass =
-      c.align === "center" ? "text-center" : c.align === "right" ? "text-right" : "text-left";
+    const alignClass = c.align === "center" ? "text-center" : c.align === "right" ? "text-right" : "text-left";
 
     return (
       <div
@@ -655,9 +569,7 @@ function PreviewBlock({
           borderRadius: "var(--button-radius)",
         }}
       >
-        <div className={clsx(sizeClass, alignClass, "text-[rgb(var(--text))] whitespace-pre-wrap")}>
-          {text || "Your text here"}
-        </div>
+        <div className={clsx(sizeClass, alignClass, "text-[rgb(var(--text))] whitespace-pre-wrap")}>{text || "Your text here"}</div>
       </div>
     );
   }
@@ -684,17 +596,10 @@ function PreviewBlock({
         {isValidHttpUrl(url) ? (
           <div className="mx-auto w-full max-w-[360px] aspect-square overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={normalizeUrl(url)}
-              alt={alt || "Image"}
-              className="h-full w-full object-cover"
-              style={{ borderRadius: radius }}
-            />
+            <img src={normalizeUrl(url)} alt={alt || "Image"} className="h-full w-full object-cover" style={{ borderRadius: radius }} />
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">
-            Image URL missing / invalid.
-          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">Image URL missing / invalid.</div>
         )}
       </div>
     );
@@ -712,8 +617,7 @@ function PreviewBlock({
       }))
       .filter((x) => x.title && isValidHttpUrl(x.url));
 
-    const alignWrap =
-      blockAlign === "left" ? "items-start" : blockAlign === "right" ? "items-end" : "items-center";
+    const alignWrap = blockAlign === "left" ? "items-start" : blockAlign === "right" ? "items-end" : "items-center";
 
     return (
       <div className={clsx("flex flex-col gap-3", alignWrap)}>
@@ -733,9 +637,7 @@ function PreviewBlock({
         ) : (
           items.map((it, i) => {
             const per = it.align === "left" || it.align === "right" || it.align === "center" ? it.align : blockAlign;
-            const perWrap =
-              per === "left" ? "self-start" : per === "right" ? "self-end" : "self-center";
-
+            const perWrap = per === "left" ? "self-start" : per === "right" ? "self-end" : "self-center";
             return (
               <div key={i} className={perWrap}>
                 <LinkButton href={normalizeUrl(it.url)} label={it.title} buttonStyle={buttonStyle} />
@@ -758,9 +660,7 @@ export default function DashboardPage() {
 
   const [creating, setCreating] = useState<null | "hero" | "links" | "image" | "text" | "divider">(null);
   const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
-  const [inserting, setInserting] = useState<null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }>(
-    null,
-  );
+  const [inserting, setInserting] = useState<null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }>(null);
 
   const [colors, setColors] = useState({
     bg_color: "",
@@ -946,6 +846,34 @@ export default function DashboardPage() {
 
   const canAct = !!site && !loading && !creating && !inserting;
 
+  // ✅ ЕДИНЫЙ onSave для всех editors — больше никакого копипаста и рассинхрона сигнатур
+  const saveSelectedBlock = async (next: BlockPatch) => {
+    if (!selectedBlock || !site) return;
+    await updateBlock(selectedBlock.id, next);
+    const bs = await loadBlocks(site.id);
+    setBlocks(bs);
+  };
+  type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style">>;
+
+  async function reloadBlocksAfterSave() {
+    if (!site) return;
+    const bs = await loadBlocks(site.id);
+    setBlocks(bs);
+  }
+  
+  const saveSelectedBlockContent = async (content: any) => {
+    if (!selectedBlock || !site) return;
+    await updateBlock(selectedBlock.id, { content } as BlockPatch);
+    await reloadBlocksAfterSave();
+  };
+  
+  const saveSelectedHero = async (next: any) => {
+    // next ожидаем как патч (например {content, variant} или {content, variant, style})
+    if (!selectedBlock || !site) return;
+    await updateBlock(selectedBlock.id, next as BlockPatch);
+    await reloadBlocksAfterSave();
+  };
+  
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="sticky top-0 z-30 border-b border-white/10 bg-black/60 backdrop-blur">
@@ -1330,13 +1258,13 @@ export default function DashboardPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Card</div>
+                        <div className="text-xs text-white/50 mb-2">Cards</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
                           value={(site as any)?.card_style ?? "card"}
                           onChange={async (e) => {
                             if (!site) return;
-                            const card_style = e.target.value;
+                            const card_style = e.target.value as any;
                             try {
                               await updateSiteTheme(site.id, { card_style } as any);
                               setSite({ ...(site as any), card_style } as any);
@@ -1346,8 +1274,8 @@ export default function DashboardPage() {
                           }}
                           disabled={!site || loading}
                         >
-                          <option value="card">Card</option>
                           <option value="plain">Plain</option>
+                          <option value="card">Card</option>
                         </select>
                       </label>
                     </div>
@@ -1374,7 +1302,7 @@ export default function DashboardPage() {
                                 button_text_color: null,
                               } as any);
 
-                              const nextSite = {
+                              setSite({
                                 ...site,
                                 bg_color: null,
                                 text_color: null,
@@ -1382,9 +1310,8 @@ export default function DashboardPage() {
                                 border_color: null,
                                 button_color: null,
                                 button_text_color: null,
-                              } as SiteRow;
+                              } as SiteRow);
 
-                              setSite(nextSite);
                               setColors({
                                 bg_color: "",
                                 text_color: "",
@@ -1458,103 +1385,53 @@ export default function DashboardPage() {
                 </Card>
               )}
 
-              {/* BLOCK EDITOR */}
-              <Card className="bg-white/3 shadow-none">
-                <div className="p-4 space-y-4 min-w-0">
-                  <div className="flex items-start justify-between gap-3 min-w-0">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold">Block editor</div>
-                      <div
-                        className="text-xs text-white/50 mt-1 min-w-0"
-                        style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-                      >
-                        {selectedBlock ? (
-                          <>
-                            Editing:{" "}
-                            <span className="text-white/70">
-                              {selectedBlock.type} (pos {selectedBlock.position})
-                            </span>
-                          </>
-                        ) : (
-                          "Select a block on the left."
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedBlock && (
-                      <div className="flex items-center gap-2">
+              {/* BLOCK TAB */}
+              {inspectorTab === "block" && (
+                <>
+                  {!selectedBlock ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">Select a block</div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           disabled={!canAct}
                           onClick={() => toggleVisibility(selectedBlock)}
                           className="px-3 py-2 text-xs"
                         >
-                          {selectedBlock.is_visible ? "Hide" : "Show"}
+                          {selectedBlock.is_visible ? "Toggle visibility" : "Show"}
                         </Button>
+
                         <Button
-                          variant="danger"
+                          variant="ghost"
                           disabled={!canAct}
                           onClick={() => removeBlock(selectedBlock)}
                           className="px-3 py-2 text-xs"
                         >
-                          Delete
+                          Remove
                         </Button>
                       </div>
-                    )}
-                  </div>
 
-                  {!selectedBlock ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">
-                      Click a block in the left panel to edit it here.
-                    </div>
-                  ) : selectedBlock.type === "hero" ? (
-                    <HeroEditor
-                      block={selectedBlock}
-                      onSave={async ({ content, variant }) => {
-                        await updateBlock(selectedBlock.id, { content, variant });
-                        const bs = await loadBlocks(site!.id);
-                        setBlocks(bs);
-                      }}
-                    />
-                  ) : selectedBlock.type === "links" ? (
-                    <LinksEditor
-                      block={selectedBlock}
-                      onSave={async (content) => {
-                        await updateBlock(selectedBlock.id, { content });
-                        const bs = await loadBlocks(site!.id);
-                        setBlocks(bs);
-                      }}
-                    />
-                  ) : selectedBlock.type === "image" ? (
-                    <ImageEditor
-                      block={selectedBlock}
-                      onSave={async (content) => {
-                        await updateBlock(selectedBlock.id, { content });
-                        const bs = await loadBlocks(site!.id);
-                        setBlocks(bs);
-                      }}
-                    />
-                  ) : selectedBlock.type === "text" ? (
-                    <TextEditor
-                    block={selectedBlock as any}
-                      onSave={async (content) => {
-                        await updateBlock(selectedBlock.id, { content });
-                        const bs = await loadBlocks(site!.id);
-                        setBlocks(bs);
-                      }}
-                    />
-                  ) : selectedBlock.type === "divider" ? (
-                    <DividerEditor />
-                  )
-                   : (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">
-                      Unknown block type: <span className="text-white/80">{selectedBlock.type}</span>
-                    </div>
+                      {selectedBlock.type === "hero" ? (
+                        <HeroEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
+                      ) : selectedBlock.type === "text" ? (
+                        <TextEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
+                      ) : selectedBlock.type === "links" ? (
+                        <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
+                      ) : selectedBlock.type === "image" ? (
+                        <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
+                      ) : selectedBlock.type === "divider" ? (
+                        <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
+                      ) : (
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                          No editor wired for:{" "}
+                          <span className="font-mono">{String((selectedBlock as any).type)}</span>
+                        </div>
+                      )}
+                    </>
                   )}
-                </div>
-              </Card>
-
-              <div className="text-center text-xs text-white/35 pt-2">Powered by Mini-Site Builder</div>
+                </>
+              )}
             </div>
           </Card>
         </div>
