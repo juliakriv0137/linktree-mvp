@@ -1413,21 +1413,21 @@ export default function DashboardPage() {
                       </div>
 
                       {selectedBlock.type === "hero" ? (
-                        <HeroEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
-                      ) : selectedBlock.type === "text" ? (
-                        <TextEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
-                      ) : selectedBlock.type === "links" ? (
-                        <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
-                      ) : selectedBlock.type === "image" ? (
-                        <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
-                      ) : selectedBlock.type === "divider" ? (
-                        <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlock} />
-                      ) : (
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
-                          No editor wired for:{" "}
-                          <span className="font-mono">{String((selectedBlock as any).type)}</span>
-                        </div>
-                      )}
+  <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
+) : selectedBlock.type === "text" ? (
+  <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+) : selectedBlock.type === "links" ? (
+  <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+) : selectedBlock.type === "image" ? (
+  <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+) : selectedBlock.type === "divider" ? (
+  <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+) : (
+  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+    No editor wired for:{" "}
+    <span className="font-mono">{String((selectedBlock as any).type)}</span>
+  </div>
+)}
                     </>
                   )}
                 </>
