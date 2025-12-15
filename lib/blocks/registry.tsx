@@ -85,6 +85,28 @@ function heroAspectRatioStyle(ratio: string): React.CSSProperties | undefined {
   }
 }
 
+function heroRadiusClass(radius: string) {
+  switch (radius) {
+    case "none":
+      return "rounded-none";
+    case "sm":
+      return "rounded-sm";
+    case "md":
+      return "rounded-md";
+    case "lg":
+      return "rounded-lg";
+    case "xl":
+      return "rounded-xl";
+    case "2xl":
+      return "rounded-2xl";
+    case "full":
+      return "rounded-full";
+    default:
+      return "rounded-2xl";
+  }
+}
+
+
 export const BlockRegistry: Record<string, BlockEntry> = {
   divider: {
     title: "Divider",
@@ -128,6 +150,125 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       const imgBoxWClass = heroImageSizeClass(imageSize);
       const ratioStyle = heroAspectRatioStyle(imageRatio);
 
+      if (variant === "background") {
+        const bgUrl = safeTrim((c as any)?.avatar ?? "");
+        const overlay = String((c as any)?.bg_overlay ?? "medium");
+      
+        const overlayClass =
+          overlay === "soft"
+            ? "bg-black/30"
+            : overlay === "strong"
+              ? "bg-black/70"
+              : "bg-black/50";
+              const bgHeight = String((c as any)?.bg_height ?? "md");
+              const bgRadius = String((c as any)?.bg_radius ?? "2xl");
+              const align = String((c as any)?.align ?? "left") as "left" | "center" | "right";
+
+              const textAlignClass =
+                align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+      
+              const ctaJustifyClass =
+                align === "center"
+                  ? "justify-center"
+                  : align === "right"
+                    ? "justify-end"
+                    : "justify-start";
+      
+              const radiusClass =
+                bgRadius === "none"
+                  ? "rounded-none"
+                  : bgRadius === "sm"
+                    ? "rounded-sm"
+                    : bgRadius === "md"
+                      ? "rounded-md"
+                      : bgRadius === "lg"
+                        ? "rounded-lg"
+                        : bgRadius === "xl"
+                          ? "rounded-xl"
+                          : bgRadius === "full"
+                            ? "rounded-full"
+                            : "rounded-2xl";
+      
+              const heightClass =
+                bgHeight === "sm"
+                  ? "py-12 md:py-16"
+                  : bgHeight === "lg"
+                    ? "py-24 md:py-32"
+                    : bgHeight === "xl"
+                      ? "py-32 md:py-44"
+                      : "py-16 md:py-24";
+              return (
+                <div className={`relative overflow-hidden min-w-0 w-full ${radiusClass}`}>
+              
+            <div
+              className="absolute inset-0 w-full h-full"
+              style={{
+                backgroundImage: bgUrl ? `url(${normalizeUrl(bgUrl)})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            />
+            <div className={overlayClass + " absolute inset-0"} />
+      
+            <div className={`relative ${heightClass} px-6 md:px-10 min-w-0`}>
+
+
+
+            <div
+  className={`space-y-3 min-w-0 max-w-3xl ${textAlignClass} ${
+    align === "center"
+      ? "mx-auto"
+      : align === "right"
+        ? "ml-auto"
+        : ""
+  }`}
+>
+
+
+
+                <div className={titleClass + " font-bold text-white leading-tight"}>
+                  {title}
+                </div>
+      
+                {subtitle ? (
+                  <div
+                    className={subtitleClass + " text-white/80 leading-relaxed whitespace-pre-wrap min-w-0"}
+                    style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                  >
+                    {subtitle}
+                  </div>
+                ) : null}
+              </div>
+      
+              {hasPrimary || hasSecondary ? (
+                <div className={`flex flex-wrap items-center gap-3 pt-6 ${ctaJustifyClass}`}>
+
+                  {hasPrimary ? (
+                    <a
+                      href={normalizeUrl(primaryUrl)}
+                      className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold bg-[rgb(var(--primary))] text-[rgb(var(--button-text))] hover:opacity-90 transition"
+                      style={{ borderRadius: "var(--button-radius)" as any }}
+                    >
+                      {primaryTitle}
+                    </a>
+                  ) : null}
+      
+                  {hasSecondary ? (
+                    <a
+                      href={normalizeUrl(secondaryUrl)}
+                      className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold border border-white/30 bg-white/10 text-white hover:bg-white/15 transition"
+                      style={{ borderRadius: "var(--button-radius)" as any }}
+                    >
+                      {secondaryTitle}
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      }
+      
       if (variant === "split") {
         const textCol = (
           <div className="space-y-4 min-w-0">

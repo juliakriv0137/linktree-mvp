@@ -73,6 +73,14 @@ type HeroContent = {
   // split hero extras
   image_side?: "left" | "right";
   image_size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+    // background hero extras
+    bg_overlay?: "soft" | "medium" | "strong";
+      // background hero extras
+      bg_radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+
+  bg_height?: "sm" | "md" | "lg" | "xl";
+
+
   image_ratio?: "auto" | "square" | "4:3" | "16:9" | "3:4" | "9:16";
 
 
@@ -504,6 +512,18 @@ function HeroEditor({
   const [imageSize, setImageSize] = useState<HeroContent["image_size"]>(
     ((initial as any)?.image_size ?? "md") as any,
   );
+  const [bgHeight, setBgHeight] = useState<"sm" | "md" | "lg" | "xl">(
+    ((initial as any)?.bg_height ?? "md") as any,
+  );
+
+  const [bgOverlay, setBgOverlay] = useState<"soft" | "medium" | "strong">(
+    ((initial as any)?.bg_overlay ?? "medium") as any,
+  );
+  const [bgRadius, setBgRadius] = useState<
+  "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full"
+>(
+  ((initial as any)?.bg_radius ?? "2xl") as any,
+);
 
   const [imageRatio, setImageRatio] = useState<HeroContent["image_ratio"]>(
     ((initial as any)?.image_ratio ?? "square") as any,
@@ -531,8 +551,12 @@ function HeroEditor({
     setVariant(((block as any).variant ?? "default") as string);
     setImageSide(((c as any)?.image_side ?? "right") as any);
     setImageSize(((c as any)?.image_size ?? "md") as any);
+    setBgOverlay(((c as any)?.bg_overlay ?? "medium") as any);
     setImageRatio(((c as any)?.image_ratio ?? "square") as any);
-    
+    setBgHeight(((c as any)?.bg_height ?? "md") as any);
+    setBgRadius(((c as any)?.bg_radius ?? "2xl") as any);
+
+
 
 
     setPrimaryBtnTitle(((c as any)?.primary_button_title ?? "") as string);
@@ -571,9 +595,52 @@ function HeroEditor({
           onChange={(e) => setVariant(e.target.value)}
         >
           <option value="default">Default</option>
-          <option value="split">Split (text + image)</option>
+<option value="split">Split (text + image)</option>
+<option value="background">Background image</option>
+
         </select>
       </label>
+      {variant === "background" ? (
+        <label className="block">
+          <div className="text-sm text-white/80 mb-2">Section height</div>
+          <select
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            value={bgHeight}
+            onChange={(e) => setBgHeight(e.target.value as any)}
+          >
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+            <option value="xl">X-Large</option>
+          </select>
+          <div className="text-xs text-white/50 mt-2">
+            Controls vertical padding / minimum height for background hero.
+          </div>
+        </label>
+      ) : null}
+
+{variant === "background" ? (
+  <label className="block">
+    <div className="text-sm text-white/80 mb-2">Corner radius</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+      value={bgRadius}
+      onChange={(e) => setBgRadius(e.target.value as any)}
+    >
+      <option value="none">None</option>
+      <option value="sm">Small</option>
+      <option value="md">Medium</option>
+      <option value="lg">Large</option>
+      <option value="xl">X-Large</option>
+      <option value="2xl">2X-Large</option>
+      <option value="full">Full</option>
+    </select>
+    <div className="text-xs text-white/50 mt-2">
+      Controls rounding of background hero block.
+    </div>
+  </label>
+) : null}
+
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
         <div className="text-sm text-white/80">Buttons (optional)</div>
@@ -617,14 +684,29 @@ function HeroEditor({
         </div>
       </div>
 
-      {variant === "split" ? (
-        <Input
-          label="Avatar / Image URL"
-          value={avatar}
-          onChange={setAvatar}
-          placeholder="https://example.com/image.png"
-        />
-      ) : null}
+      {variant === "split" || variant === "background" ? (
+  <Input
+    label={variant === "background" ? "Background image URL" : "Avatar / Image URL"}
+    value={avatar}
+    onChange={setAvatar}
+    placeholder="https://example.com/image.png"
+  />
+) : null}
+{variant === "background" ? (
+  <label className="block">
+    <div className="text-sm text-white/80 mb-2">Overlay</div>
+    <select
+      className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+      value={bgOverlay}
+      onChange={(e) => setBgOverlay(e.target.value as any)}
+    >
+      <option value="soft">Soft</option>
+      <option value="medium">Medium</option>
+      <option value="strong">Strong</option>
+    </select>
+  </label>
+) : null}
+
 
 {variant === "split" ? (
   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -751,24 +833,30 @@ function HeroEditor({
             try {
               await onSave({
                 content: {
-                  title: safeTrim(title),
-                  subtitle: safeTrim(subtitle),
-                  avatar: safeTrim(avatar) ? safeTrim(avatar) : null,
-                  title_size: titleSize ?? "lg",
-                  subtitle_size: subtitleSize ?? "md",
-                  align: (align as any) ?? "center",
+  title: safeTrim(title),
+  subtitle: safeTrim(subtitle),
+  avatar: safeTrim(avatar) ? safeTrim(avatar) : null,
+  title_size: titleSize ?? "lg",
+  subtitle_size: subtitleSize ?? "md",
+  align: (align as any) ?? "center",
 
-                  image_side: imageSide,
-                  image_size: imageSize,
-                  image_ratio: imageRatio,
+  image_side: imageSide,
+  image_size: imageSize,
+  image_ratio: imageRatio,
 
-                  primary_button_title: safeTrim(primaryBtnTitle),
-                  primary_button_url: safeTrim(primaryBtnUrl),
-                  secondary_button_title: safeTrim(secondaryBtnTitle),
-                  secondary_button_url: safeTrim(secondaryBtnUrl),
-                },
+  bg_height: bgHeight,
+bg_radius: bgRadius,
+
+
+  primary_button_title: safeTrim(primaryBtnTitle),
+  primary_button_url: safeTrim(primaryBtnUrl),
+  secondary_button_title: safeTrim(secondaryBtnTitle),
+  secondary_button_url: safeTrim(secondaryBtnUrl),
+},
+
                 variant,
               });
+              
             } finally {
               setSaving(false);
             }
