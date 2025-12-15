@@ -19,13 +19,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
-import InsertBlockMenu from "@/components/InsertBlockMenu";
+import InsertBlockMenu, { type BlockType } from "@/components/InsertBlockMenu";
 import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
 import { supabase } from "@/lib/supabaseClient";
 
 import {
+  HeaderEditor,
   HeroEditor,
   LinksEditor,
   ImageEditor,
@@ -861,9 +862,15 @@ export default function DashboardPage() {
     setBlocks(bs);
   }
   
-  const saveSelectedBlockContent = async (content: any) => {
+  const saveSelectedBlockContent = async (next: any) => {
     if (!selectedBlock || !site) return;
-    await updateBlock(selectedBlock.id, { content } as BlockPatch);
+
+    const patch =
+      next && typeof next === "object" && ("content" in next || "variant" in next || "style" in next)
+        ? (next as BlockPatch)
+        : ({ content: next } as BlockPatch);
+
+    await updateBlock(selectedBlock.id, patch);
     await reloadBlocksAfterSave();
   };
   
@@ -1412,7 +1419,9 @@ export default function DashboardPage() {
                         </Button>
                       </div>
 
-                      {selectedBlock.type === "hero" ? (
+                      {selectedBlock.type === "header" ? (
+  <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+) : selectedBlock.type === "hero" ? (
   <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
 ) : selectedBlock.type === "text" ? (
   <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />

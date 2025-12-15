@@ -116,6 +116,129 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     ),
   },
 
+  header: {
+    title: "Header",
+    render: ({ block }) => {
+      const c = asObj(block.content);
+      const variant = String((block as any).variant ?? "default");
+
+      const brandText = safeTrim((c as any)?.brand_text ?? "My Site");
+      const brandUrl = normalizeUrl((c as any)?.brand_url ?? "");
+      const logoUrl = safeTrim((c as any)?.logo_url ?? "");
+
+      const links = Array.isArray((c as any)?.links) ? ((c as any).links as any[]) : [];
+      const items = links
+        .map((x) => ({
+          label: safeTrim(x?.label),
+          url: normalizeUrl(x?.url),
+        }))
+        .filter((x) => x.label && x.url);
+
+      const showCta = Boolean((c as any)?.show_cta);
+      const ctaLabel = safeTrim((c as any)?.cta_label ?? "");
+      const ctaUrl = normalizeUrl((c as any)?.cta_url ?? "");
+      const hasCta = showCta && !!ctaLabel && !!ctaUrl;
+
+      const Brand = () => {
+        const inner = (
+          <div className="flex items-center gap-2 min-w-0">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={brandText || "Logo"}
+                className="h-7 w-7 rounded-full object-cover border border-white/10"
+              />
+            ) : null}
+            <div className="font-semibold text-white/90 truncate">{brandText || " "}</div>
+          </div>
+        );
+
+        if (brandUrl) {
+          return (
+            <a href={brandUrl} className="hover:opacity-90 transition-opacity">
+              {inner}
+            </a>
+          );
+        }
+        return inner;
+      };
+
+      const Links = ({ justify }: { justify: "start" | "center" | "end" }) => (
+        <div
+          className={[
+            "flex flex-wrap gap-x-4 gap-y-2 text-sm text-white/70",
+            justify === "center" ? "justify-center" : justify === "end" ? "justify-end" : "justify-start",
+          ].join(" ")}
+        >
+          {items.map((it, idx) => (
+            <a key={idx} href={it.url} className="hover:text-white/90 transition-colors">
+              {it.label}
+            </a>
+          ))}
+        </div>
+      );
+
+      const Cta = () =>
+        hasCta ? (
+          <a
+            href={ctaUrl}
+            className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/15 transition border border-white/10"
+          >
+            {ctaLabel}
+          </a>
+        ) : null;
+
+      if (variant === "centered") {
+        return (
+          <div className="w-full">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+              <div className="flex items-center justify-center">
+                <Brand />
+              </div>
+
+              {items.length ? <div className="mt-3"><Links justify="center" /></div> : null}
+
+              {hasCta ? <div className="mt-3 flex justify-center"><Cta /></div> : null}
+            </div>
+          </div>
+        );
+      }
+
+      // default
+      return (
+        <div className="w-full">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="flex items-center gap-4">
+              <div className="min-w-0 flex-1">
+                <Brand />
+              </div>
+
+              {items.length ? (
+                <div className="hidden sm:block flex-1">
+                  <Links justify="center" />
+                </div>
+              ) : null}
+
+              {hasCta ? (
+                <div className="hidden sm:flex justify-end">
+                  <Cta />
+                </div>
+              ) : null}
+            </div>
+
+            {/* mobile row */}
+            {(items.length || hasCta) ? (
+              <div className="mt-3 sm:hidden flex flex-col gap-3">
+                {items.length ? <Links justify="start" /> : null}
+                {hasCta ? <div className="flex justify-start"><Cta /></div> : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    },
+  },
+
   hero: {
     title: "Hero",
     render: ({ block }) => {
