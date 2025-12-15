@@ -22,11 +22,14 @@ import InsertBlockMenu from "@/components/InsertBlockMenu";
 import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
-import { HeroEditor } from "@/components/dashboard/editors/HeroEditor";
-import { LinksEditor } from "@/components/dashboard/editors/LinksEditor";
-import { ImageEditor } from "@/components/dashboard/editors/ImageEditor";
-import { TextEditor } from "@/components/dashboard/editors/TextEditor";
-import { DividerEditor } from "@/components/dashboard/editors/DividerEditor";
+import {
+  HeroEditor,
+  LinksEditor,
+  ImageEditor,
+  TextEditor,
+  DividerEditor,
+} from "@/components/dashboard/editors";
+
 
 
 
