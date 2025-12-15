@@ -238,7 +238,7 @@ async function loadBlocks(siteId: string): Promise<BlockRow[]> {
   return (data ?? []) as BlockRow[];
 }
 
-async function createBlock(siteId: string, type: "hero" | "links" | "image" | "text" | "divider") {
+async function createBlock(siteId: string, type: BlockType) {
   const { data: maxPosRow, error: maxPosErr } = await supabase
     .from("site_blocks")
     .select("position")
@@ -251,26 +251,36 @@ async function createBlock(siteId: string, type: "hero" | "links" | "image" | "t
   const nextPos = (maxPosRow?.position ?? 0) + 1;
 
   const defaultContent =
-    type === "hero"
+    type === "header"
       ? ({
-          title: "Your title",
-          subtitle: "Short subtitle",
-          avatar: null,
-        } satisfies HeroContent)
-      : type === "image"
+          brand_text: "My Site",
+          brand_url: "",
+          logo_url: "",
+          links: [],
+          show_cta: false,
+          cta_label: "",
+          cta_url: "",
+        } as any)
+      : type === "hero"
         ? ({
-            url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
-            alt: "Profile image",
-            shape: "circle",
-          } satisfies ImageContent)
-        : type === "text"
-          ? ({ text: "Your text here" } satisfies TextContent)
-          : type === "divider"
-            ? ({ style: "line" } as any)
-            : ({
-                items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
-                align: "center",
-              } satisfies LinksContent);
+            title: "Your title",
+            subtitle: "Short subtitle",
+            avatar: null,
+          } satisfies HeroContent)
+        : type === "image"
+          ? ({
+              url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
+              alt: "Profile image",
+              shape: "circle",
+            } satisfies ImageContent)
+          : type === "text"
+            ? ({ text: "Your text here" } satisfies TextContent)
+            : type === "divider"
+              ? ({ style: "line" } as any)
+              : ({
+                  items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
+                  align: "center",
+                } satisfies LinksContent);
 
   const { error } = await supabase.from("site_blocks").insert({
     site_id: siteId,
@@ -659,9 +669,9 @@ export default function DashboardPage() {
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [creating, setCreating] = useState<null | "hero" | "links" | "image" | "text" | "divider">(null);
+  const [creating, setCreating] = useState<BlockType | null>(null);
   const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
-  const [inserting, setInserting] = useState<null | { index: number; type: "hero" | "links" | "image" | "text" | "divider" }>(null);
+  const [inserting, setInserting] = useState<null | { index: number; type: BlockType }>(null);
 
   const [colors, setColors] = useState({
     bg_color: "",
@@ -748,7 +758,7 @@ export default function DashboardPage() {
     }
   }
 
-  async function insertBlockAt(index: number, type: "hero" | "links" | "image" | "text" | "divider") {
+  async function insertBlockAt(index: number, type: BlockType) {
     if (!site) return;
     setError(null);
     setInserting({ index, type });
@@ -942,7 +952,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {(["hero", "links", "image", "text", "divider"] as const).map((t) => (
+                {(["header", "hero", "links", "image", "text", "divider"] as const).map((t) => (
                   <Button
                     key={t}
                     variant="primary"

@@ -2,7 +2,7 @@
 
 import React from "react";
 
-type BlockType = "hero" | "links" | "image" | "text" | "divider";
+export type BlockType = "header" | "hero" | "links" | "image" | "text" | "divider";
 
 export default function InsertBlockMenu({
   insertIndex,
@@ -23,7 +23,7 @@ export default function InsertBlockMenu({
   showLabel?: boolean;
   showOnHover?: boolean;
 }) {
-  const types: BlockType[] = ["hero", "links", "image", "text", "divider"];
+  const types: BlockType[] = ["header", "hero", "links", "image", "text", "divider"];
 
   return (
     <div className="flex justify-center">

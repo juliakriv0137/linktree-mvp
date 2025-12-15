@@ -163,15 +163,37 @@ export const BlockRegistry: Record<string, BlockEntry> = {
         return inner;
       };
 
-      const Links = ({ justify }: { justify: "start" | "center" | "end" }) => (
+      const Links = ({
+        justify,
+        layout = "row",
+      }: {
+        justify: "start" | "center" | "end";
+        layout?: "row" | "col";
+      }) => (
         <div
           className={[
-            "flex flex-wrap gap-x-4 gap-y-2 text-sm text-white/70",
-            justify === "center" ? "justify-center" : justify === "end" ? "justify-end" : "justify-start",
+            layout === "col"
+              ? "flex flex-col gap-2 text-sm text-white/80"
+              : "flex flex-wrap gap-x-4 gap-y-2 text-sm text-white/70",
+            layout === "col"
+              ? "items-stretch"
+              : justify === "center"
+                ? "justify-center"
+                : justify === "end"
+                  ? "justify-end"
+                  : "justify-start",
           ].join(" ")}
         >
           {items.map((it, idx) => (
-            <a key={idx} href={it.url} className="hover:text-white/90 transition-colors">
+            <a
+              key={idx}
+              href={it.url}
+              className={
+                layout === "col"
+                  ? "rounded-xl px-3 py-2 hover:bg-white/10 hover:text-white transition"
+                  : "hover:text-white/90 transition-colors"
+              }
+            >
               {it.label}
             </a>
           ))}
@@ -207,7 +229,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       // default
       return (
         <div className="w-full">
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div className="relative rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
             <div className="flex items-center gap-4">
               <div className="min-w-0 flex-1">
                 <Brand />
@@ -224,15 +246,81 @@ export const BlockRegistry: Record<string, BlockEntry> = {
                   <Cta />
                 </div>
               ) : null}
+
+              {(items.length || hasCta) ? (
+                <div className="sm:hidden">
+                  <details className="group">
+                    <summary
+                      className={[
+                        "flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full",
+                        "border border-white/10 bg-white/5 text-white/85",
+                        "hover:bg-white/10 hover:text-white",
+                        "transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
+                      ].join(" ")}
+                      aria-label="Open menu"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="opacity-90"
+                      >
+                        <path
+                          d="M4 7H20"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M4 12H20"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M4 17H20"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </summary>
+
+                    <div
+                      className={[
+                        "absolute left-3 right-3 top-[3.25rem] z-20",
+                        "rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl",
+                        "px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
+                        "origin-top scale-95 opacity-0 translate-y-1",
+                        "group-open:scale-100 group-open:opacity-100 group-open:translate-y-0",
+                        "transition duration-150",
+                      ].join(" ")}
+                    >
+                      <div className="flex flex-col gap-2">
+                        {items.length ? (
+                          <div className="rounded-xl bg-white/5 px-3 py-3">
+                            <Links justify="start" layout="col" />
+                          </div>
+                        ) : null}
+
+                        {hasCta ? (
+                          <div className={items.length ? "pt-1" : ""}>
+                            <div className={items.length ? "h-px w-full bg-white/10 mb-3" : ""} />
+                            <div className="flex justify-start px-1">
+                              <Cta />
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              ) : null}
             </div>
 
-            {/* mobile row */}
-            {(items.length || hasCta) ? (
-              <div className="mt-3 sm:hidden flex flex-col gap-3">
-                {items.length ? <Links justify="start" /> : null}
-                {hasCta ? <div className="flex justify-start"><Cta /></div> : null}
-              </div>
-            ) : null}
+            {/* mobile menu is handled via <details> hamburger above */}
           </div>
         </div>
       );
