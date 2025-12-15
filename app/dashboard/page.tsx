@@ -69,6 +69,8 @@ type HeroContent = {
   title_size?: "sm" | "md" | "lg";
   subtitle_size?: "sm" | "md" | "lg";
   align?: "left" | "center" | "right";
+  vertical_align?: "top" | "center" | "bottom";
+
 
   // split hero extras
   image_side?: "left" | "right";
@@ -504,7 +506,11 @@ function HeroEditor({
     initial.subtitle_size ?? "md",
   );
   const [align, setAlign] = useState<HeroContent["align"]>(initial.align ?? "center");
+  const [verticalAlign, setVerticalAlign] = useState<HeroContent["vertical_align"]>(
+    (initial as any)?.vertical_align ?? "center",
+  );
   const [variant, setVariant] = useState<string>((block as any).variant ?? "default");
+
 
   const [imageSide, setImageSide] = useState<"left" | "right">(
     ((initial as any)?.image_side ?? "right") as any,
@@ -547,8 +553,10 @@ function HeroEditor({
     setSubtitle(c.subtitle ?? "");
     setTitleSize((c.title_size as any) ?? "lg");
     setSubtitleSize((c.subtitle_size as any) ?? "md");
-    setAlign((c.align as any) ?? "center");
-    setVariant(((block as any).variant ?? "default") as string);
+setAlign((c.align as any) ?? "center");
+setVerticalAlign(((c as any)?.vertical_align ?? "center") as any);
+setVariant(((block as any).variant ?? "default") as string);
+
     setImageSide(((c as any)?.image_side ?? "right") as any);
     setImageSize(((c as any)?.image_size ?? "md") as any);
     setBgOverlay(((c as any)?.bg_overlay ?? "medium") as any);
@@ -710,6 +718,7 @@ function HeroEditor({
 
 {variant === "split" ? (
   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
     <label className="block">
       <div className="text-sm text-white/80 mb-2">Image side</div>
       <select
@@ -796,6 +805,20 @@ function HeroEditor({
             <option value="right">Right</option>
           </select>
         </label>
+        {variant === "background" ? (
+    <label className="block">
+      <div className="text-sm text-white/80 mb-2">Vertical align</div>
+      <select
+        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        value={verticalAlign ?? "center"}
+        onChange={(e) => setVerticalAlign(e.target.value as any)}
+      >
+        <option value="top">Top</option>
+        <option value="center">Center</option>
+        <option value="bottom">Bottom</option>
+      </select>
+    </label>
+  ) : null}
       </div>
 
       <div
@@ -839,8 +862,10 @@ function HeroEditor({
   title_size: titleSize ?? "lg",
   subtitle_size: subtitleSize ?? "md",
   align: (align as any) ?? "center",
+vertical_align: (verticalAlign as any) ?? "center",
 
-  image_side: imageSide,
+image_side: imageSide,
+
   image_size: imageSize,
   image_ratio: imageRatio,
 

@@ -106,7 +106,6 @@ function heroRadiusClass(radius: string) {
   }
 }
 
-
 export const BlockRegistry: Record<string, BlockEntry> = {
   divider: {
     title: "Divider",
@@ -153,53 +152,69 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       if (variant === "background") {
         const bgUrl = safeTrim((c as any)?.avatar ?? "");
         const overlay = String((c as any)?.bg_overlay ?? "medium");
-      
+
         const overlayClass =
           overlay === "soft"
             ? "bg-black/30"
             : overlay === "strong"
               ? "bg-black/70"
               : "bg-black/50";
-              const bgHeight = String((c as any)?.bg_height ?? "md");
-              const bgRadius = String((c as any)?.bg_radius ?? "2xl");
-              const align = String((c as any)?.align ?? "left") as "left" | "center" | "right";
 
-              const textAlignClass =
-                align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
-      
-              const ctaJustifyClass =
-                align === "center"
-                  ? "justify-center"
-                  : align === "right"
-                    ? "justify-end"
-                    : "justify-start";
-      
-              const radiusClass =
-                bgRadius === "none"
-                  ? "rounded-none"
-                  : bgRadius === "sm"
-                    ? "rounded-sm"
-                    : bgRadius === "md"
-                      ? "rounded-md"
-                      : bgRadius === "lg"
-                        ? "rounded-lg"
-                        : bgRadius === "xl"
-                          ? "rounded-xl"
-                          : bgRadius === "full"
-                            ? "rounded-full"
-                            : "rounded-2xl";
-      
-              const heightClass =
-                bgHeight === "sm"
-                  ? "py-12 md:py-16"
-                  : bgHeight === "lg"
-                    ? "py-24 md:py-32"
-                    : bgHeight === "xl"
-                      ? "py-32 md:py-44"
-                      : "py-16 md:py-24";
-              return (
-                <div className={`relative overflow-hidden min-w-0 w-full ${radiusClass}`}>
-              
+        const bgHeight = String((c as any)?.bg_height ?? "md");
+        const bgRadius = String((c as any)?.bg_radius ?? "2xl");
+        const align = String((c as any)?.align ?? "left") as "left" | "center" | "right";
+
+        // ✅ NEW: vertical align (top/center/bottom) for background hero
+        const verticalAlign = String((c as any)?.vertical_align ?? "center") as
+          | "top"
+          | "center"
+          | "bottom";
+
+        const verticalAlignClass =
+          verticalAlign === "top"
+            ? "justify-start"
+            : verticalAlign === "bottom"
+              ? "justify-end"
+              : "justify-center";
+
+        const textAlignClass =
+          align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+
+        const ctaJustifyClass =
+          align === "center"
+            ? "justify-center"
+            : align === "right"
+              ? "justify-end"
+              : "justify-start";
+
+        const radiusClass =
+          bgRadius === "none"
+            ? "rounded-none"
+            : bgRadius === "sm"
+              ? "rounded-sm"
+              : bgRadius === "md"
+                ? "rounded-md"
+                : bgRadius === "lg"
+                  ? "rounded-lg"
+                  : bgRadius === "xl"
+                    ? "rounded-xl"
+                    : bgRadius === "full"
+                      ? "rounded-full"
+                      : "rounded-2xl";
+
+                      const heightClass =
+  bgHeight === "sm"
+    ? "min-h-[320px] py-10 md:py-14"
+    : bgHeight === "lg"
+      ? "min-h-[560px] py-24 md:py-32"
+      : bgHeight === "xl"
+        ? "min-h-[720px] py-28 md:py-40"
+        : "min-h-[420px] py-14 md:py-20";
+
+                    
+
+        return (
+          <div className={`relative overflow-hidden min-w-0 w-full ${radiusClass}`}>
             <div
               className="absolute inset-0 w-full h-full"
               style={{
@@ -209,27 +224,16 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               }}
             />
             <div className={overlayClass + " absolute inset-0"} />
-      
-            <div className={`relative ${heightClass} px-6 md:px-10 min-w-0`}>
 
+            {/* ✅ verticalAlignClass applied here */}
+            <div className={`relative ${heightClass} px-6 md:px-10 min-w-0 flex flex-col ${verticalAlignClass}`}>
+              <div
+                className={`space-y-3 min-w-0 max-w-3xl ${textAlignClass} ${
+                  align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""
+                }`}
+              >
+                <div className={titleClass + " font-bold text-white leading-tight"}>{title}</div>
 
-
-            <div
-  className={`space-y-3 min-w-0 max-w-3xl ${textAlignClass} ${
-    align === "center"
-      ? "mx-auto"
-      : align === "right"
-        ? "ml-auto"
-        : ""
-  }`}
->
-
-
-
-                <div className={titleClass + " font-bold text-white leading-tight"}>
-                  {title}
-                </div>
-      
                 {subtitle ? (
                   <div
                     className={subtitleClass + " text-white/80 leading-relaxed whitespace-pre-wrap min-w-0"}
@@ -239,10 +243,9 @@ export const BlockRegistry: Record<string, BlockEntry> = {
                   </div>
                 ) : null}
               </div>
-      
+
               {hasPrimary || hasSecondary ? (
                 <div className={`flex flex-wrap items-center gap-3 pt-6 ${ctaJustifyClass}`}>
-
                   {hasPrimary ? (
                     <a
                       href={normalizeUrl(primaryUrl)}
@@ -252,7 +255,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
                       {primaryTitle}
                     </a>
                   ) : null}
-      
+
                   {hasSecondary ? (
                     <a
                       href={normalizeUrl(secondaryUrl)}
@@ -268,7 +271,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           </div>
         );
       }
-      
+
       if (variant === "split") {
         const textCol = (
           <div className="space-y-4 min-w-0">
@@ -329,11 +332,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               <img
                 src={normalizeUrl(imgUrl)}
                 alt="Hero image"
-                className={
-                  ratioStyle
-                    ? "w-full h-full object-cover"
-                    : "w-full h-auto object-contain"
-                }
+                className={ratioStyle ? "w-full h-full object-cover" : "w-full h-auto object-contain"}
               />
             </div>
           </div>
@@ -445,8 +444,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       if (!items.length) return null;
 
       const blockAlign = (c?.align as "left" | "center" | "right" | undefined) ?? "center";
-      const buttonStyle =
-        ((site as any)?.button_style as "solid" | "outline" | "soft" | undefined) ?? "solid";
+      const buttonStyle = (((site as any)?.button_style as "solid" | "outline" | "soft" | undefined) ?? "solid");
 
       return (
         <div className="w-full">
