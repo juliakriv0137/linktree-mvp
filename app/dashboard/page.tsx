@@ -69,6 +69,20 @@ type HeroContent = {
   title_size?: "sm" | "md" | "lg";
   subtitle_size?: "sm" | "md" | "lg";
   align?: "left" | "center" | "right";
+
+  // split hero extras
+  image_side?: "left" | "right";
+  image_size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+  image_ratio?: "auto" | "square" | "4:3" | "16:9" | "3:4" | "9:16";
+
+
+  
+
+  // buttons (optional)
+  primary_button_title?: string;
+  primary_button_url?: string;
+  secondary_button_title?: string;
+  secondary_button_url?: string;
 };
 
 type LinksContent = {
@@ -252,7 +266,7 @@ async function createBlock(siteId: string, type: "hero" | "links" | "image" | "t
 
 async function updateBlock(
   blockId: string,
-  patch: Partial<Pick<BlockRow, "content" | "is_visible" | "position">>,
+  patch: Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style">>,
 ) {
   const { error } = await supabase.from("site_blocks").update(patch).eq("id", blockId);
   if (error) throw error;
@@ -471,7 +485,7 @@ function HeroEditor({
   onSave,
 }: {
   block: BlockRow;
-  onSave: (next: HeroContent) => Promise<void>;
+  onSave: (next: { content: HeroContent; variant: string }) => Promise<void>;
 }) {
   const initial = (block.content ?? {}) as HeroContent;
 
@@ -482,6 +496,29 @@ function HeroEditor({
     initial.subtitle_size ?? "md",
   );
   const [align, setAlign] = useState<HeroContent["align"]>(initial.align ?? "center");
+  const [variant, setVariant] = useState<string>((block as any).variant ?? "default");
+
+  const [imageSide, setImageSide] = useState<"left" | "right">(
+    ((initial as any)?.image_side ?? "right") as any,
+  );
+  const [imageSize, setImageSize] = useState<HeroContent["image_size"]>(
+    ((initial as any)?.image_size ?? "md") as any,
+  );
+
+  const [imageRatio, setImageRatio] = useState<HeroContent["image_ratio"]>(
+    ((initial as any)?.image_ratio ?? "square") as any,
+  );
+
+
+
+
+  const [primaryBtnTitle, setPrimaryBtnTitle] = useState((initial as any)?.primary_button_title ?? "");
+  const [primaryBtnUrl, setPrimaryBtnUrl] = useState((initial as any)?.primary_button_url ?? "");
+  const [secondaryBtnTitle, setSecondaryBtnTitle] = useState((initial as any)?.secondary_button_title ?? "");
+  const [secondaryBtnUrl, setSecondaryBtnUrl] = useState((initial as any)?.secondary_button_url ?? "");
+
+  const [avatar, setAvatar] = useState<string>((initial.avatar as any) ?? "");
+
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -491,6 +528,19 @@ function HeroEditor({
     setTitleSize((c.title_size as any) ?? "lg");
     setSubtitleSize((c.subtitle_size as any) ?? "md");
     setAlign((c.align as any) ?? "center");
+    setVariant(((block as any).variant ?? "default") as string);
+    setImageSide(((c as any)?.image_side ?? "right") as any);
+    setImageSize(((c as any)?.image_size ?? "md") as any);
+    setImageRatio(((c as any)?.image_ratio ?? "square") as any);
+    
+
+
+    setPrimaryBtnTitle(((c as any)?.primary_button_title ?? "") as string);
+    setPrimaryBtnUrl(((c as any)?.primary_button_url ?? "") as string);
+    setSecondaryBtnTitle(((c as any)?.secondary_button_title ?? "") as string);
+    setSecondaryBtnUrl(((c as any)?.secondary_button_url ?? "") as string);
+
+    setAvatar((c.avatar as any) ?? "");
   }, [block.id, block.content]);
 
   const titleClass =
@@ -512,6 +562,118 @@ function HeroEditor({
         placeholder="Short bio / tagline"
         rows={3}
       />
+
+      <label className="block">
+        <div className="text-sm text-white/80 mb-2">Variant</div>
+        <select
+          className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+          value={variant}
+          onChange={(e) => setVariant(e.target.value)}
+        >
+          <option value="default">Default</option>
+          <option value="split">Split (text + image)</option>
+        </select>
+      </label>
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+        <div className="text-sm text-white/80">Buttons (optional)</div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-3">
+            <div className="text-xs text-white/50">Primary button</div>
+            <Input
+              label="Title"
+              value={primaryBtnTitle}
+              onChange={setPrimaryBtnTitle}
+              placeholder="Request a demo"
+            />
+            <Input
+              label="URL"
+              value={primaryBtnUrl}
+              onChange={setPrimaryBtnUrl}
+              placeholder="https://..."
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="text-xs text-white/50">Secondary button</div>
+            <Input
+              label="Title"
+              value={secondaryBtnTitle}
+              onChange={setSecondaryBtnTitle}
+              placeholder="Learn more"
+            />
+            <Input
+              label="URL"
+              value={secondaryBtnUrl}
+              onChange={setSecondaryBtnUrl}
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
+        <div className="text-xs text-white/50">
+          To show a button, fill both Title and URL. You can use only Primary, or both.
+        </div>
+      </div>
+
+      {variant === "split" ? (
+        <Input
+          label="Avatar / Image URL"
+          value={avatar}
+          onChange={setAvatar}
+          placeholder="https://example.com/image.png"
+        />
+      ) : null}
+
+{variant === "split" ? (
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <label className="block">
+      <div className="text-sm text-white/80 mb-2">Image side</div>
+      <select
+        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        value={imageSide}
+        onChange={(e) => setImageSide(e.target.value as any)}
+      >
+        <option value="right">Right</option>
+        <option value="left">Left</option>
+      </select>
+    </label>
+
+    <label className="block">
+      <div className="text-sm text-white/80 mb-2">Image size</div>
+      <select
+        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        value={imageSize ?? "md"}
+        onChange={(e) => setImageSize(e.target.value as any)}
+      >
+        <option value="xs">X-Small</option>
+        <option value="sm">Small</option>
+        <option value="md">Medium</option>
+        <option value="lg">Large</option>
+        <option value="xl">X-Large</option>
+        <option value="2xl">2X-Large</option>
+      </select>
+    </label>
+
+    <label className="block">
+      <div className="text-sm text-white/80 mb-2">Image ratio</div>
+      <select
+        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        value={imageRatio ?? "square"}
+        onChange={(e) => setImageRatio(e.target.value as any)}
+      >
+        <option value="square">Square (1:1)</option>
+        <option value="4:3">4:3</option>
+        <option value="16:9">16:9</option>
+        <option value="3:4">3:4</option>
+        <option value="9:16">9:16</option>
+        <option value="auto">Auto</option>
+      </select>
+    </label>
+  </div>
+) : null}
+
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="block">
@@ -562,10 +724,13 @@ function HeroEditor({
           padding: "var(--card-padding)",
           borderRadius: "var(--button-radius)",
         }}
-        className="space-y-2"
+        className="space-y-2 min-w-0"
       >
         <div className="text-xs text-white/50">Preview</div>
-        <div className={`space-y-1 ${alignClass}`}>
+        <div
+          className={`space-y-1 ${alignClass} min-w-0`}
+          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+        >
           <div className={`${titleClass} font-bold text-[rgb(var(--text))]`}>
             {safeTrim(title) ? title : "Your title…"}
           </div>
@@ -585,12 +750,24 @@ function HeroEditor({
             setSaving(true);
             try {
               await onSave({
-                title: safeTrim(title),
-                subtitle: safeTrim(subtitle),
-                avatar: null,
-                title_size: titleSize ?? "lg",
-                subtitle_size: subtitleSize ?? "md",
-                align: (align as any) ?? "center",
+                content: {
+                  title: safeTrim(title),
+                  subtitle: safeTrim(subtitle),
+                  avatar: safeTrim(avatar) ? safeTrim(avatar) : null,
+                  title_size: titleSize ?? "lg",
+                  subtitle_size: subtitleSize ?? "md",
+                  align: (align as any) ?? "center",
+
+                  image_side: imageSide,
+                  image_size: imageSize,
+                  image_ratio: imageRatio,
+
+                  primary_button_title: safeTrim(primaryBtnTitle),
+                  primary_button_url: safeTrim(primaryBtnUrl),
+                  secondary_button_title: safeTrim(secondaryBtnTitle),
+                  secondary_button_url: safeTrim(secondaryBtnUrl),
+                },
+                variant,
               });
             } finally {
               setSaving(false);
@@ -654,31 +831,8 @@ function LinksEditor({
   const hasInvalid = useMemo(() => effectiveRows.some((r) => !rowIsValid(r)), [effectiveRows]);
   const hasPartials = useMemo(() => effectiveRows.some((r) => rowIsPartial(r)), [effectiveRows]);
 
-  const AlignButton = ({ value, label }: { value: "left" | "center" | "right"; label: string }) => {
-    const active = align === value;
-    return (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          setAlign(value);
-        }}
-        className={clsx(
-          "rounded-xl border px-3 py-2 text-xs font-medium transition",
-          active
-            ? "border-white/30 bg-white/15 text-white"
-            : "border-white/10 bg-black/20 text-white/70 hover:bg-white/10 hover:text-white",
-        )}
-      >
-        {label}
-      </button>
-    );
-  };
-
   return (
     <div className="space-y-4">
-      
-
       <div className="space-y-3">
         {items.map((it, idx) => {
           const empty = rowIsEmpty(it);
@@ -841,8 +995,6 @@ function LinksEditor({
           {saving ? "Saving..." : "Save links"}
         </Button>
       </div>
-
-     
 
       {hasPartials && (
         <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-100/90">
@@ -1104,24 +1256,19 @@ function SortableBlockRow({
         )}
       >
         <div className="flex items-center gap-2">
-          {/* drag handle */}
-<div
-  className="flex items-center justify-center rounded-xl border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/70 cursor-grab active:cursor-grabbing"
-  {...attributes}
-  {...listeners}
-  aria-label="Drag to reorder"
-  title="Drag to reorder"
-  onClick={(e) => {
-    // чтобы клик по ручке не выбирал блок
-    e.stopPropagation();
-  }}
->
-  ⠿
-</div>
+          <div
+            className="flex items-center justify-center rounded-xl border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/70 cursor-grab active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+            aria-label="Drag to reorder"
+            title="Drag to reorder"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            ⠿
+          </div>
 
-
-  
-          {/* clickable area to select */}
           <button
             type="button"
             onClick={(e) => {
@@ -1136,12 +1283,11 @@ function SortableBlockRow({
             </div>
             <div className="text-xs text-white/40 mt-1">pos {block.position}</div>
           </button>
-  
-          {/* actions */}
+
           <div className="flex items-center gap-2">
-          <IconButton title={block.is_visible ? "Hide" : "Show"} onClick={onToggleVisible} disabled={disabled}>
-  {block.is_visible ? "🙈" : "👁️"}
-</IconButton>
+            <IconButton title={block.is_visible ? "Hide" : "Show"} onClick={onToggleVisible} disabled={disabled}>
+              {block.is_visible ? "🙈" : "👁️"}
+            </IconButton>
 
             <IconButton title="Delete" onClick={onDelete} disabled={disabled}>
               🗑️
@@ -1151,7 +1297,6 @@ function SortableBlockRow({
       </div>
     </div>
   );
-  
 }
 
 /** Preview renderer (center column) */
@@ -1194,9 +1339,12 @@ function PreviewBlock({
           padding: "var(--card-padding)",
           borderRadius: "var(--button-radius)",
         }}
-        className="space-y-2"
+        className="space-y-2 min-w-0"
       >
-        <div className={clsx("space-y-1", alignClass)}>
+        <div
+          className={clsx("space-y-1", alignClass, "min-w-0")}
+          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+        >
           <div className={clsx(titleClass, "font-bold text-[rgb(var(--text))]")}>{title || "Your title"}</div>
           {subtitle ? (
             <div className={clsx(subtitleClass, "text-[rgb(var(--muted))]")}>{subtitle}</div>
@@ -1344,7 +1492,6 @@ export default function DashboardPage() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
-
 
   async function refreshAll() {
     setError(null);
@@ -1519,7 +1666,6 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Top bar */}
       <div className="sticky top-0 z-30 border-b border-white/10 bg-black/60 backdrop-blur">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -1566,12 +1712,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 3-panel layout */}
       <div className="mx-auto max-w-[1400px] px-4 py-6">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_380px]">
-          {/* LEFT: Blocks list */}
+          {/* LEFT */}
           <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
-
             <div className="p-4 border-b border-white/10">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -1655,7 +1799,7 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          {/* CENTER: Live preview */}
+          {/* CENTER */}
           <Card className="overflow-hidden">
             <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3">
               <div>
@@ -1714,50 +1858,47 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          {/* RIGHT: Inspector (Theme + selected block editor) */}
+          {/* RIGHT */}
           <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
-  {/* HEADER — НЕ скроллится */}
-  <div className="shrink-0 p-4 border-b border-white/10 bg-black/20">
-    <div>
-      <div className="text-sm font-semibold">Inspector</div>
-      <div className="text-xs text-white/50 mt-1">Edit theme or selected block.</div>
-    </div>
+            <div className="shrink-0 p-4 border-b border-white/10 bg-black/20">
+              <div>
+                <div className="text-sm font-semibold">Inspector</div>
+                <div className="text-xs text-white/50 mt-1">Edit theme or selected block.</div>
+              </div>
 
-    <div className="mt-3 flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setInspectorTab("block")}
-        className={clsx(
-          "rounded-full px-3 py-2 text-xs font-semibold border transition",
-          inspectorTab === "block"
-            ? "border-white/25 bg-white/10 text-white"
-            : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
-        )}
-      >
-        Block
-      </button>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab("block")}
+                  className={clsx(
+                    "rounded-full px-3 py-2 text-xs font-semibold border transition",
+                    inspectorTab === "block"
+                      ? "border-white/25 bg-white/10 text-white"
+                      : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  Block
+                </button>
 
-      <button
-        type="button"
-        onClick={() => setInspectorTab("theme")}
-        className={clsx(
-          "rounded-full px-3 py-2 text-xs font-semibold border transition",
-          inspectorTab === "theme"
-            ? "border-white/25 bg-white/10 text-white"
-            : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
-        )}
-      >
-        Theme
-      </button>
-    </div>
-  </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab("theme")}
+                  className={clsx(
+                    "rounded-full px-3 py-2 text-xs font-semibold border transition",
+                    inspectorTab === "theme"
+                      ? "border-white/25 bg-white/10 text-white"
+                      : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  Theme
+                </button>
+              </div>
+            </div>
 
             <div className="p-4 lg:h-[calc(100%-56px)] lg:overflow-auto space-y-4">
-              {/* Theme */}
-              {/* Theme */}
-{inspectorTab === "theme" && (
-  <Card className="bg-white/3 shadow-none">
-
+              {/* THEME TAB */}
+              {inspectorTab === "theme" && (
+                <Card className="bg-white/3 shadow-none">
                   <div className="p-4 space-y-4">
                     <div>
                       <div className="text-sm font-semibold">Theme</div>
@@ -2035,13 +2176,16 @@ export default function DashboardPage() {
                 </Card>
               )}
 
-              {/* Selected block editor */}
+              {/* BLOCK EDITOR */}
               <Card className="bg-white/3 shadow-none">
-                <div className="p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                <div className="p-4 space-y-4 min-w-0">
+                  <div className="flex items-start justify-between gap-3 min-w-0">
+                    <div className="min-w-0">
                       <div className="text-sm font-semibold">Block editor</div>
-                      <div className="text-xs text-white/50 mt-1">
+                      <div
+                        className="text-xs text-white/50 mt-1 min-w-0"
+                        style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                      >
                         {selectedBlock ? (
                           <>
                             Editing:{" "}
@@ -2084,8 +2228,8 @@ export default function DashboardPage() {
                   ) : selectedBlock.type === "hero" ? (
                     <HeroEditor
                       block={selectedBlock}
-                      onSave={async (content) => {
-                        await updateBlock(selectedBlock.id, { content });
+                      onSave={async ({ content, variant }) => {
+                        await updateBlock(selectedBlock.id, { content, variant });
                         const bs = await loadBlocks(site!.id);
                         setBlocks(bs);
                       }}
