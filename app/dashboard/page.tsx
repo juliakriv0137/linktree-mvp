@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
 import InsertBlockMenu, { type BlockType } from "@/components/InsertBlockMenu";
+
 import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { LinkButton } from "@/components/site/LinkButton";
@@ -69,8 +70,12 @@ type BlockRow = {
   content: any;
   position: number;
   is_visible: boolean;
+
+  anchor_id?: string | null;
+
   created_at: string;
 };
+
 
 type HeroContent = {
   title?: string;
@@ -238,7 +243,11 @@ async function loadBlocks(siteId: string): Promise<BlockRow[]> {
   return (data ?? []) as BlockRow[];
 }
 
-async function createBlock(siteId: string, type: BlockType) {
+async function createBlock(
+  siteId: string,
+  type: "header" | "hero" | "links" | "image" | "text" | "divider",
+) {
+
   const { data: maxPosRow, error: maxPosErr } = await supabase
     .from("site_blocks")
     .select("position")
@@ -250,37 +259,42 @@ async function createBlock(siteId: string, type: BlockType) {
   if (maxPosErr) throw maxPosErr;
   const nextPos = (maxPosRow?.position ?? 0) + 1;
 
+
+  
   const defaultContent =
-    type === "header"
+  type === "header"
+    ? ({
+        title: "My site",
+        logo_url: "",
+        align: "center",
+        links: [
+          { label: "About", url: "https://example.com" },
+          { label: "Contact", url: "https://example.com" },
+        ],
+        cta_label: "Buy",
+        cta_url: "https://example.com",
+        show_cta: false,
+      } as any)
+    :type === "hero"
       ? ({
-          brand_text: "My Site",
-          brand_url: "",
-          logo_url: "",
-          links: [],
-          show_cta: false,
-          cta_label: "",
-          cta_url: "",
-        } as any)
-      : type === "hero"
+          title: "Your title",
+          subtitle: "Short subtitle",
+          avatar: null,
+        } satisfies HeroContent)
+      : type === "image"
         ? ({
-            title: "Your title",
-            subtitle: "Short subtitle",
-            avatar: null,
-          } satisfies HeroContent)
-        : type === "image"
-          ? ({
-              url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
-              alt: "Profile image",
-              shape: "circle",
-            } satisfies ImageContent)
-          : type === "text"
-            ? ({ text: "Your text here" } satisfies TextContent)
-            : type === "divider"
-              ? ({ style: "line" } as any)
-              : ({
-                  items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
-                  align: "center",
-                } satisfies LinksContent);
+            url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
+            alt: "Profile image",
+            shape: "circle",
+          } satisfies ImageContent)
+        : type === "text"
+          ? ({ text: "Your text here" } satisfies TextContent)
+          : type === "divider"
+            ? ({ style: "line" } as any)
+            : ({
+                items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
+                align: "center",
+              } satisfies LinksContent);
 
   const { error } = await supabase.from("site_blocks").insert({
     site_id: siteId,
@@ -669,7 +683,8 @@ export default function DashboardPage() {
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [creating, setCreating] = useState<BlockType | null>(null);
+  const [creating, setCreating] = useState<null | BlockType>(null);
+
   const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
   const [inserting, setInserting] = useState<null | { index: number; type: BlockType }>(null);
 
@@ -759,6 +774,7 @@ export default function DashboardPage() {
   }
 
   async function insertBlockAt(index: number, type: BlockType) {
+
     if (!site) return;
     setError(null);
     setInserting({ index, type });
@@ -872,15 +888,9 @@ export default function DashboardPage() {
     setBlocks(bs);
   }
   
-  const saveSelectedBlockContent = async (next: any) => {
+  const saveSelectedBlockContent = async (content: any) => {
     if (!selectedBlock || !site) return;
-
-    const patch =
-      next && typeof next === "object" && ("content" in next || "variant" in next || "style" in next)
-        ? (next as BlockPatch)
-        : ({ content: next } as BlockPatch);
-
-    await updateBlock(selectedBlock.id, patch);
+    await updateBlock(selectedBlock.id, { content } as BlockPatch);
     await reloadBlocksAfterSave();
   };
   

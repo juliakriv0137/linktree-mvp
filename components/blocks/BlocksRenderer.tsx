@@ -8,6 +8,7 @@ export type SiteBlockRow = {
   variant?: string | null;
   style?: Record<string, unknown> | null;
   content: Record<string, unknown> | null;
+  anchor_id?: string | null;
   sort_order: number;
   is_hidden?: boolean | null;
 };
@@ -44,7 +45,11 @@ export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
 
         const Comp = entry.render;
 
-        return <Comp key={block.id} block={block} mode={mode} site={site} />;
+        return (
+          <section id={block.anchor_id || undefined} key={block.id} className="scroll-mt-24">
+            <Comp block={block} mode={mode} site={site} />
+          </section>
+        );
       })}
     </>
   );
