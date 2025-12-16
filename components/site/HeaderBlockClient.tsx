@@ -225,7 +225,7 @@ export function HeaderBlockClient(props: {
                   </svg>
                 </summary>
 
-                <div className="absolute left-4 right-4 top-[3.25rem] z-20">
+                <div className="absolute left-4 right-4 top-[3.25rem] z-[100]">
                   <div
                     className={[
                       "rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl",

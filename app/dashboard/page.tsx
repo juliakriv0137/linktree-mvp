@@ -940,7 +940,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* CENTER */}
-          <Card className="overflow-hidden">
+          <Card>
             <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Preview</div>
@@ -992,7 +992,7 @@ export default function DashboardPage() {
 
             {!previewCollapsed ? (
               <div className="p-4">
-                <div className={clsx("mx-auto overflow-hidden rounded-2xl border border-white/10", previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full")}>
+                <div className={clsx("mx-auto rounded-2xl border border-white/10", previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full")}>
 
                   {previewDevice === "mobile" ? (
                     <iframe
