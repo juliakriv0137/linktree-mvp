@@ -23,7 +23,6 @@ import InsertBlockMenu, { type BlockType } from "@/components/InsertBlockMenu";
 
 import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
-import { LinkButton } from "@/components/site/LinkButton";
 import { supabase } from "@/lib/supabaseClient";
 
 import {
@@ -70,12 +69,9 @@ type BlockRow = {
   content: any;
   position: number;
   is_visible: boolean;
-
   anchor_id?: string | null;
-
   created_at: string;
 };
-
 
 type HeroContent = {
   title?: string;
@@ -87,19 +83,15 @@ type HeroContent = {
   align?: "left" | "center" | "right";
   vertical_align?: "top" | "center" | "bottom";
 
-  // split hero extras
   image_side?: "left" | "right";
   image_size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 
-  // background hero extras
   bg_overlay?: "soft" | "medium" | "strong";
   bg_radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
   bg_height?: "sm" | "md" | "lg" | "xl";
 
-  // image ratio
   image_ratio?: "auto" | "square" | "4:3" | "16:9" | "3:4" | "9:16";
 
-  // buttons (optional)
   primary_button_title?: string;
   primary_button_url?: string;
   secondary_button_title?: string;
@@ -123,7 +115,10 @@ type TextContent = {
   align?: "left" | "center" | "right";
 };
 
-type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style">>;
+// ✅ один единственный BlockPatch — без дублей
+type BlockPatch = Partial<
+  Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id">
+>;
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -149,6 +144,16 @@ function isValidHttpUrl(raw: string) {
   } catch {
     return false;
   }
+}
+
+function normalizeAnchorId(raw: string) {
+  let v = safeTrim(raw).toLowerCase();
+  v = v.replace(/^#+/, "");
+  v = v.replace(/[\s_]+/g, "-");
+  v = v.replace(/[^a-z0-9-]/g, "");
+  v = v.replace(/-+/g, "-");
+  v = v.replace(/^-+|-+$/g, "");
+  return v;
 }
 
 function normalizeHexOrNull(v: string): string | null {
@@ -247,7 +252,6 @@ async function createBlock(
   siteId: string,
   type: "header" | "hero" | "links" | "image" | "text" | "divider",
 ) {
-
   const { data: maxPosRow, error: maxPosErr } = await supabase
     .from("site_blocks")
     .select("position")
@@ -259,56 +263,53 @@ async function createBlock(
   if (maxPosErr) throw maxPosErr;
   const nextPos = (maxPosRow?.position ?? 0) + 1;
 
-
-  
+  // ✅ ВАЖНО: header content в формате HeaderEditor
   const defaultContent =
-  type === "header"
-    ? ({
-        title: "My site",
-        logo_url: "",
-        align: "center",
-        links: [
-          { label: "About", url: "https://example.com" },
-          { label: "Contact", url: "https://example.com" },
-        ],
-        cta_label: "Buy",
-        cta_url: "https://example.com",
-        show_cta: false,
-      } as any)
-    :type === "hero"
+    type === "header"
       ? ({
-          title: "Your title",
-          subtitle: "Short subtitle",
-          avatar: null,
-        } satisfies HeroContent)
-      : type === "image"
+          brand_text: "My Site",
+          brand_url: "/",
+          links: [
+            { label: "About", url: "https://example.com" },
+            { label: "Contact", url: "https://example.com" },
+          ],
+          show_cta: false,
+          cta_label: "Buy",
+          cta_url: "https://example.com",
+        } as any)
+      : type === "hero"
         ? ({
-            url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
-            alt: "Profile image",
-            shape: "circle",
-          } satisfies ImageContent)
-        : type === "text"
-          ? ({ text: "Your text here" } satisfies TextContent)
-          : type === "divider"
-            ? ({ style: "line" } as any)
-            : ({
-                items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
-                align: "center",
-              } satisfies LinksContent);
+            title: "Your title",
+            subtitle: "Short subtitle",
+            avatar: null,
+          } satisfies HeroContent)
+        : type === "image"
+          ? ({
+              url: "https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80",
+              alt: "Profile image",
+              shape: "circle",
+            } satisfies ImageContent)
+          : type === "text"
+            ? ({ text: "Your text here" } satisfies TextContent)
+            : type === "divider"
+              ? ({ style: "line" } as any)
+              : ({
+                  items: [{ title: "Telegram", url: "https://t.me/yourname", align: "center" }],
+                  align: "center",
+                } satisfies LinksContent);
 
-  const { error } = await supabase.from("site_blocks").insert({
+  const insertRow: any = {
     site_id: siteId,
     type,
     content: defaultContent,
     position: nextPos,
     is_visible: true,
-  });
+  };
 
-  if (error) throw error;
-}
+  // ✅ дефолтный variant для header (чтобы сразу корректно был)
+  if (type === "header") insertRow.variant = "default";
 
-async function updateBlock(blockId: string, patch: BlockPatch) {
-  const { error } = await supabase.from("site_blocks").update(patch).eq("id", blockId);
+  const { error } = await supabase.from("site_blocks").insert(insertRow);
   if (error) throw error;
 }
 
@@ -404,7 +405,9 @@ function IconButton({
       }}
       className={clsx(
         "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition",
-        disabled ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5" : "border-white/10 bg-white/5 hover:bg-white/10",
+        disabled
+          ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5"
+          : "border-white/10 bg-white/5 hover:bg-white/10",
       )}
     >
       {children}
@@ -533,150 +536,6 @@ function SortableBlockRow({
   );
 }
 
-/** (legacy) preview helper left here (harmless), but the preview now uses BlocksRenderer */
-function PreviewBlock({ block, buttonStyle }: { block: BlockRow; buttonStyle: any }) {
-  if (!block.is_visible) return null;
-
-  if (block.type === "divider") {
-    return (
-      <div className="flex justify-center py-4">
-        <div className="h-px w-24 bg-[rgb(var(--border))] opacity-60" />
-      </div>
-    );
-  }
-
-  if (block.type === "hero") {
-    const c = (block.content ?? {}) as HeroContent;
-    const title = safeTrim(c.title ?? "");
-    const subtitle = safeTrim(c.subtitle ?? "");
-    const align = (c.align ?? "center") as "left" | "center" | "right";
-
-    const titleClass = c.title_size === "sm" ? "text-xl" : c.title_size === "md" ? "text-2xl" : "text-3xl";
-    const subtitleClass = c.subtitle_size === "sm" ? "text-sm" : c.subtitle_size === "lg" ? "text-lg" : "text-base";
-    const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
-
-    return (
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-        className="space-y-2 min-w-0"
-      >
-        <div className={clsx("space-y-1", alignClass, "min-w-0")} style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
-          <div className={clsx(titleClass, "font-bold text-[rgb(var(--text))]")}>{title || "Your title"}</div>
-          {subtitle ? (
-            <div className={clsx(subtitleClass, "text-[rgb(var(--muted))]")}>{subtitle}</div>
-          ) : (
-            <div className={clsx(subtitleClass, "text-[rgb(var(--muted))] opacity-60")}>Short subtitle</div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (block.type === "text") {
-    const c = (block.content ?? {}) as TextContent;
-    const text = safeTrim(c.text ?? "");
-    const sizeClass = c.size === "sm" ? "text-sm" : c.size === "lg" ? "text-lg" : "text-base";
-    const alignClass = c.align === "center" ? "text-center" : c.align === "right" ? "text-right" : "text-left";
-
-    return (
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-      >
-        <div className={clsx(sizeClass, alignClass, "text-[rgb(var(--text))] whitespace-pre-wrap")}>{text || "Your text here"}</div>
-      </div>
-    );
-  }
-
-  if (block.type === "image") {
-    const c = (block.content ?? {}) as ImageContent;
-    const url = safeTrim(c.url ?? "");
-    const alt = safeTrim(c.alt ?? "");
-
-    const shape = (c.shape ?? "circle") as "circle" | "rounded" | "square";
-    const radius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
-
-    return (
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-        className="space-y-3"
-      >
-        {isValidHttpUrl(url) ? (
-          <div className="mx-auto w-full max-w-[360px] aspect-square overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={normalizeUrl(url)} alt={alt || "Image"} className="h-full w-full object-cover" style={{ borderRadius: radius }} />
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/50">Image URL missing / invalid.</div>
-        )}
-      </div>
-    );
-  }
-
-  if (block.type === "links") {
-    const c = (block.content ?? {}) as LinksContent;
-    const blockAlign = (c.align ?? "center") as "left" | "center" | "right";
-
-    const items = (c.items ?? [])
-      .map((x) => ({
-        title: safeTrim(x.title ?? ""),
-        url: safeTrim(x.url ?? ""),
-        align: (x as any).align as "left" | "center" | "right" | undefined,
-      }))
-      .filter((x) => x.title && isValidHttpUrl(x.url));
-
-    const alignWrap = blockAlign === "left" ? "items-start" : blockAlign === "right" ? "items-end" : "items-center";
-
-    return (
-      <div className={clsx("flex flex-col gap-3", alignWrap)}>
-        {items.length === 0 ? (
-          <div
-            style={{
-              background: "var(--card-bg)",
-              border: "var(--card-border)",
-              boxShadow: "var(--card-shadow)",
-              padding: "var(--card-padding)",
-              borderRadius: "var(--button-radius)",
-            }}
-            className="text-sm text-[rgb(var(--muted))]"
-          >
-            Add at least 1 valid button (text + URL).
-          </div>
-        ) : (
-          items.map((it, i) => {
-            const per = it.align === "left" || it.align === "right" || it.align === "center" ? it.align : blockAlign;
-            const perWrap = per === "left" ? "self-start" : per === "right" ? "self-end" : "self-center";
-            return (
-              <div key={i} className={perWrap}>
-                <LinkButton href={normalizeUrl(it.url)} label={it.title} buttonStyle={buttonStyle} />
-              </div>
-            );
-          })
-        )}
-      </div>
-    );
-  }
-
-  return null;
-}
-
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [site, setSite] = useState<SiteRow | null>(null);
@@ -698,8 +557,38 @@ export default function DashboardPage() {
   });
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [anchorDraft, setAnchorDraft] = useState("");
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
+
+  const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
+
+  const publicUrl = site ? `/${site.slug}` : "/";
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const canAct = !!site && !loading && !creating && !inserting;
+
+  // ✅ единый апдейтер: ограничиваем колонки + оптимистично обновляем UI
+  async function updateBlock(blockId: string, patch: BlockPatch) {
+    if (!site) throw new Error("No site loaded");
+
+    const updates: any = {};
+    if ("content" in patch) updates.content = (patch as any).content;
+    if ("variant" in patch) updates.variant = (patch as any).variant;
+    if ("style" in patch) updates.style = (patch as any).style;
+    if ("anchor_id" in patch) updates.anchor_id = (patch as any).anchor_id;
+    if ("position" in patch) updates.position = (patch as any).position;
+    if ("is_visible" in patch) updates.is_visible = (patch as any).is_visible;
+
+    if (Object.keys(updates).length === 0) return;
+
+    // optimistic local state update
+    setBlocks((prev) => prev.map((b) => (b.id === blockId ? ({ ...b, ...updates } as any) : b)));
+
+    const { error } = await supabase.from("site_blocks").update(updates).eq("id", blockId);
+    if (error) throw error;
+  }
 
   async function refreshAll() {
     setError(null);
@@ -717,19 +606,19 @@ export default function DashboardPage() {
         button_text_color: s.button_text_color ?? "",
       });
 
-      const bs = await loadBlocks(s.id);
-      setBlocks(bs);
+      let bs = await loadBlocks(s.id);
 
+      // гарантируем, что есть hero (как раньше)
       if (!bs.some((b) => b.type === "hero")) {
         await createBlock(s.id, "hero");
-        const bs2 = await loadBlocks(s.id);
-        setBlocks(bs2);
+        bs = await loadBlocks(s.id);
       }
 
-      const latest = await loadBlocks(s.id);
-      const firstVisible = latest.find((b) => b.is_visible) ?? latest[0];
+      setBlocks(bs);
+
+      const firstVisible = bs.find((b) => b.is_visible) ?? bs[0];
       setSelectedBlockId((prev) => {
-        if (prev && latest.some((b) => b.id === prev)) return prev;
+        if (prev && bs.some((b) => b.id === prev)) return prev;
         return firstVisible?.id ?? null;
       });
     } catch (e: any) {
@@ -741,11 +630,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const publicUrl = site ? `/${site.slug}` : "/";
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // sync anchor draft with selected block
+  React.useEffect(() => {
+    setAnchorDraft(selectedBlock?.anchor_id ?? "");
+  }, [selectedBlockId, selectedBlock?.anchor_id]);
 
   async function persistOrder(next: BlockRow[]) {
     if (!site) return;
@@ -774,7 +665,6 @@ export default function DashboardPage() {
   }
 
   async function insertBlockAt(index: number, type: BlockType) {
-
     if (!site) return;
     setError(null);
     setInserting({ index, type });
@@ -869,38 +759,49 @@ export default function DashboardPage() {
     }
   }
 
-  const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
-
-  const canAct = !!site && !loading && !creating && !inserting;
-
-  // ✅ ЕДИНЫЙ onSave для всех editors — больше никакого копипаста и рассинхрона сигнатур
-  const saveSelectedBlock = async (next: BlockPatch) => {
-    if (!selectedBlock || !site) return;
-    await updateBlock(selectedBlock.id, next);
-    const bs = await loadBlocks(site.id);
-    setBlocks(bs);
-  };
-  type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style">>;
-
   async function reloadBlocksAfterSave() {
     if (!site) return;
     const bs = await loadBlocks(site.id);
     setBlocks(bs);
   }
-  
+
+  // ✅ общий save для “content only” редакторов
   const saveSelectedBlockContent = async (content: any) => {
     if (!selectedBlock || !site) return;
-    await updateBlock(selectedBlock.id, { content } as BlockPatch);
-    await reloadBlocksAfterSave();
+    try {
+      setError(null);
+      await updateBlock(selectedBlock.id, { content });
+      await reloadBlocksAfterSave();
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
   };
-  
-  const saveSelectedHero = async (next: any) => {
-    // next ожидаем как патч (например {content, variant} или {content, variant, style})
+
+  // ✅ важный: patch-сейв (Header: content + variant)
+  const saveSelectedBlockPatch = async (patch: { content?: any; variant?: any; style?: any; anchor_id?: string }) => {
     if (!selectedBlock || !site) return;
-    await updateBlock(selectedBlock.id, next as BlockPatch);
-    await reloadBlocksAfterSave();
+
+    try {
+      setError(null);
+      await updateBlock(selectedBlock.id, patch as any);
+      await reloadBlocksAfterSave();
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
   };
-  
+
+  // hero уже работает как patch (content/variant/style)
+  const saveSelectedHero = async (next: any) => {
+    if (!selectedBlock || !site) return;
+    try {
+      setError(null);
+      await updateBlock(selectedBlock.id, next as BlockPatch);
+      await reloadBlocksAfterSave();
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    }
+  };
+
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="sticky top-0 z-30 border-b border-white/10 bg-black/60 backdrop-blur">
@@ -1244,7 +1145,7 @@ export default function DashboardPage() {
                           value={(site as any)?.font_scale ?? "md"}
                           onChange={async (e) => {
                             if (!site) return;
-                            const font_scale = e.target.value;
+                            const font_scale = e.target.value as any;
                             try {
                               await updateSiteTheme(site.id, { font_scale } as any);
                               setSite({ ...(site as any), font_scale } as any);
@@ -1267,7 +1168,7 @@ export default function DashboardPage() {
                           value={(site as any)?.button_radius ?? "2xl"}
                           onChange={async (e) => {
                             if (!site) return;
-                            const button_radius = e.target.value;
+                            const button_radius = e.target.value as any;
                             try {
                               await updateSiteTheme(site.id, { button_radius } as any);
                               setSite({ ...(site as any), button_radius } as any);
@@ -1439,24 +1340,60 @@ export default function DashboardPage() {
                         </Button>
                       </div>
 
+                      <div className="mb-4">
+                        <label className="mb-1 block text-xs font-medium opacity-70">Anchor ID</label>
+                        <input
+                          type="text"
+                          value={anchorDraft}
+                          onChange={(e) => setAnchorDraft(e.target.value)}
+                          onBlur={async () => {
+                            if (!selectedBlock) return;
+
+                            const blockId = selectedBlock.id;
+                            const normalized = normalizeAnchorId(anchorDraft);
+                            const next = normalized || null;
+
+                            setAnchorDraft(normalized);
+                            setBlocks((prev) =>
+                              prev.map((b) => (b.id === blockId ? { ...b, anchor_id: next } : b)),
+                            );
+
+                            try {
+                              await updateBlock(blockId, { anchor_id: next });
+                            } catch (e: any) {
+                              setError(e?.message ?? String(e));
+                              if (site) {
+                                const bs = await loadBlocks(site.id);
+                                setBlocks(bs);
+                              }
+                            }
+                          }}
+                          placeholder="about / pricing / contact"
+                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-white/30"
+                        />
+                        <p className="mt-1 text-[11px] opacity-50">
+                          Use for links like <span className="font-mono">#about</span>
+                        </p>
+                      </div>
+
                       {selectedBlock.type === "header" ? (
-  <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-) : selectedBlock.type === "hero" ? (
-  <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
-) : selectedBlock.type === "text" ? (
-  <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-) : selectedBlock.type === "links" ? (
-  <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-) : selectedBlock.type === "image" ? (
-  <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-) : selectedBlock.type === "divider" ? (
-  <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-) : (
-  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
-    No editor wired for:{" "}
-    <span className="font-mono">{String((selectedBlock as any).type)}</span>
-  </div>
-)}
+                        <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockPatch} />
+                      ) : selectedBlock.type === "hero" ? (
+                        <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
+                      ) : selectedBlock.type === "text" ? (
+                        <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                      ) : selectedBlock.type === "links" ? (
+                        <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                      ) : selectedBlock.type === "image" ? (
+                        <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                      ) : selectedBlock.type === "divider" ? (
+                        <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                      ) : (
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                          No editor wired for:{" "}
+                          <span className="font-mono">{String((selectedBlock as any).type)}</span>
+                        </div>
+                      )}
                     </>
                   )}
                 </>
