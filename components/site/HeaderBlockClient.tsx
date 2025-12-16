@@ -228,7 +228,7 @@ export function HeaderBlockClient(props: {
                 <div className="absolute left-4 right-4 top-[3.25rem] z-[100]">
                   <div
                     className={[
-                      "rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl",
+                      "rounded-2xl border border-white/10 bg-black",
                       "max-h-[70vh] overflow-auto pr-1",
                       "px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
                       "origin-top scale-95 opacity-0 translate-y-1",
