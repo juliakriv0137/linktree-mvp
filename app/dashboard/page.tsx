@@ -560,6 +560,7 @@ export default function DashboardPage() {
   const [anchorDraft, setAnchorDraft] = useState("");
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [previewNonce, setPreviewNonce] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
 
   const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
@@ -950,7 +951,10 @@ export default function DashboardPage() {
                 <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
                   <button
                     type="button"
-                    onClick={() => setPreviewDevice("desktop")}
+                    onClick={() => {
+                      setPreviewDevice("desktop");
+                      setPreviewNonce(Date.now());
+                    }}
                     className={clsx(
                       "rounded-full px-3 py-2 text-xs font-semibold transition",
                       previewDevice === "desktop" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
@@ -960,7 +964,11 @@ export default function DashboardPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPreviewDevice("mobile")}
+                    onClick={() => {
+                      setPreviewDevice("mobile");
+                      setPreviewNonce(Date.now());
+                    }}
+                    
                     className={clsx(
                       "rounded-full px-3 py-2 text-xs font-semibold transition",
                       previewDevice === "mobile" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
@@ -986,7 +994,14 @@ export default function DashboardPage() {
               <div className="p-4">
                 <div className={clsx("mx-auto overflow-hidden rounded-2xl border border-white/10", previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full")}>
 
-                  <SiteShell
+                  {previewDevice === "mobile" ? (
+                    <iframe
+                      title="Mobile preview"
+                      src={`${publicUrl}?preview=${previewNonce}`}
+                      className="h-[760px] w-[390px] max-w-full rounded-2xl"
+                    />
+                  ) : (
+<SiteShell
                     themeKey={site?.theme_key ?? "midnight"}
                     backgroundStyle={(site?.background_style ?? "solid") as any}
                     buttonStyle={(site?.button_style ?? "solid") as any}
@@ -1014,6 +1029,7 @@ export default function DashboardPage() {
                       />
                     </div>
                   </SiteShell>
+                  )}
                 </div>
               </div>
             ) : (
