@@ -174,7 +174,7 @@ export function BlockFrame({ block, anchorId, children }: Props) {
       data-block-id={block.id}
       data-block-type={block.type}
       data-anchor-id={anchorId || undefined}
-      className={outerCls}
+      className={block.type === "header" ? outerCls + " relative z-[50]" : outerCls}
     >
       <div className={innerCls}>{children}</div>
     </section>
