@@ -23,6 +23,16 @@ export type BlocksRendererProps = {
   mode: "public" | "preview";
   site?: BlocksRendererSiteCtx;
 };
+function normalizeAnchorId(raw?: string | null) {
+  if (!raw) return undefined;
+  let s = String(raw).trim();
+  if (!s) return undefined;
+  if (s.startsWith("#")) s = s.slice(1).trim();
+  if (!s) return undefined;
+  // Keep it HTML-id friendly: letters/numbers/_/- ; convert spaces to "-"
+  s = s.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "");
+  return s || undefined;
+}
 
 export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
   const sorted = React.useMemo(() => {
@@ -45,11 +55,19 @@ export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
 
         const Comp = entry.render;
 
-        return (
-          <section id={block.anchor_id || undefined} key={block.id} className="scroll-mt-24">
-            <Comp block={block} mode={mode} site={site} />
-          </section>
-        );
+        const anchorId = normalizeAnchorId(block.anchor_id);
+
+return (
+  <section
+    id={anchorId}
+    data-anchor-id={anchorId}
+    key={block.id}
+    className="scroll-mt-24"
+  >
+    <Comp block={block} mode={mode} site={site} />
+  </section>
+);
+
       })}
     </>
   );

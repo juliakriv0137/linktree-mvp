@@ -24,9 +24,23 @@ function safeTrim(v: any) {
 function normalizeUrl(raw: any) {
   const v = safeTrim(raw);
   if (!v) return "";
-  if (!/^https?:\/\//i.test(v)) return `https://${v}`;
-  return v;
+
+  // anchors inside the page
+  if (v.startsWith("#")) return v;
+
+  // relative paths
+  if (v.startsWith("/")) return v;
+
+  // non-http schemes
+  if (/^(mailto:|tel:|sms:)/i.test(v)) return v;
+
+  // already absolute
+  if (/^https?:\/\//i.test(v)) return v;
+
+  // fallback: domain → https
+  return `https://${v}`;
 }
+
 
 function asObj(v: unknown): Record<string, any> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as any) : {};
