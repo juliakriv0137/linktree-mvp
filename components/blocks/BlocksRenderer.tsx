@@ -1,4 +1,5 @@
 import * as React from "react";
+import { BlockFrame } from "@/components/blocks/BlockFrame";
 import { BlockRegistry } from "@/lib/blocks/registry";
 
 export type SiteBlockRow = {
@@ -57,16 +58,11 @@ export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
 
         const anchorId = normalizeAnchorId(block.anchor_id);
 
-return (
-  <section
-    id={anchorId}
-    data-anchor-id={anchorId}
-    key={block.id}
-    className="scroll-mt-24"
-  >
-    <Comp block={block} mode={mode} site={site} />
-  </section>
-);
+        return (
+          <BlockFrame key={block.id} block={block} anchorId={anchorId}>
+            <Comp block={block} mode={mode} site={site} />
+          </BlockFrame>
+        );
 
       })}
     </>

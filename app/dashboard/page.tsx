@@ -559,6 +559,7 @@ export default function DashboardPage() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [anchorDraft, setAnchorDraft] = useState("");
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
 
   const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
@@ -946,6 +947,29 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("desktop")}
+                    className={clsx(
+                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      previewDevice === "desktop" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+                    )}
+                  >
+                    Desktop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("mobile")}
+                    className={clsx(
+                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      previewDevice === "mobile" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+                    )}
+                  >
+                    Mobile
+                  </button>
+                </div>
+
                 <Button variant="ghost" onClick={() => setPreviewCollapsed((v) => !v)} className="px-3 py-2 text-xs">
                   {previewCollapsed ? "Expand" : "Collapse"}
                 </Button>
@@ -960,7 +984,8 @@ export default function DashboardPage() {
 
             {!previewCollapsed ? (
               <div className="p-4">
-                <div className="overflow-hidden rounded-2xl border border-white/10">
+                <div className={clsx("mx-auto overflow-hidden rounded-2xl border border-white/10", previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full")}>
+
                   <SiteShell
                     themeKey={site?.theme_key ?? "midnight"}
                     backgroundStyle={(site?.background_style ?? "solid") as any}
@@ -1375,6 +1400,318 @@ export default function DashboardPage() {
                           Use for links like <span className="font-mono">#about</span>
                         </p>
                       </div>
+
+                      <Card className="bg-white/3 shadow-none">
+                        <div className="p-4 space-y-3">
+                          <div>
+                            <div className="text-sm font-semibold">Style</div>
+                            <div className="text-xs text-white/50 mt-1">Applies to any block (via BlockFrame).</div>
+                          </div>
+                          <div className="mt-3">
+                            <div className="text-xs text-white/50 mb-2">Presets</div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={!canAct}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                                onClick={async () => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, bg: "card", padding: "lg", radius: "2xl", border: "subtle" };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) setBlocks(await loadBlocks(site.id));
+                                  }
+                                }}
+                              >
+                                Card
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={!canAct}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                                onClick={async () => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, bg: "none", padding: "sm", radius: "none", border: "none" };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) setBlocks(await loadBlocks(site.id));
+                                  }
+                                }}
+                              >
+                                Minimal
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={!canAct}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                                onClick={async () => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, width: "wide", padding: "md" };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) setBlocks(await loadBlocks(site.id));
+                                  }
+                                }}
+                              >
+                                Wide section
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={!canAct}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                                onClick={async () => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, align: "center" };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) setBlocks(await loadBlocks(site.id));
+                                  }
+                                }}
+                              >
+                                Centered
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={!canAct}
+                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                                onClick={async () => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, bg: "card", width: "full", padding: "lg", align: "center", radius: "2xl", border: "subtle" };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) setBlocks(await loadBlocks(site.id));
+                                  }
+                                }}
+                              >
+                                Hero highlight
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label className="block">
+                              <div className="text-xs text-white/50 mb-2">Padding</div>
+                              <select
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                value={String(((selectedBlock as any).style ?? {}).padding ?? "none")}
+                                disabled={!canAct}
+                                onChange={async (e) => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, padding: e.target.value };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) {
+                                      const bs = await loadBlocks(site.id);
+                                      setBlocks(bs);
+                                    }
+                                  }
+                                }}
+                              >
+                                <option value="none">None</option>
+                                <option value="sm">Small</option>
+                                <option value="md">Medium</option>
+                                <option value="lg">Large</option>
+                              </select>
+                            </label>
+
+                            <label className="block">
+                              <div className="text-xs text-white/50 mb-2">Width</div>
+                              <select
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                value={String(((selectedBlock as any).style ?? {}).width ?? "full")}
+                                disabled={!canAct}
+                                onChange={async (e) => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, width: e.target.value };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) {
+                                      const bs = await loadBlocks(site.id);
+                                      setBlocks(bs);
+                                    }
+                                  }
+                                }}
+                              >
+                                <option value="compact">Compact</option>
+                                <option value="wide">Wide</option>
+                                <option value="full">Full</option>
+                              </select>
+                            </label>
+
+                            <label className="block sm:col-span-2">
+                              <div className="text-xs text-white/50 mb-2">Background</div>
+                              <select
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                value={String(((selectedBlock as any).style ?? {}).bg ?? "none")}
+                                disabled={!canAct}
+                                onChange={async (e) => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, bg: e.target.value };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) {
+                                      const bs = await loadBlocks(site.id);
+                                      setBlocks(bs);
+                                    }
+                                  }
+                                }}
+                              >
+                                <option value="none">None</option>
+                                <option value="card">Card</option>
+                              </select>
+                            </label>
+                          
+                            <label className="block">
+                              <div className="text-xs text-white/50 mb-2">Align</div>
+                              <select
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                value={String(((selectedBlock as any).style ?? {}).align ?? "left")}
+                                disabled={!canAct}
+                                onChange={async (e) => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, align: e.target.value };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) {
+                                      const bs = await loadBlocks(site.id);
+                                      setBlocks(bs);
+                                    }
+                                  }
+                                }}
+                              >
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                              </select>
+                            </label>
+
+                            <label className="block">
+                              <div className="text-xs text-white/50 mb-2">Radius</div>
+                              <select
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                value={String(((selectedBlock as any).style ?? {}).radius ?? "2xl")}
+                                disabled={!canAct}
+                                onChange={async (e) => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, radius: e.target.value };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) {
+                                      const bs = await loadBlocks(site.id);
+                                      setBlocks(bs);
+                                    }
+                                  }
+                                }}
+                              >
+                                <option value="none">None</option>
+                                <option value="sm">Small</option>
+                                <option value="md">Medium</option>
+                                <option value="lg">Large</option>
+                                <option value="xl">XL</option>
+                                <option value="2xl">2XL</option>
+                              </select>
+                            </label>
+
+                            <label className="block sm:col-span-2">
+                              <div className="text-xs text-white/50 mb-2">Border</div>
+                              <select
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                                value={String(((selectedBlock as any).style ?? {}).border ?? "subtle")}
+                                disabled={!canAct}
+                                onChange={async (e) => {
+                                  if (!selectedBlock) return;
+                                  const blockId = selectedBlock.id;
+                                  const cur = ((selectedBlock as any).style ?? {}) as any;
+                                  const next = { ...cur, border: e.target.value };
+
+                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
+
+                                  try {
+                                    await updateBlock(blockId, { style: next } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                    if (site) {
+                                      const bs = await loadBlocks(site.id);
+                                      setBlocks(bs);
+                                    }
+                                  }
+                                }}
+                              >
+                                <option value="none">None</option>
+                                <option value="subtle">Subtle</option>
+                              </select>
+                            </label>
+</div>
+                        </div>
+                      </Card>
 
                       {selectedBlock.type === "header" ? (
                         <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockPatch} />
