@@ -8,6 +8,7 @@ import { Card } from "@/components/dashboard/ui/Card";
 import { Button } from "@/components/dashboard/ui/Button";
 import { IconButton } from "@/components/dashboard/ui/IconButton";
 import { ColorField } from "@/components/dashboard/ui/ColorField";
+import { Inspector } from "@/components/dashboard/inspector/Inspector";
 import {
   DndContext,
   PointerSensor,
@@ -1103,46 +1104,13 @@ export default function DashboardPage() {
           </Card>
 
           {/* RIGHT */}
-          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
-            <div className="shrink-0 p-4 border-b border-white/10 bg-black/20">
-              <div>
-                <div className="text-sm font-semibold">Inspector</div>
-                <div className="text-xs text-white/50 mt-1">Edit theme or selected block.</div>
-              </div>
-
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab("block")}
-                  className={clsx(
-                    "rounded-full px-3 py-2 text-xs font-semibold border transition",
-                    inspectorTab === "block"
-                      ? "border-white/25 bg-white/10 text-white"
-                      : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
-                  )}
-                >
-                  Block
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab("theme")}
-                  className={clsx(
-                    "rounded-full px-3 py-2 text-xs font-semibold border transition",
-                    inspectorTab === "theme"
-                      ? "border-white/25 bg-white/10 text-white"
-                      : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white",
-                  )}
-                >
-                  Theme
-                </button>
-              </div>
-            </div>
-
-            <div className="p-4 lg:h-[calc(100%-56px)] lg:overflow-auto space-y-4">
-              {/* THEME TAB */}
-              {inspectorTab === "theme" && (
-                <Card className="bg-white/3 shadow-none">
+          <div className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
+  <Inspector
+    tab={inspectorTab}
+    onTabChange={setInspectorTab}
+    theme={(
+      <>
+<Card className="bg-white/3 shadow-none">
                   <div className="p-4 space-y-5">
                     <div>
                       <div className="text-sm font-semibold">Theme</div>
@@ -1380,11 +1348,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </Card>
-              )}
-
-              {/* BLOCK TAB */}
-              {inspectorTab === "block" && (
-                <>
+      </>
+    )}
+    block={(
+      <>
+<>
                   {!selectedBlock ? (
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
                       Select a block on the left to edit.
@@ -1594,9 +1562,10 @@ export default function DashboardPage() {
                     </>
                   )}
                 </>
-              )}
-            </div>
-          </Card>
+      </>
+    )}
+  />
+</div>
         </div>
       </div>
     </main>
