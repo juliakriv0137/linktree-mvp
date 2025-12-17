@@ -14,3 +14,6 @@ supabase/.temp/
 # env files
 .env*.local
 .env.production.local
+
+# TypeScript build cache
+tsconfig.tsbuildinfo

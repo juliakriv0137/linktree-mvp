@@ -110,14 +110,33 @@ export function HeaderBlockClient(props: {
         <a
           key={idx}
           href={normalizeUrl(it.url)}
-          onClick={
-            closeOnClick
-              ? (e) => {
-                  const d = (e.currentTarget as any)?.closest?.("details");
-                  if (d && typeof d.removeAttribute === "function") d.removeAttribute("open");
+          onClick={(e) => {
+              const href = normalizeUrl(it.url);
+
+              if (closeOnClick) {
+                const d = (e.currentTarget as any)?.closest?.("details");
+                if (d && typeof d.removeAttribute === "function") d.removeAttribute("open");
+              }
+
+              if (href && href.startsWith("#")) {
+                e.preventDefault();
+                const id = href.slice(1);
+
+                if (typeof window !== "undefined") {
+                  window.history.pushState(null, "", href);
                 }
-              : undefined
-          }
+
+                // после закрытия меню/перерендера — надёжнее скроллит
+                if (typeof window !== "undefined") {
+                  window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                      const el = document.getElementById(id);
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                  });
+                }
+              }
+            }}
           className={
             layout === "col"
               ? "rounded-xl px-3 py-2 hover:bg-white/10 hover:text-white transition"

@@ -32,7 +32,7 @@ function normalizeAnchorId(raw?: string | null) {
   if (!s) return undefined;
   // Keep it HTML-id friendly: letters/numbers/_/- ; convert spaces to "-"
   s = s.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "");
-  return s || undefined;
+  return (s || undefined)?.toLowerCase();
 }
 
 export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
