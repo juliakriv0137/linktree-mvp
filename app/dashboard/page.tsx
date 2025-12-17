@@ -556,7 +556,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setAnchorDraft(selectedBlock?.anchor_id ?? "");
-    setBlockTab("content");
+    setBlockTab("style");
+
   }, [selectedBlockId, selectedBlock?.anchor_id]);
 
   async function persistOrder(next: BlockRow[]) {
@@ -1377,37 +1378,40 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setBlockTab("content")}
-                      className={clsx(
-                        "rounded-full px-3 py-2 text-xs font-semibold transition",
-                        blockTab === "content" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
-                      )}
-                    >
-                      Content
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBlockTab("style")}
-                      className={clsx(
-                        "rounded-full px-3 py-2 text-xs font-semibold transition",
-                        blockTab === "style" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
-                      )}
-                    >
-                      Style
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBlockTab("advanced")}
-                      className={clsx(
-                        "rounded-full px-3 py-2 text-xs font-semibold transition",
-                        blockTab === "advanced" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
-                      )}
-                    >
-                      Advanced
-                    </button>
-                  </div>
+  <button
+    type="button"
+    onClick={() => setBlockTab("style")}
+    className={clsx(
+      "rounded-full px-3 py-2 text-xs font-semibold transition",
+      blockTab === "style" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+    )}
+  >
+    Style
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setBlockTab("content")}
+    className={clsx(
+      "rounded-full px-3 py-2 text-xs font-semibold transition",
+      blockTab === "content" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+    )}
+  >
+    Content
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setBlockTab("advanced")}
+    className={clsx(
+      "rounded-full px-3 py-2 text-xs font-semibold transition",
+      blockTab === "advanced" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+    )}
+  >
+    Advanced
+  </button>
+</div>
+
                   {blockTab === "advanced" && (
 
 
@@ -1465,7 +1469,47 @@ export default function DashboardPage() {
 
                   <Card className="bg-white/3 shadow-none">
                     <div className="p-4 space-y-3">
-                      <div>
+                      {/* Header-specific style controls */}
+                        {selectedBlock && (selectedBlock as any).type === "header" ? (
+                          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-3">
+                            <div className="text-sm font-semibold">Header style</div>
+
+                            <div>
+                              <div className="text-xs text-white/50 mb-2">Variant</div>
+                              <select
+                                disabled={!canAct}
+                                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50"
+                                value={
+                                  (((selectedBlock as any).variant ?? "default") as any) === "centered"
+                                    ? "centered"
+                                    : "default"
+                                }
+                                onChange={(e) => saveSelectedBlockPatch({ variant: e.target.value as any })}
+                              >
+                                <option value="default">Default</option>
+                                <option value="centered">Centered</option>
+                              </select>
+                              <div className="text-xs text-white/50 mt-2">
+                                Variant — стиль/компоновка блока (site_blocks.variant).
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                              <div className="text-sm font-medium">Full width (edge-to-edge)</div>
+                              <input
+                                disabled={!canAct}
+                                type="checkbox"
+                                checked={Boolean(((selectedBlock as any)?.style as any)?.full_bleed)}
+                                onChange={(e) => onPatchBlockStyle({ full_bleed: e.target.checked })}
+                              />
+                            </div>
+                            <div className="text-xs text-white/50">
+                              Делает хедер на всю ширину. Это style (site_blocks.style.full_bleed).
+                            </div>
+                          </div>
+                        ) : null}
+
+<div>
                         <div className="text-sm font-semibold">Block style</div>
                         <div className="text-xs text-white/50 mt-1">
                           Applies to this block (via BlockFrame).
