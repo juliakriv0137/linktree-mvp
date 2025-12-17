@@ -7,11 +7,10 @@ import { InspectorHeader } from "@/components/dashboard/inspector/InspectorHeade
 type Props = {
   tab: "block" | "theme";
   onTabChange: (tab: "block" | "theme") => void;
-  theme: React.ReactNode;
-  block: React.ReactNode;
+block: React.ReactNode;
 };
 
-export function Inspector({ tab, onTabChange, theme, block }: Props) {
+export function Inspector({ tab, onTabChange, block }: Props) {
   return (
     <Card className="h-full overflow-hidden flex flex-col">
       <div className="shrink-0">
@@ -19,7 +18,7 @@ export function Inspector({ tab, onTabChange, theme, block }: Props) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto p-4 space-y-4">
-        {tab === "theme" ? theme : block}
+        {block}
       </div>
     </Card>
   );

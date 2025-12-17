@@ -8,7 +8,6 @@ import { Card } from "@/components/dashboard/ui/Card";
 import { Button } from "@/components/dashboard/ui/Button";
 import { IconButton } from "@/components/dashboard/ui/IconButton";
 import { ColorField } from "@/components/dashboard/ui/ColorField";
-import { Inspector } from "@/components/dashboard/inspector/Inspector";
 import {
   DndContext,
   PointerSensor,
@@ -121,7 +120,6 @@ type TextContent = {
   align?: "left" | "center" | "right";
 };
 
-// ✅ один единственный BlockPatch — без дублей
 type BlockPatch = Partial<
   Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id">
 >;
@@ -132,24 +130,6 @@ function clsx(...xs: Array<string | false | null | undefined>) {
 
 function safeTrim(v: string) {
   return (v ?? "").trim();
-}
-
-function normalizeUrl(raw: string) {
-  const v = safeTrim(raw);
-  if (!v) return "";
-  if (!/^https?:\/\//i.test(v)) return `https://${v}`;
-  return v;
-}
-
-function isValidHttpUrl(raw: string) {
-  const v = safeTrim(raw);
-  if (!v) return false;
-  try {
-    const u = new URL(normalizeUrl(v));
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 function normalizeAnchorId(raw: string) {
@@ -269,7 +249,6 @@ async function createBlock(
   if (maxPosErr) throw maxPosErr;
   const nextPos = (maxPosRow?.position ?? 0) + 1;
 
-  // ✅ ВАЖНО: header content в формате HeaderEditor
   const defaultContent =
     type === "header"
       ? ({
@@ -312,7 +291,6 @@ async function createBlock(
     is_visible: true,
   };
 
-  // ✅ дефолтный variant для header (чтобы сразу корректно был)
   if (type === "header") insertRow.variant = "default";
 
   const { error } = await supabase.from("site_blocks").insert(insertRow);
@@ -348,7 +326,7 @@ async function updateSiteTheme(
   const { error } = await supabase.from("sites").update(patch).eq("id", siteId);
   if (error) throw error;
 }
-/** Left list item (sortable) */
+
 function SortableBlockRow({
   block,
   selected,
@@ -436,7 +414,6 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [creating, setCreating] = useState<null | BlockType>(null);
-
   const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
   const [inserting, setInserting] = useState<null | { index: number; type: BlockType }>(null);
 
@@ -455,6 +432,7 @@ export default function DashboardPage() {
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [previewNonce, setPreviewNonce] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
+  const [blockTab, setBlockTab] = useState<"content" | "style" | "advanced">("content");
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.id === selectedBlockId) ?? null,
@@ -467,7 +445,6 @@ export default function DashboardPage() {
 
   const canAct = !!site && !loading && !creating && !inserting;
 
-  // ✅ единый апдейтер: ограничиваем колонки + оптимистично обновляем UI
   async function updateBlock(blockId: string, patch: BlockPatch) {
     if (!site) throw new Error("No site loaded");
 
@@ -481,7 +458,6 @@ export default function DashboardPage() {
 
     if (Object.keys(updates).length === 0) return;
 
-    // optimistic local state update
     setBlocks((prev) => prev.map((b) => (b.id === blockId ? ({ ...b, ...updates } as any) : b)));
 
     const { error } = await supabase.from("site_blocks").update(updates).eq("id", blockId);
@@ -501,11 +477,14 @@ export default function DashboardPage() {
     }
   }
 
-  async function onApplyStylePreset(presetKey: any) {
+  async function onApplyStylePreset(presetKey: string) {
     if (!selectedBlock) return;
     const blockId = selectedBlock.id;
     const cur = ((selectedBlock as any).style ?? {}) as any;
-    const next = applyStylePreset(cur, presetKey);
+
+    // ✅ фикс типа: applyStylePreset ждёт StylePresetKey
+    const next = applyStylePreset(cur, presetKey as any);
+
     await saveBlockStyle(blockId, next);
   }
 
@@ -521,10 +500,7 @@ export default function DashboardPage() {
     const raw = ((selectedBlock as any)?.style ?? {}) as any;
     const n = normalizeBlockStyle(raw);
 
-    // desktop-first view for now (later we can add a device toggle)
     const d: any = { ...n, ...(n as any).desktop };
-
-    // UI wants legacy "compact" option, but canonical token is "content"
     const uiWidth = d.width === "content" ? "compact" : (d.width ?? "full");
 
     return {
@@ -555,7 +531,6 @@ export default function DashboardPage() {
 
       let bs = await loadBlocks(s.id);
 
-      // гарантируем, что есть hero (как раньше)
       if (!bs.some((b) => b.type === "hero")) {
         await createBlock(s.id, "hero");
         bs = await loadBlocks(s.id);
@@ -564,7 +539,7 @@ export default function DashboardPage() {
       setBlocks(bs);
 
       const firstVisible = bs.find((b) => b.is_visible) ?? bs[0];
-      setSelectedBlockId((prev) => {
+      setSelectedBlockId((prev: string | null) => {
         if (prev && bs.some((b) => b.id === prev)) return prev;
         return firstVisible?.id ?? null;
       });
@@ -580,9 +555,9 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // sync anchor draft with selected block
   useEffect(() => {
     setAnchorDraft(selectedBlock?.anchor_id ?? "");
+    setBlockTab("content");
   }, [selectedBlockId, selectedBlock?.anchor_id]);
 
   async function persistOrder(next: BlockRow[]) {
@@ -600,8 +575,6 @@ export default function DashboardPage() {
     if (oldIndex === -1 || newIndex === -1) return;
 
     const next = arrayMove(blocks, oldIndex, newIndex).map((b) => ({ ...b }));
-
-    // normalize positions
     const normalized = next.map((b, idx) => ({ ...b, position: idx + 1 }));
 
     try {
@@ -705,7 +678,7 @@ export default function DashboardPage() {
 
       await Promise.all(normalized.map((b) => updateBlock(b.id, { position: b.position })));
 
-      setSelectedBlockId((prev) => {
+      setSelectedBlockId((prev: string | null) => {
         if (!prev) return normalized[0]?.id ?? null;
         if (prev === block.id) return normalized[0]?.id ?? null;
         if (!normalized.some((b) => b.id === prev)) return normalized[0]?.id ?? null;
@@ -724,7 +697,6 @@ export default function DashboardPage() {
     setBlocks(bs);
   }
 
-  // ✅ общий save для “content only” редакторов
   const saveSelectedBlockContent = async (content: any) => {
     if (!selectedBlock || !site) return;
     try {
@@ -736,7 +708,6 @@ export default function DashboardPage() {
     }
   };
 
-  // ✅ patch-сейв (Header: content + variant, etc.)
   const saveSelectedBlockPatch = async (patch: {
     content?: any;
     variant?: any;
@@ -744,7 +715,6 @@ export default function DashboardPage() {
     anchor_id?: string;
   }) => {
     if (!selectedBlock || !site) return;
-
     try {
       setError(null);
       await updateBlock(selectedBlock.id, patch as any);
@@ -754,7 +724,6 @@ export default function DashboardPage() {
     }
   };
 
-  // hero уже работает как patch (content/variant/style)
   const saveSelectedHero = async (next: any) => {
     if (!selectedBlock || !site) return;
     try {
@@ -800,7 +769,6 @@ export default function DashboardPage() {
                 Sign out
               </Button>
 
-              {/* Theme quick controls (top bar) */}
               <div className="hidden lg:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1">
                 <span className="text-[11px] font-semibold text-white/70 px-2">Theme</span>
 
@@ -916,7 +884,9 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold">Blocks</div>
-                  <div className="text-xs text-white/50 mt-1">Select a block to edit. Drag to reorder.</div>
+                  <div className="text-xs text-white/50 mt-1">
+                    Select a block to edit. Drag to reorder.
+                  </div>
                 </div>
               </div>
 
@@ -933,7 +903,10 @@ export default function DashboardPage() {
                         await createBlock(site.id, t);
                         const bs = await loadBlocks(site.id);
                         setBlocks(bs);
-                        const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
+                        const last = bs.reduce(
+                          (acc, cur) => (cur.position > acc.position ? cur : acc),
+                          bs[0],
+                        );
                         if (last?.id) setSelectedBlockId(last.id);
                       } catch (e: any) {
                         setError(e?.message ?? String(e));
@@ -978,7 +951,9 @@ export default function DashboardPage() {
                           <InsertBlockMenu
                             insertIndex={insertIndex}
                             isOpen={insertMenuIndex === insertIndex}
-                            onToggle={() => setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)}
+                            onToggle={() =>
+                              setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)
+                            }
                             onInsert={(t) => insertBlockAt(insertIndex, t)}
                             disabled={!site || loading || !!creating || !!inserting}
                             inserting={inserting}
@@ -1103,14 +1078,49 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          {/* RIGHT */}
-          <div className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
-  <Inspector
-    tab={inspectorTab}
-    onTabChange={setInspectorTab}
-    theme={(
-      <>
-<Card className="bg-white/3 shadow-none">
+          {/* RIGHT (Inspector inline) */}
+          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-auto">
+            <div className="p-4 border-b border-white/10">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold">Inspector</div>
+                  <div className="text-xs text-white/50 mt-1">
+                    {inspectorTab === "theme" ? "Site-wide settings" : "Selected block settings"}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setInspectorTab("block")}
+                    className={clsx(
+                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      inspectorTab === "block"
+                        ? "bg-white/10 text-white"
+                        : "text-white/60 hover:text-white",
+                    )}
+                  >
+                    Block
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectorTab("theme")}
+                    className={clsx(
+                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      inspectorTab === "theme"
+                        ? "bg-white/10 text-white"
+                        : "text-white/60 hover:text-white",
+                    )}
+                  >
+                    Theme
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {inspectorTab === "theme" ? (
+                <Card className="bg-white/3 shadow-none">
                   <div className="p-4 space-y-5">
                     <div>
                       <div className="text-sm font-semibold">Theme</div>
@@ -1348,224 +1358,254 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </Card>
-      </>
-    )}
-    block={(
-      <>
-<>
-                  {!selectedBlock ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
-                      Select a block on the left to edit.
-                    </div>
-                  ) : (
-                    <>
-                      {/* Block meta: anchor */}
-                      <Card className="bg-white/3 shadow-none">
-                        <div className="p-4 space-y-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-sm font-semibold">Selected</div>
-                              <div className="text-xs text-white/50 mt-1 truncate">
-                                {selectedBlock.type} · id{" "}
-                                <span className="font-mono text-white/70">{selectedBlock.id}</span>
-                              </div>
-                            </div>
-
-                            <Button
-                              variant="ghost"
-                              className="px-3 py-2 text-xs"
-                              disabled={!canAct}
-                              onClick={async () => {
-                                if (!site || !selectedBlock) return;
-                                const normalized = normalizeAnchorId(anchorDraft);
-                                try {
-                                  setError(null);
-                                  await updateBlock(selectedBlock.id, { anchor_id: normalized || null });
-                                  await reloadBlocksAfterSave();
-                                  setAnchorDraft(normalized);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              Save anchor
-                            </Button>
-                          </div>
-
-                          <label className="block">
-                            <div className="text-xs text-white/50 mb-2">anchor_id (optional)</div>
-                            <input
-                              value={anchorDraft}
-                              disabled={!canAct}
-                              onChange={(e) => setAnchorDraft(e.target.value)}
-                              placeholder="e.g. about / pricing / faq"
-                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
-                            />
-                            <div className="text-xs text-white/50 mt-2">
-                              Use in links as <span className="font-mono text-white/70">#anchor</span> (e.g.{" "}
-                              <span className="font-mono text-white/70">/#about</span>).
-                            </div>
-                          </label>
-                        </div>
-                      </Card>
-
-                      {/* Block style */}
-                      <Card className="bg-white/3 shadow-none">
-                        <div className="p-4 space-y-3">
-                          <div>
-                            <div className="text-sm font-semibold">Block style</div>
-                            <div className="text-xs text-white/50 mt-1">
-                              Applies to this block (via BlockFrame).
-                            </div>
-                          </div>
-
-                          <div className="mt-2">
-                            <div className="text-xs text-white/50 mb-2">Presets</div>
-                            <div className="flex flex-wrap gap-2">
-                              {[
-                                ["card", "Card"],
-                                ["minimal", "Minimal"],
-                                ["wide_section", "Wide section"],
-                                ["centered", "Centered"],
-                                ["hero_highlight", "Hero highlight"],
-                              ].map(([k, label]) => (
-                                <button
-                                  key={k}
-                                  type="button"
-                                  disabled={!canAct}
-                                  className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
-                                  onClick={() => onApplyStylePreset(k)}
-                                >
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <label className="block">
-                              <div className="text-xs text-white/50 mb-2">Padding</div>
-                              <select
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={getStyleView().padding}
-                                disabled={!canAct}
-                                onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
-                              >
-                                <option value="none">None</option>
-                                <option value="sm">Small</option>
-                                <option value="md">Medium</option>
-                                <option value="lg">Large</option>
-                              </select>
-                            </label>
-
-                            <label className="block">
-                              <div className="text-xs text-white/50 mb-2">Width</div>
-                              <select
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={getStyleView().width}
-                                disabled={!canAct}
-                                onChange={(e) => {
-                                  const v = e.target.value === "compact" ? "content" : e.target.value;
-                                  onPatchBlockStyle({ width: v });
-                                }}
-                              >
-                                <option value="compact">Compact</option>
-                                <option value="wide">Wide</option>
-                                <option value="full">Full</option>
-                              </select>
-                            </label>
-
-                            <label className="block sm:col-span-2">
-                              <div className="text-xs text-white/50 mb-2">Background</div>
-                              <select
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={getStyleView().background}
-                                disabled={!canAct}
-                                onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
-                              >
-                                <option value="none">None</option>
-                                <option value="card">Card</option>
-                                <option value="highlight">Highlight</option>
-                              </select>
-                              <div className="text-xs text-white/50 mt-1">
-                                Leave empty to use preset theme colors.
-                              </div>
-                            </label>
-
-                            <label className="block">
-                              <div className="text-xs text-white/50 mb-2">Align</div>
-                              <select
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={getStyleView().align}
-                                disabled={!canAct}
-                                onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
-                              >
-                                <option value="left">Left</option>
-                                <option value="center">Center</option>
-                                <option value="right">Right</option>
-                              </select>
-                            </label>
-
-                            <label className="block">
-                              <div className="text-xs text-white/50 mb-2">Radius</div>
-                              <select
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={getStyleView().radius}
-                                disabled={!canAct}
-                                onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
-                              >
-                                <option value="none">None</option>
-                                <option value="sm">Small</option>
-                                <option value="md">Medium</option>
-                                <option value="lg">Large</option>
-                                <option value="xl">XL</option>
-                                <option value="2xl">2XL</option>
-                              </select>
-                            </label>
-
-                            <label className="block sm:col-span-2">
-                              <div className="text-xs text-white/50 mb-2">Border</div>
-                              <select
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={getStyleView().border}
-                                disabled={!canAct}
-                                onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
-                              >
-                                <option value="none">None</option>
-                                <option value="subtle">Subtle</option>
-                                <option value="strong">Strong</option>
-                              </select>
-                            </label>
-                          </div>
-                        </div>
-                      </Card>
-
-                      {/* Editors */}
-                      {selectedBlock.type === "header" ? (
-                        <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockPatch} />
-                      ) : selectedBlock.type === "hero" ? (
-                        <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
-                      ) : selectedBlock.type === "text" ? (
-                        <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                      ) : selectedBlock.type === "links" ? (
-                        <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                      ) : selectedBlock.type === "image" ? (
-                        <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                      ) : selectedBlock.type === "divider" ? (
-                        <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                      ) : (
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
-                          No editor wired for:{" "}
-                          <span className="font-mono">{String((selectedBlock as any).type)}</span>
-                        </div>
+              ) : !selectedBlock ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                  Select a block on the left to edit.
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setBlockTab("content")}
+                      className={clsx(
+                        "rounded-full px-3 py-2 text-xs font-semibold transition",
+                        blockTab === "content" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
                       )}
-                    </>
+                    >
+                      Content
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockTab("style")}
+                      className={clsx(
+                        "rounded-full px-3 py-2 text-xs font-semibold transition",
+                        blockTab === "style" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+                      )}
+                    >
+                      Style
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockTab("advanced")}
+                      className={clsx(
+                        "rounded-full px-3 py-2 text-xs font-semibold transition",
+                        blockTab === "advanced" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+                      )}
+                    >
+                      Advanced
+                    </button>
+                  </div>
+                  {blockTab === "advanced" && (
+
+
+                  <Card className="bg-white/3 shadow-none">
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold">Selected</div>
+                          <div className="text-xs text-white/50 mt-1 truncate">
+                            {selectedBlock.type} · id{" "}
+                            <span className="font-mono text-white/70">{selectedBlock.id}</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          className="px-3 py-2 text-xs"
+                          disabled={!canAct}
+                          onClick={async () => {
+                            if (!site || !selectedBlock) return;
+                            const normalized = normalizeAnchorId(anchorDraft);
+                            try {
+                              setError(null);
+                              await updateBlock(selectedBlock.id, { anchor_id: normalized || null });
+                              await reloadBlocksAfterSave();
+                              setAnchorDraft(normalized);
+                            } catch (err: any) {
+                              setError(err?.message ?? String(err));
+                            }
+                          }}
+                        >
+                          Save anchor
+                        </Button>
+                      </div>
+
+                      <label className="block">
+                        <div className="text-xs text-white/50 mb-2">anchor_id (optional)</div>
+                        <input
+                          value={anchorDraft}
+                          disabled={!canAct}
+                          onChange={(e) => setAnchorDraft(e.target.value)}
+                          placeholder="e.g. about / pricing / faq"
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+                        />
+                        <div className="text-xs text-white/50 mt-2">
+                          Use in links as <span className="font-mono text-white/70">#anchor</span> (e.g.{" "}
+                          <span className="font-mono text-white/70">/#about</span>).
+                        </div>
+                      </label>
+                    </div>
+                  </Card>
                   )}
+
+                  {blockTab === "style" && (
+
+                  <Card className="bg-white/3 shadow-none">
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <div className="text-sm font-semibold">Block style</div>
+                        <div className="text-xs text-white/50 mt-1">
+                          Applies to this block (via BlockFrame).
+                        </div>
+                      </div>
+
+                      <div className="mt-2">
+                        <div className="text-xs text-white/50 mb-2">Presets</div>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            ["card", "Card"],
+                            ["minimal", "Minimal"],
+                            ["wide_section", "Wide section"],
+                            ["centered", "Centered"],
+                            ["hero_highlight", "Hero highlight"],
+                          ].map(([k, label]) => (
+                            <button
+                              key={String(k)}
+                              type="button"
+                              disabled={!canAct}
+                              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                              onClick={() => onApplyStylePreset(String(k))}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="block">
+                          <div className="text-xs text-white/50 mb-2">Padding</div>
+                          <select
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            value={getStyleView().padding}
+                            disabled={!canAct}
+                            onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
+                          >
+                            <option value="none">None</option>
+                            <option value="sm">Small</option>
+                            <option value="md">Medium</option>
+                            <option value="lg">Large</option>
+                          </select>
+                        </label>
+
+                        <label className="block">
+                          <div className="text-xs text-white/50 mb-2">Width</div>
+                          <select
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            value={getStyleView().width}
+                            disabled={!canAct}
+                            onChange={(e) => {
+                              const v = e.target.value === "compact" ? "content" : e.target.value;
+                              onPatchBlockStyle({ width: v });
+                            }}
+                          >
+                            <option value="compact">Compact</option>
+                            <option value="wide">Wide</option>
+                            <option value="full">Full</option>
+                          </select>
+                        </label>
+
+                        <label className="block sm:col-span-2">
+                          <div className="text-xs text-white/50 mb-2">Background</div>
+                          <select
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            value={getStyleView().background}
+                            disabled={!canAct}
+                            onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
+                          >
+                            <option value="none">None</option>
+                            <option value="card">Card</option>
+                            <option value="highlight">Highlight</option>
+                          </select>
+                          <div className="text-xs text-white/50 mt-1">
+                            Leave empty to use preset theme colors.
+                          </div>
+                        </label>
+
+                        <label className="block">
+                          <div className="text-xs text-white/50 mb-2">Align</div>
+                          <select
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            value={getStyleView().align}
+                            disabled={!canAct}
+                            onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
+                          >
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </label>
+
+                        <label className="block">
+                          <div className="text-xs text-white/50 mb-2">Radius</div>
+                          <select
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            value={getStyleView().radius}
+                            disabled={!canAct}
+                            onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
+                          >
+                            <option value="none">None</option>
+                            <option value="sm">Small</option>
+                            <option value="md">Medium</option>
+                            <option value="lg">Large</option>
+                            <option value="xl">XL</option>
+                            <option value="2xl">2XL</option>
+                          </select>
+                        </label>
+
+                        <label className="block sm:col-span-2">
+                          <div className="text-xs text-white/50 mb-2">Border</div>
+                          <select
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            value={getStyleView().border}
+                            disabled={!canAct}
+                            onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
+                          >
+                            <option value="none">None</option>
+                            <option value="subtle">Subtle</option>
+                            <option value="strong">Strong</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                  </Card>
+                  )}
+                  {blockTab === "content" && (
+                  selectedBlock.type === "header" ? (
+                    <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockPatch} />
+                  ) : selectedBlock.type === "hero" ? (
+                    <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
+                  ) : selectedBlock.type === "text" ? (
+                    <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                  ) : selectedBlock.type === "links" ? (
+                    <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                  ) : selectedBlock.type === "image" ? (
+                    <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                  ) : selectedBlock.type === "divider" ? (
+                    <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                  ) : (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                      No editor wired for:{" "}
+                      <span className="font-mono">{String((selectedBlock as any).type)}</span>
+                    </div>
+                  )
+                  )}
+
                 </>
-      </>
-    )}
-  />
-</div>
+              )}
+            </div>
+          </Card>
         </div>
       </div>
     </main>
