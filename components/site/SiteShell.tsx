@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { LAYOUT_DEFAULTS, SPACING_PX, RADIUS_PX, type LayoutVariant } from "@/lib/design/tokens";
+
 import {
   BackgroundStyle,
   ThemeOverrides,
@@ -35,7 +37,21 @@ export function SiteShell({
   themeOverrides,
   layoutWidth = "compact",
 }: Props) {
-  const vars = cssVarsFromSiteTheme(themeKey, themeOverrides);
+  
+  // Layout variant (site-level). One per site.
+  // For now we map existing layoutWidth presets to layout variants.
+  const layoutVariant: LayoutVariant =
+    layoutWidth === "wide" ? "wide" : layoutWidth === "full" ? "full" : "compact";
+  const layout = LAYOUT_DEFAULTS[layoutVariant ?? "centered"];
+  const layoutContainerStyle: React.CSSProperties = {
+    maxWidth: layout.maxWidthPx === null ? undefined : `${layout.maxWidthPx}px`,
+    marginLeft: "auto",
+    marginRight: "auto",
+    width: "100%",
+  };
+
+  const blockGapPx = `${SPACING_PX[layout.blockGap]}px`;
+const vars = cssVarsFromSiteTheme(themeKey, themeOverrides);
 
   // font scale: supports "sm|md|lg" OR numeric
   const scaleFromKey =
@@ -47,6 +63,10 @@ export function SiteShell({
       : scaleFromKey;
 
   const rootFontSizePx = `${16 * scale}px`;
+
+  // Typography role vars (button)
+  const buttonTextSizeRem = `${0.95 * scale}rem`;
+  const buttonTextWeight = 600;
 
   // button radius: supports presets OR numeric(px)
   const radiusPx =
@@ -61,6 +81,19 @@ export function SiteShell({
       : 24;
 
   const buttonRadiusCss = `${radiusPx}px`;
+
+  // Radius system (token-based). We map current buttonRadius presets to our radius tokens for now.
+  const radiusToken =
+    typeof buttonRadius === "number"
+      ? "md"
+      : buttonRadius === "md"
+      ? "md"
+      : buttonRadius === "xl"
+      ? "lg"
+      : buttonRadius === "full"
+      ? "xl"
+      : "xl";
+  const radiusCss = `${RADIUS_PX[radiusToken]}px`;
 
   // Card vars
   const cardVars =
@@ -92,14 +125,18 @@ export function SiteShell({
           ...(vars as React.CSSProperties),
           ...(cardVars as React.CSSProperties),
           fontSize: rootFontSizePx,
+          ["--text-button-size" as any]: buttonTextSizeRem,
+          ["--text-button-weight" as any]: buttonTextWeight,
           ["--button-radius" as any]: buttonRadiusCss,
+          ["--block-gap" as any]: blockGapPx,
+          ["--radius" as any]: radiusCss,
         } as React.CSSProperties
       }
       className={`min-h-screen ${bgClass}`}
     >
       {/* group + data-layout-width нужны, чтобы LinksBlock мог нормализовать ширину в wide/full */}
       <div className="group w-full" data-layout-width={layoutWidth}>
-        {children}
+        <div style={layoutContainerStyle}>{children}</div>
       </div>
     </div>
   );

@@ -301,23 +301,19 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               {hasPrimary || hasSecondary ? (
                 <div className={`flex flex-wrap items-center gap-3 pt-6 ${ctaJustifyClass}`}>
                   {hasPrimary ? (
-                    <a
+                    <LinkButton
                       href={normalizeUrl(primaryUrl)}
-                      className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold bg-[rgb(var(--primary))] text-[rgb(var(--button-text))] hover:opacity-90 transition"
-                      style={{ borderRadius: "var(--button-radius)" as any }}
-                    >
-                      {primaryTitle}
-                    </a>
+                      label={primaryTitle}
+                      buttonStyle={"solid"}
+                    />
                   ) : null}
 
                   {hasSecondary ? (
-                    <a
+                    <LinkButton
                       href={normalizeUrl(secondaryUrl)}
-                      className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold border border-white/30 bg-white/10 text-white hover:bg-white/15 transition"
-                      style={{ borderRadius: "var(--button-radius)" as any }}
-                    >
-                      {secondaryTitle}
-                    </a>
+                      label={secondaryTitle}
+                      buttonStyle={"outline"}
+                    />
                   ) : null}
                 </div>
               ) : null}
@@ -357,13 +353,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
                 ) : null}
 
                 {hasSecondary ? (
-                  <a
+                  <LinkButton
                     href={normalizeUrl(secondaryUrl)}
-                    className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold border border-white/15 bg-white/5 text-[rgb(var(--text))] hover:bg-white/10 transition"
-                    style={{ borderRadius: "var(--button-radius)" as any }}
-                  >
-                    {secondaryTitle}
-                  </a>
+                    label={secondaryTitle}
+                    buttonStyle={"outline"}
+                  />
                 ) : null}
               </div>
             ) : null}

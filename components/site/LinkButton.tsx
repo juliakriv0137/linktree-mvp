@@ -20,7 +20,7 @@ export function LinkButton({
   className?: string;
 }) {
   const base =
-    "inline-flex items-center justify-center font-semibold transition select-none " +
+    "inline-flex items-center justify-center font-[var(--text-button-weight,600)] transition select-none " +
     "focus:outline-none focus:ring-2 focus:ring-white/25 " +
     "active:scale-[0.99]";
 
@@ -28,12 +28,11 @@ export function LinkButton({
   // Кнопка не w-full — она ограничена, и контейнер решает left/center/right.
   const width = "w-[min(360px,100%)]";
 
-  const padding = "px-5 py-3 text-sm";
+  const padding = "px-5 py-3 text-[length:var(--text-button-size,0.95rem)]";
 
   const solid = "bg-[rgb(var(--primary))] text-[rgb(var(--button-text))] hover:opacity-95";
-  const outline =
-    "bg-transparent text-[rgb(var(--text))] border border-[rgb(var(--border))] hover:bg-white/5";
-  const soft = "bg-white/8 text-[rgb(var(--text))] hover:bg-white/12";
+  const outline = "border border-[rgb(var(--border))] text-[rgb(var(--text))] bg-transparent hover:bg-[rgb(var(--surface))]";
+  const soft = "bg-[rgb(var(--surface))] text-[rgb(var(--text))] hover:opacity-95";
 
   const styleClass =
     buttonStyle === "outline" ? outline : buttonStyle === "soft" ? soft : solid;
@@ -45,7 +44,7 @@ export function LinkButton({
       rel="noreferrer"
       className={clsx(base, width, padding, styleClass, className)}
       style={{
-        borderRadius: "var(--button-radius)",
+        borderRadius: "var(--button-radius,24px)",
       }}
     >
       {label}
