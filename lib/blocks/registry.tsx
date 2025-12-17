@@ -101,24 +101,9 @@ function heroAspectRatioStyle(ratio: string): React.CSSProperties | undefined {
 }
 
 function heroRadiusClass(radius: string) {
-  switch (radius) {
-    case "none":
-      return "rounded-none";
-    case "sm":
-      return "rounded-sm";
-    case "md":
-      return "rounded-md";
-    case "lg":
-      return "rounded-lg";
-    case "xl":
-      return "rounded-xl";
-    case "2xl":
-      return "rounded-2xl";
-    case "full":
-      return "rounded-full";
-    default:
-      return "rounded-2xl";
-  }
+  // Radius is controlled by design-system CSS vars (e.g. --radius / --button-radius).
+  // Keep this helper for backward compatibility with existing calls.
+  return "";
 }
 
 export const BlockRegistry: Record<string, BlockEntry> = {
@@ -126,7 +111,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     title: "Divider",
     render: () => (
       <div className="flex justify-center py-2">
-        <div className="h-px w-24 bg-white/20" />
+        <div className="h-px w-24 bg-[rgb(var(--divider))] opacity-60" />
       </div>
     ),
   },
@@ -241,22 +226,9 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               ? "justify-end"
               : "justify-start";
 
-        const radiusClass =
-          bgRadius === "none"
-            ? "rounded-none"
-            : bgRadius === "sm"
-              ? "rounded-sm"
-              : bgRadius === "md"
-                ? "rounded-md"
-                : bgRadius === "lg"
-                  ? "rounded-lg"
-                  : bgRadius === "xl"
-                    ? "rounded-xl"
-                    : bgRadius === "full"
-                      ? "rounded-full"
-                      : "rounded-2xl";
+        const radiusClass = "";
 
-                      const heightClass =
+        const heightClass =
   bgHeight === "sm"
     ? "min-h-[320px] py-10 md:py-14"
     : bgHeight === "lg"
@@ -272,6 +244,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
             <div
               className="absolute inset-0 w-full h-full"
               style={{
+                borderRadius: "var(--radius,15px)",
                 backgroundImage: bgUrl ? `url(${normalizeUrl(bgUrl)})` : undefined,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
@@ -343,13 +316,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
             {hasPrimary || hasSecondary ? (
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 {hasPrimary ? (
-                  <a
+                  <LinkButton
                     href={normalizeUrl(primaryUrl)}
-                    className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold bg-[rgb(var(--primary))] text-[rgb(var(--button-text))] hover:opacity-90 transition"
-                    style={{ borderRadius: "var(--button-radius)" as any }}
-                  >
-                    {primaryTitle}
-                  </a>
+                    label={primaryTitle}
+                    buttonStyle={"solid"}
+                  />
                 ) : null}
 
                 {hasSecondary ? (
@@ -370,10 +341,10 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           <div className="flex justify-center md:justify-end min-w-0">
             {/* ВАЖНО: не задаём высоту. Только width + aspectRatio */}
             <div
-              className={`${imgBoxWClass} overflow-hidden rounded-2xl bg-white/5`}
+              className={`${imgBoxWClass} overflow-hidden bg-white/5`}
               style={{
                 ...(ratioStyle ?? {}),
-                borderRadius: "var(--button-radius)" as any,
+                borderRadius: "var(--radius,15px)",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

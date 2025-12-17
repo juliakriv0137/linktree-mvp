@@ -12,6 +12,7 @@ export type ThemeVars = {
   "--text": string;
   "--muted": string;
   "--border": string;
+  "--divider": string;
   "--primary": string;
   "--primary-2": string;
   "--button-text": string;
@@ -33,6 +34,7 @@ export const THEMES: ThemeDefinition[] = [
       "--text": "244 246 250",
       "--muted": "167 174 189",
       "--border": "32 38 52",
+      "--divider": "32 38 52",
       "--primary": "99 102 241",
       "--primary-2": "139 92 246",
       "--button-text": "255 255 255",
@@ -47,6 +49,7 @@ export const THEMES: ThemeDefinition[] = [
       "--text": "249 245 250",
       "--muted": "190 176 195",
       "--border": "46 34 52",
+      "--divider": "46 34 52",
       "--primary": "236 72 153",
       "--primary-2": "168 85 247",
       "--button-text": "255 255 255",
@@ -61,6 +64,7 @@ export const THEMES: ThemeDefinition[] = [
       "--text": "243 250 246",
       "--muted": "170 190 178",
       "--border": "30 52 40",
+      "--divider": "30 52 40",
       "--primary": "16 185 129",
       "--primary-2": "34 197 94",
       "--button-text": "255 255 255",
@@ -75,6 +79,7 @@ export const THEMES: ThemeDefinition[] = [
       "--text": "17 24 39",
       "--muted": "71 85 105",
       "--border": "226 232 240",
+      "--divider": "226 232 240",
       "--primary": "79 70 229",
       "--primary-2": "236 72 153",
       "--button-text": "255 255 255",
@@ -143,6 +148,7 @@ export function cssVarsFromSiteTheme(
     "--text": hexToRgbTriplet(overrides?.text_color) ?? base["--text"],
     "--muted": hexToRgbTriplet(overrides?.muted_color) ?? base["--muted"],
     "--border": hexToRgbTriplet(overrides?.border_color) ?? base["--border"],
+    "--divider": base["--divider"] ?? base["--border"],
     "--primary": hexToRgbTriplet(overrides?.button_color) ?? base["--primary"],
     "--primary-2": base["--primary-2"],
     "--button-text":
