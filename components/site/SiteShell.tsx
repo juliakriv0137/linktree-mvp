@@ -44,7 +44,13 @@ export function SiteShell({
     layoutWidth === "wide" ? "wide" : layoutWidth === "full" ? "full" : "compact";
   const layout = LAYOUT_DEFAULTS[layoutVariant ?? "centered"];
   const layoutContainerStyle: React.CSSProperties = {
-    maxWidth: layout.maxWidthPx === null ? undefined : `${layout.maxWidthPx}px`,
+    // "full" should feel like a real full-screen website (no max-width clamp on the outer shell).
+    maxWidth:
+      layoutWidth === "full"
+        ? undefined
+        : layout.maxWidthPx === null
+          ? undefined
+          : `${layout.maxWidthPx}px`,
     marginLeft: "auto",
     marginRight: "auto",
     width: "100%",
