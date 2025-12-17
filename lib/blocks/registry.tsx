@@ -272,7 +272,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               </div>
 
               {hasPrimary || hasSecondary ? (
-                <div className={`flex flex-wrap items-center gap-3 pt-6 ${ctaJustifyClass}`}>
+                <div className={`flex flex-wrap items-center gap-3 pt-6 w-full ${ctaJustifyClass}`}>
                   {hasPrimary ? (
                     <LinkButton
                       href={normalizeUrl(primaryUrl)}
@@ -296,6 +296,14 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       }
 
       if (variant === "split") {
+        const splitAlign = safeTrim((c as any)?.align || "left");
+        const splitCtaJustifyClass =
+          splitAlign === "center"
+            ? "justify-center"
+            : splitAlign === "right"
+              ? "justify-end"
+              : "justify-start";
+
         const textCol = (
           <div className="space-y-4 min-w-0">
             <div className="space-y-3 min-w-0">
@@ -314,7 +322,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
             </div>
 
             {hasPrimary || hasSecondary ? (
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className={`flex flex-wrap items-center gap-3 pt-2 w-full ${splitCtaJustifyClass}`}>
                 {hasPrimary ? (
                   <LinkButton
                     href={normalizeUrl(primaryUrl)}

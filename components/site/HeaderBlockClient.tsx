@@ -248,7 +248,7 @@ export function HeaderBlockClient(props: {
                   <div
                     style={{ borderRadius: "var(--radius,15px)" }}
                     className={[
-                      "border border-white/10 bg-black",
+                      "border border-white/10 bg-black overflow-hidden",
                       "max-h-[70vh] overflow-auto pr-1",
                       "px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
                       "origin-top scale-95 opacity-0 translate-y-1",
@@ -258,7 +258,7 @@ export function HeaderBlockClient(props: {
 >
                     <div className="flex flex-col gap-2">
                       {items.length ? (
-                        <div className="bg-white/5 px-3 py-3">
+                        <div className="bg-white/5 px-3 py-3" style={{ borderRadius: "var(--radius,15px)" }}>
                           <Links justify="start" layout="col" closeOnClick />
                         </div>
                       ) : null}
