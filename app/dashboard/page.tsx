@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { applyStylePreset, mergeStyle, normalizeBlockStyle } from "@/lib/blocks/style";
 import {
   DndContext,
   PointerSensor,
@@ -443,7 +444,9 @@ function ColorField({
               isValid ? "border-white/10" : "border-red-500/50",
             )}
           />
-          {!isValid && <div className="text-xs text-red-300 mt-2">Invalid hex. Use #fff or #ffffff.</div>}
+          {!isValid && (
+            <div className="text-xs text-red-300 mt-2">Invalid hex. Use #fff or #ffffff.</div>
+          )}
         </label>
       </div>
 
@@ -477,7 +480,9 @@ function SortableBlockRow({
   onDelete: () => void;
   disabled: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+  });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -522,7 +527,11 @@ function SortableBlockRow({
           </button>
 
           <div className="flex items-center gap-2">
-            <IconButton title={block.is_visible ? "Hide" : "Show"} onClick={onToggleVisible} disabled={disabled}>
+            <IconButton
+              title={block.is_visible ? "Hide" : "Show"}
+              onClick={onToggleVisible}
+              disabled={disabled}
+            >
               {block.is_visible ? "🙈" : "👁️"}
             </IconButton>
 
@@ -563,7 +572,10 @@ export default function DashboardPage() {
   const [previewNonce, setPreviewNonce] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
 
-  const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
+  const selectedBlock = useMemo(
+    () => blocks.find((b) => b.id === selectedBlockId) ?? null,
+    [blocks, selectedBlockId],
+  );
 
   const publicUrl = site ? `/${site.slug}` : "/";
 
@@ -590,6 +602,55 @@ export default function DashboardPage() {
 
     const { error } = await supabase.from("site_blocks").update(updates).eq("id", blockId);
     if (error) throw error;
+  }
+
+  async function saveBlockStyle(blockId: string, nextStyle: any) {
+    setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: nextStyle } : b)));
+    try {
+      await updateBlock(blockId, { style: nextStyle } as any);
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+      if (site) {
+        const bs = await loadBlocks(site.id);
+        setBlocks(bs);
+      }
+    }
+  }
+
+  async function onApplyStylePreset(presetKey: any) {
+    if (!selectedBlock) return;
+    const blockId = selectedBlock.id;
+    const cur = ((selectedBlock as any).style ?? {}) as any;
+    const next = applyStylePreset(cur, presetKey);
+    await saveBlockStyle(blockId, next);
+  }
+
+  async function onPatchBlockStyle(patch: any) {
+    if (!selectedBlock) return;
+    const blockId = selectedBlock.id;
+    const cur = ((selectedBlock as any).style ?? {}) as any;
+    const next = mergeStyle(cur, patch);
+    await saveBlockStyle(blockId, next);
+  }
+
+  function getStyleView() {
+    const raw = ((selectedBlock as any)?.style ?? {}) as any;
+    const n = normalizeBlockStyle(raw);
+
+    // desktop-first view for now (later we can add a device toggle)
+    const d: any = { ...n, ...(n as any).desktop };
+
+    // UI wants legacy "compact" option, but canonical token is "content"
+    const uiWidth = d.width === "content" ? "compact" : (d.width ?? "full");
+
+    return {
+      padding: String(d.padding ?? "none"),
+      width: String(uiWidth),
+      background: String(d.background ?? "none"),
+      align: String(d.align ?? "left"),
+      radius: String(d.radius ?? "2xl"),
+      border: String(d.border ?? "subtle"),
+    };
   }
 
   async function refreshAll() {
@@ -636,7 +697,7 @@ export default function DashboardPage() {
   }, []);
 
   // sync anchor draft with selected block
-  React.useEffect(() => {
+  useEffect(() => {
     setAnchorDraft(selectedBlock?.anchor_id ?? "");
   }, [selectedBlockId, selectedBlock?.anchor_id]);
 
@@ -654,10 +715,13 @@ export default function DashboardPage() {
     const newIndex = blocks.findIndex((b) => b.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const next = arrayMove(blocks, oldIndex, newIndex).map((b, idx) => ({ ...b, position: idx + 1 }));
+    const next = arrayMove(blocks, oldIndex, newIndex).map((b) => ({ ...b }));
+
+    // normalize positions
+    const normalized = next.map((b, idx) => ({ ...b, position: idx + 1 }));
 
     try {
-      await persistOrder(next);
+      await persistOrder(normalized);
     } catch (e: any) {
       setError(e?.message ?? String(e));
       if (!site) return;
@@ -779,8 +843,13 @@ export default function DashboardPage() {
     }
   };
 
-  // ✅ важный: patch-сейв (Header: content + variant)
-  const saveSelectedBlockPatch = async (patch: { content?: any; variant?: any; style?: any; anchor_id?: string }) => {
+  // ✅ patch-сейв (Header: content + variant, etc.)
+  const saveSelectedBlockPatch = async (patch: {
+    content?: any;
+    variant?: any;
+    style?: any;
+    anchor_id?: string;
+  }) => {
     if (!selectedBlock || !site) return;
 
     try {
@@ -803,6 +872,8 @@ export default function DashboardPage() {
       setError(e?.message ?? String(e));
     }
   };
+
+  const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -908,7 +979,6 @@ export default function DashboardPage() {
 
                     {blocks.map((b, idx) => {
                       const insertIndex = idx + 1;
-
                       return (
                         <div key={b.id} className="space-y-3">
                           <SortableBlockRow
@@ -957,7 +1027,9 @@ export default function DashboardPage() {
                     }}
                     className={clsx(
                       "rounded-full px-3 py-2 text-xs font-semibold transition",
-                      previewDevice === "desktop" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+                      previewDevice === "desktop"
+                        ? "bg-white/10 text-white"
+                        : "text-white/60 hover:text-white",
                     )}
                   >
                     Desktop
@@ -968,17 +1040,22 @@ export default function DashboardPage() {
                       setPreviewDevice("mobile");
                       setPreviewNonce(Date.now());
                     }}
-                    
                     className={clsx(
                       "rounded-full px-3 py-2 text-xs font-semibold transition",
-                      previewDevice === "mobile" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+                      previewDevice === "mobile"
+                        ? "bg-white/10 text-white"
+                        : "text-white/60 hover:text-white",
                     )}
                   >
                     Mobile
                   </button>
                 </div>
 
-                <Button variant="ghost" onClick={() => setPreviewCollapsed((v) => !v)} className="px-3 py-2 text-xs">
+                <Button
+                  variant="ghost"
+                  onClick={() => setPreviewCollapsed((v) => !v)}
+                  className="px-3 py-2 text-xs"
+                >
                   {previewCollapsed ? "Expand" : "Collapse"}
                 </Button>
 
@@ -992,8 +1069,12 @@ export default function DashboardPage() {
 
             {!previewCollapsed ? (
               <div className="p-4">
-                <div className={clsx("mx-auto rounded-2xl border border-white/10", previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full")}>
-
+                <div
+                  className={clsx(
+                    "mx-auto overflow-hidden rounded-2xl border border-white/10",
+                    previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full",
+                  )}
+                >
                   {previewDevice === "mobile" ? (
                     <iframe
                       title="Mobile preview"
@@ -1001,34 +1082,34 @@ export default function DashboardPage() {
                       className="h-[760px] w-[390px] max-w-full rounded-2xl"
                     />
                   ) : (
-<SiteShell
-                    themeKey={site?.theme_key ?? "midnight"}
-                    backgroundStyle={(site?.background_style ?? "solid") as any}
-                    buttonStyle={(site?.button_style ?? "solid") as any}
-                    fontScale={(site as any)?.font_scale ?? "md"}
-                    buttonRadius={(site as any)?.button_radius ?? "2xl"}
-                    cardStyle={(site as any)?.card_style ?? "card"}
-                    layoutWidth={(site as any)?.layout_width ?? "compact"}
-                    themeOverrides={{
-                      bg_color: site?.bg_color ?? null,
-                      text_color: site?.text_color ?? null,
-                      muted_color: site?.muted_color ?? null,
-                      border_color: site?.border_color ?? null,
-                      button_color: site?.button_color ?? null,
-                      button_text_color: site?.button_text_color ?? null,
-                    }}
-                  >
-                    <div className="space-y-4">
-                      <BlocksRenderer
-                        blocks={(blocks.filter((b) => b.is_visible) as any) ?? []}
-                        mode="preview"
-                        site={{
-                          layout_width: (site as any)?.layout_width ?? "compact",
-                          button_style: (site?.button_style ?? "solid") as any,
-                        }}
-                      />
-                    </div>
-                  </SiteShell>
+                    <SiteShell
+                      themeKey={site?.theme_key ?? "midnight"}
+                      backgroundStyle={(site?.background_style ?? "solid") as any}
+                      buttonStyle={(site?.button_style ?? "solid") as any}
+                      fontScale={(site as any)?.font_scale ?? "md"}
+                      buttonRadius={(site as any)?.button_radius ?? "2xl"}
+                      cardStyle={(site as any)?.card_style ?? "card"}
+                      layoutWidth={(site as any)?.layout_width ?? "compact"}
+                      themeOverrides={{
+                        bg_color: site?.bg_color ?? null,
+                        text_color: site?.text_color ?? null,
+                        muted_color: site?.muted_color ?? null,
+                        border_color: site?.border_color ?? null,
+                        button_color: site?.button_color ?? null,
+                        button_text_color: site?.button_text_color ?? null,
+                      }}
+                    >
+                      <div className="space-y-4">
+                        <BlocksRenderer
+                          blocks={(blocks.filter((b) => b.is_visible) as any) ?? []}
+                          mode="preview"
+                          site={{
+                            layout_width: (site as any)?.layout_width ?? "compact",
+                            button_style: (site?.button_style ?? "solid") as any,
+                          }}
+                        />
+                      </div>
+                    </SiteShell>
                   )}
                 </div>
               </div>
@@ -1078,10 +1159,10 @@ export default function DashboardPage() {
               {/* THEME TAB */}
               {inspectorTab === "theme" && (
                 <Card className="bg-white/3 shadow-none">
-                  <div className="p-4 space-y-4">
+                  <div className="p-4 space-y-5">
                     <div>
                       <div className="text-sm font-semibold">Theme</div>
-                      <div className="text-xs text-white/50 mt-1">Styles are saved instantly.</div>
+                      <div className="text-xs text-white/50 mt-1">Applies to the whole site.</div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1090,265 +1171,228 @@ export default function DashboardPage() {
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
                           value={site?.theme_key ?? "midnight"}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
                             const theme_key = e.target.value;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { theme_key } as any);
-                              setSite({ ...site, theme_key });
+                              setSite({ ...site, theme_key } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          {THEMES.map((t) => (
-                            <option key={t.key} value={t.key}>
-                              {t.label}
+                          {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
+                            <option key={k} value={k}>
+                              {k}
                             </option>
                           ))}
                         </select>
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Layout</div>
+                        <div className="text-xs text-white/50 mb-2">Layout width</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                          value={(site as any)?.layout_width ?? "compact"}
+                          value={(site?.layout_width ?? "compact") as any}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
                             const layout_width = e.target.value as any;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { layout_width } as any);
-                              setSite({ ...(site as any), layout_width } as any);
+                              setSite({ ...site, layout_width } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          <option value="compact">Compact</option>
-                          <option value="wide">Wide</option>
-                          <option value="full">Full</option>
+                          <option value="compact">compact</option>
+                          <option value="wide">wide</option>
+                          <option value="full">full</option>
                         </select>
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Background</div>
+                        <div className="text-xs text-white/50 mb-2">Background style</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                          value={site?.background_style ?? "solid"}
+                          value={(site?.background_style ?? "solid") as any}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
-                            const background_style = e.target.value;
+                            const background_style = e.target.value as any;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { background_style } as any);
-                              setSite({ ...site, background_style });
+                              setSite({ ...site, background_style } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          <option value="solid">Solid</option>
-                          <option value="gradient">Gradient</option>
-                          <option value="dots">Dots</option>
+                          <option value="solid">solid</option>
+                          <option value="gradient">gradient</option>
                         </select>
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Buttons</div>
+                        <div className="text-xs text-white/50 mb-2">Button style</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                          value={site?.button_style ?? "solid"}
+                          value={(site?.button_style ?? "solid") as any}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
-                            const button_style = e.target.value;
+                            const button_style = e.target.value as any;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { button_style } as any);
-                              setSite({ ...site, button_style });
+                              setSite({ ...site, button_style } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          <option value="solid">Solid</option>
-                          <option value="outline">Outline</option>
-                          <option value="soft">Soft</option>
+                          <option value="solid">solid</option>
+                          <option value="outline">outline</option>
                         </select>
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Font</div>
+                        <div className="text-xs text-white/50 mb-2">Font scale</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                          value={(site as any)?.font_scale ?? "md"}
+                          value={(site?.font_scale ?? "md") as any}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
                             const font_scale = e.target.value as any;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { font_scale } as any);
-                              setSite({ ...(site as any), font_scale } as any);
+                              setSite({ ...site, font_scale } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          <option value="sm">Small</option>
-                          <option value="md">Medium</option>
-                          <option value="lg">Large</option>
+                          <option value="sm">sm</option>
+                          <option value="md">md</option>
+                          <option value="lg">lg</option>
                         </select>
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Radius</div>
+                        <div className="text-xs text-white/50 mb-2">Button radius</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                          value={(site as any)?.button_radius ?? "2xl"}
+                          value={(site?.button_radius ?? "2xl") as any}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
                             const button_radius = e.target.value as any;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { button_radius } as any);
-                              setSite({ ...(site as any), button_radius } as any);
+                              setSite({ ...site, button_radius } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          <option value="md">MD</option>
-                          <option value="xl">XL</option>
-                          <option value="2xl">2XL</option>
-                          <option value="full">Full</option>
+                          <option value="md">md</option>
+                          <option value="xl">xl</option>
+                          <option value="2xl">2xl</option>
+                          <option value="full">full</option>
                         </select>
                       </label>
 
-                      <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Cards</div>
+                      <label className="block sm:col-span-2">
+                        <div className="text-xs text-white/50 mb-2">Card style</div>
                         <select
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                          value={(site as any)?.card_style ?? "card"}
+                          value={(site?.card_style ?? "card") as any}
+                          disabled={!canAct}
                           onChange={async (e) => {
                             if (!site) return;
                             const card_style = e.target.value as any;
                             try {
+                              setError(null);
                               await updateSiteTheme(site.id, { card_style } as any);
-                              setSite({ ...(site as any), card_style } as any);
+                              setSite({ ...site, card_style } as any);
                             } catch (err: any) {
                               setError(err?.message ?? String(err));
                             }
                           }}
-                          disabled={!site || loading}
                         >
-                          <option value="plain">Plain</option>
-                          <option value="card">Card</option>
+                          <option value="plain">plain</option>
+                          <option value="card">card</option>
                         </select>
                       </label>
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-semibold">Custom colors</div>
-                          <div className="text-xs text-white/50 mt-1">Leave empty to use preset theme colors.</div>
+                    <div className="pt-2 border-t border-white/10" />
+
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-sm font-semibold">Custom colors</div>
+                        <div className="text-xs text-white/50 mt-1">
+                          Optional. Leave empty to use theme defaults.
                         </div>
-
-                        <Button
-                          variant="ghost"
-                          disabled={!site || loading}
-                          onClick={async () => {
-                            if (!site) return;
-                            try {
-                              await updateSiteTheme(site.id, {
-                                bg_color: null,
-                                text_color: null,
-                                muted_color: null,
-                                border_color: null,
-                                button_color: null,
-                                button_text_color: null,
-                              } as any);
-
-                              setSite({
-                                ...site,
-                                bg_color: null,
-                                text_color: null,
-                                muted_color: null,
-                                border_color: null,
-                                button_color: null,
-                                button_text_color: null,
-                              } as SiteRow);
-
-                              setColors({
-                                bg_color: "",
-                                text_color: "",
-                                muted_color: "",
-                                border_color: "",
-                                button_color: "",
-                                button_text_color: "",
-                              });
-                            } catch (e: any) {
-                              setError(e?.message ?? String(e));
-                            }
-                          }}
-                          className="px-3 py-2 text-xs"
-                        >
-                          Reset all
-                        </Button>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4">
-                        <ColorField
-                          label="Background"
-                          value={colors.bg_color}
-                          onChange={(v) => {
-                            setColors((p) => ({ ...p, bg_color: v }));
-                            void saveColorField("bg_color", v);
-                          }}
-                        />
-                        <ColorField
-                          label="Text"
-                          value={colors.text_color}
-                          onChange={(v) => {
-                            setColors((p) => ({ ...p, text_color: v }));
-                            void saveColorField("text_color", v);
-                          }}
-                        />
-                        <ColorField
-                          label="Muted text"
-                          value={colors.muted_color}
-                          onChange={(v) => {
-                            setColors((p) => ({ ...p, muted_color: v }));
-                            void saveColorField("muted_color", v);
-                          }}
-                        />
-                        <ColorField
-                          label="Border"
-                          value={colors.border_color}
-                          onChange={(v) => {
-                            setColors((p) => ({ ...p, border_color: v }));
-                            void saveColorField("border_color", v);
-                          }}
-                        />
-                        <ColorField
-                          label="Button background"
-                          value={colors.button_color}
-                          onChange={(v) => {
-                            setColors((p) => ({ ...p, button_color: v }));
-                            void saveColorField("button_color", v);
-                          }}
-                        />
-                        <ColorField
-                          label="Button text"
-                          value={colors.button_text_color}
-                          onChange={(v) => {
-                            setColors((p) => ({ ...p, button_text_color: v }));
-                            void saveColorField("button_text_color", v);
-                          }}
-                        />
-                      </div>
+                      <ColorField
+                        label="Background"
+                        value={colors.bg_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, bg_color: v }));
+                          saveColorField("bg_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Text"
+                        value={colors.text_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, text_color: v }));
+                          saveColorField("text_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Muted"
+                        value={colors.muted_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, muted_color: v }));
+                          saveColorField("muted_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Border"
+                        value={colors.border_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, border_color: v }));
+                          saveColorField("border_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Button"
+                        value={colors.button_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, button_color: v }));
+                          saveColorField("button_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Button text"
+                        value={colors.button_text_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, button_text_color: v }));
+                          saveColorField("button_text_color", v);
+                        }}
+                      />
                     </div>
                   </div>
                 </Card>
@@ -1358,183 +1402,91 @@ export default function DashboardPage() {
               {inspectorTab === "block" && (
                 <>
                   {!selectedBlock ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">Select a block</div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                      Select a block on the left to edit.
+                    </div>
                   ) : (
                     <>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          disabled={!canAct}
-                          onClick={() => toggleVisibility(selectedBlock)}
-                          className="px-3 py-2 text-xs"
-                        >
-                          {selectedBlock.is_visible ? "Toggle visibility" : "Show"}
-                        </Button>
+                      {/* Block meta: anchor */}
+                      <Card className="bg-white/3 shadow-none">
+                        <div className="p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold">Selected</div>
+                              <div className="text-xs text-white/50 mt-1 truncate">
+                                {selectedBlock.type} · id{" "}
+                                <span className="font-mono text-white/70">{selectedBlock.id}</span>
+                              </div>
+                            </div>
 
-                        <Button
-                          variant="ghost"
-                          disabled={!canAct}
-                          onClick={() => removeBlock(selectedBlock)}
-                          className="px-3 py-2 text-xs"
-                        >
-                          Remove
-                        </Button>
-                      </div>
+                            <Button
+                              variant="ghost"
+                              className="px-3 py-2 text-xs"
+                              disabled={!canAct}
+                              onClick={async () => {
+                                if (!site || !selectedBlock) return;
+                                const normalized = normalizeAnchorId(anchorDraft);
+                                try {
+                                  setError(null);
+                                  await updateBlock(selectedBlock.id, { anchor_id: normalized || null });
+                                  await reloadBlocksAfterSave();
+                                  setAnchorDraft(normalized);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              Save anchor
+                            </Button>
+                          </div>
 
-                      <div className="mb-4">
-                        <label className="mb-1 block text-xs font-medium opacity-70">Anchor ID</label>
-                        <input
-                          type="text"
-                          value={anchorDraft}
-                          onChange={(e) => setAnchorDraft(e.target.value)}
-                          onBlur={async () => {
-                            if (!selectedBlock) return;
+                          <label className="block">
+                            <div className="text-xs text-white/50 mb-2">anchor_id (optional)</div>
+                            <input
+                              value={anchorDraft}
+                              disabled={!canAct}
+                              onChange={(e) => setAnchorDraft(e.target.value)}
+                              placeholder="e.g. about / pricing / faq"
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                            <div className="text-xs text-white/50 mt-2">
+                              Use in links as <span className="font-mono text-white/70">#anchor</span> (e.g.{" "}
+                              <span className="font-mono text-white/70">/#about</span>).
+                            </div>
+                          </label>
+                        </div>
+                      </Card>
 
-                            const blockId = selectedBlock.id;
-                            const normalized = normalizeAnchorId(anchorDraft);
-                            const next = normalized || null;
-
-                            setAnchorDraft(normalized);
-                            setBlocks((prev) =>
-                              prev.map((b) => (b.id === blockId ? { ...b, anchor_id: next } : b)),
-                            );
-
-                            try {
-                              await updateBlock(blockId, { anchor_id: next });
-                            } catch (e: any) {
-                              setError(e?.message ?? String(e));
-                              if (site) {
-                                const bs = await loadBlocks(site.id);
-                                setBlocks(bs);
-                              }
-                            }
-                          }}
-                          placeholder="about / pricing / contact"
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-white/30"
-                        />
-                        <p className="mt-1 text-[11px] opacity-50">
-                          Use for links like <span className="font-mono">#about</span>
-                        </p>
-                      </div>
-
+                      {/* Block style */}
                       <Card className="bg-white/3 shadow-none">
                         <div className="p-4 space-y-3">
                           <div>
-                            <div className="text-sm font-semibold">Style</div>
-                            <div className="text-xs text-white/50 mt-1">Applies to any block (via BlockFrame).</div>
+                            <div className="text-sm font-semibold">Block style</div>
+                            <div className="text-xs text-white/50 mt-1">
+                              Applies to this block (via BlockFrame).
+                            </div>
                           </div>
-                          <div className="mt-3">
+
+                          <div className="mt-2">
                             <div className="text-xs text-white/50 mb-2">Presets</div>
                             <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                disabled={!canAct}
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
-                                onClick={async () => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, bg: "card", padding: "lg", radius: "2xl", border: "subtle" };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) setBlocks(await loadBlocks(site.id));
-                                  }
-                                }}
-                              >
-                                Card
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={!canAct}
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
-                                onClick={async () => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, bg: "none", padding: "sm", radius: "none", border: "none" };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) setBlocks(await loadBlocks(site.id));
-                                  }
-                                }}
-                              >
-                                Minimal
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={!canAct}
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
-                                onClick={async () => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, width: "wide", padding: "md" };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) setBlocks(await loadBlocks(site.id));
-                                  }
-                                }}
-                              >
-                                Wide section
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={!canAct}
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
-                                onClick={async () => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, align: "center" };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) setBlocks(await loadBlocks(site.id));
-                                  }
-                                }}
-                              >
-                                Centered
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={!canAct}
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
-                                onClick={async () => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, bg: "card", width: "full", padding: "lg", align: "center", radius: "2xl", border: "subtle" };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) setBlocks(await loadBlocks(site.id));
-                                  }
-                                }}
-                              >
-                                Hero highlight
-                              </button>
+                              {[
+                                ["card", "Card"],
+                                ["minimal", "Minimal"],
+                                ["wide_section", "Wide section"],
+                                ["centered", "Centered"],
+                                ["hero_highlight", "Hero highlight"],
+                              ].map(([k, label]) => (
+                                <button
+                                  key={k}
+                                  type="button"
+                                  disabled={!canAct}
+                                  className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                                  onClick={() => onApplyStylePreset(k)}
+                                >
+                                  {label}
+                                </button>
+                              ))}
                             </div>
                           </div>
 
@@ -1543,26 +1495,9 @@ export default function DashboardPage() {
                               <div className="text-xs text-white/50 mb-2">Padding</div>
                               <select
                                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={String(((selectedBlock as any).style ?? {}).padding ?? "none")}
+                                value={getStyleView().padding}
                                 disabled={!canAct}
-                                onChange={async (e) => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, padding: e.target.value };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) {
-                                      const bs = await loadBlocks(site.id);
-                                      setBlocks(bs);
-                                    }
-                                  }
-                                }}
+                                onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
                               >
                                 <option value="none">None</option>
                                 <option value="sm">Small</option>
@@ -1575,25 +1510,11 @@ export default function DashboardPage() {
                               <div className="text-xs text-white/50 mb-2">Width</div>
                               <select
                                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={String(((selectedBlock as any).style ?? {}).width ?? "full")}
+                                value={getStyleView().width}
                                 disabled={!canAct}
-                                onChange={async (e) => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, width: e.target.value };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) {
-                                      const bs = await loadBlocks(site.id);
-                                      setBlocks(bs);
-                                    }
-                                  }
+                                onChange={(e) => {
+                                  const v = e.target.value === "compact" ? "content" : e.target.value;
+                                  onPatchBlockStyle({ width: v });
                                 }}
                               >
                                 <option value="compact">Compact</option>
@@ -1606,59 +1527,30 @@ export default function DashboardPage() {
                               <div className="text-xs text-white/50 mb-2">Background</div>
                               <select
                                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={String(((selectedBlock as any).style ?? {}).bg ?? "none")}
+                                value={getStyleView().background}
                                 disabled={!canAct}
-                                onChange={async (e) => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, bg: e.target.value };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) {
-                                      const bs = await loadBlocks(site.id);
-                                      setBlocks(bs);
-                                    }
-                                  }
-                                }}
+                                onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
                               >
                                 <option value="none">None</option>
                                 <option value="card">Card</option>
+                                <option value="highlight">Highlight</option>
                               </select>
+                              <div className="text-xs text-white/50 mt-1">
+                                Leave empty to use preset theme colors.
+                              </div>
                             </label>
-                          
+
                             <label className="block">
                               <div className="text-xs text-white/50 mb-2">Align</div>
                               <select
                                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={String(((selectedBlock as any).style ?? {}).align ?? "left")}
+                                value={getStyleView().align}
                                 disabled={!canAct}
-                                onChange={async (e) => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, align: e.target.value };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) {
-                                      const bs = await loadBlocks(site.id);
-                                      setBlocks(bs);
-                                    }
-                                  }
-                                }}
+                                onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
                               >
                                 <option value="left">Left</option>
                                 <option value="center">Center</option>
+                                <option value="right">Right</option>
                               </select>
                             </label>
 
@@ -1666,26 +1558,9 @@ export default function DashboardPage() {
                               <div className="text-xs text-white/50 mb-2">Radius</div>
                               <select
                                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={String(((selectedBlock as any).style ?? {}).radius ?? "2xl")}
+                                value={getStyleView().radius}
                                 disabled={!canAct}
-                                onChange={async (e) => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, radius: e.target.value };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) {
-                                      const bs = await loadBlocks(site.id);
-                                      setBlocks(bs);
-                                    }
-                                  }
-                                }}
+                                onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
                               >
                                 <option value="none">None</option>
                                 <option value="sm">Small</option>
@@ -1700,35 +1575,20 @@ export default function DashboardPage() {
                               <div className="text-xs text-white/50 mb-2">Border</div>
                               <select
                                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                                value={String(((selectedBlock as any).style ?? {}).border ?? "subtle")}
+                                value={getStyleView().border}
                                 disabled={!canAct}
-                                onChange={async (e) => {
-                                  if (!selectedBlock) return;
-                                  const blockId = selectedBlock.id;
-                                  const cur = ((selectedBlock as any).style ?? {}) as any;
-                                  const next = { ...cur, border: e.target.value };
-
-                                  setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, style: next } : b)));
-
-                                  try {
-                                    await updateBlock(blockId, { style: next } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                    if (site) {
-                                      const bs = await loadBlocks(site.id);
-                                      setBlocks(bs);
-                                    }
-                                  }
-                                }}
+                                onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
                               >
                                 <option value="none">None</option>
                                 <option value="subtle">Subtle</option>
+                                <option value="strong">Strong</option>
                               </select>
                             </label>
-</div>
+                          </div>
                         </div>
                       </Card>
 
+                      {/* Editors */}
                       {selectedBlock.type === "header" ? (
                         <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockPatch} />
                       ) : selectedBlock.type === "hero" ? (
