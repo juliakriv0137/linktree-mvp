@@ -103,6 +103,7 @@ export default async function PublicPage({
   const headerBlock = isFullBleedHeader ? [firstBlock] : [];
   const restBlocks = isFullBleedHeader ? (visibleBlocks as any[]).slice(1) : (visibleBlocks as any[]);
 
+  const hasChrome = layoutWidth !== "full";
   return (
     <SiteShell
       themeKey={s.theme_key ?? "midnight"}
@@ -136,23 +137,8 @@ export default async function PublicPage({
           </div>
         ) : null}
 
-        <div className={containerClass}>
-          {layoutWidth === "full" ? (
-            <div className="space-y-6">
-              <BlocksRenderer
-                blocks={(restBlocks as any) ?? []}
-                mode="public"
-                site={{
-                  layout_width: layoutWidth,
-                  button_style: (s.button_style ?? "solid") as any,
-                }}
-              />
-
-              <div className="pt-2 text-center text-xs text-white/35">
-                Powered by Mini-Site Builder
-              </div>
-            </div>
-          ) : (
+        {hasChrome ? (
+          <div className={containerClass}>
             <div
               style={{
                 background: "var(--card-bg)",
@@ -177,8 +163,26 @@ export default async function PublicPage({
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="w-full">
+            <div className="space-y-6">
+              <BlocksRenderer
+                blocks={(restBlocks as any) ?? []}
+                mode="public"
+                site={{
+                  layout_width: layoutWidth,
+                  button_style: (s.button_style ?? "solid") as any,
+                }}
+              />
+
+              <div className="pt-2 text-center text-xs text-white/35">
+                Powered by Mini-Site Builder
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </SiteShell>
   );
