@@ -15,7 +15,7 @@ type HeaderContent = {
 
 type Props = {
   block: SiteBlockRow;
-  onSave: (patch: { content?: any; variant?: any }) => void;
+  onSave: (patch: { content?: any }) => void;
 };
 
 function asObj(v: unknown): Record<string, any> {
@@ -23,29 +23,23 @@ function asObj(v: unknown): Record<string, any> {
 }
 
 export function HeaderEditor({ block, onSave }: Props) {
-  const c0 = asObj(block.content) as HeaderContent;
-
-  const [variant, setVariant] = React.useState<"default" | "centered">(
-    (((block as any).variant ?? "default") as any) === "centered" ? "centered" : "default"
-  );
+  const c0 = asObj((block as any).content) as HeaderContent;
 
   const [brandText, setBrandText] = React.useState<string>(c0.brand_text ?? "");
   const [brandUrl, setBrandUrl] = React.useState<string>(c0.brand_url ?? "");
 
   const [showCta, setShowCta] = React.useState<boolean>(Boolean((c0 as any).show_cta));
-
   const [ctaLabel, setCtaLabel] = React.useState<string>(c0.cta_label ?? "");
   const [ctaUrl, setCtaUrl] = React.useState<string>(c0.cta_url ?? "");
 
   const [links, setLinks] = React.useState<Array<{ label: string; url: string }>>(
-    Array.isArray(c0.links) ? c0.links : []
+    Array.isArray(c0.links) ? c0.links : [],
   );
 
   // sync when switching selected block
   React.useEffect(() => {
-    const c = asObj(block.content) as HeaderContent;
+    const c = asObj((block as any).content) as HeaderContent;
 
-    setVariant((((block as any).variant ?? "default") as any) === "centered" ? "centered" : "default");
     setBrandText(c.brand_text ?? "");
     setBrandUrl(c.brand_url ?? "");
     setShowCta(Boolean((c as any).show_cta));
@@ -69,7 +63,6 @@ export function HeaderEditor({ block, onSave }: Props) {
 
   function save() {
     onSave({
-      variant,
       content: {
         brand_text: brandText,
         brand_url: brandUrl,
@@ -83,18 +76,6 @@ export function HeaderEditor({ block, onSave }: Props) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="text-sm font-medium mb-1">Variant</div>
-        <select
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-          value={variant}
-          onChange={(e) => setVariant(e.target.value as any)}
-        >
-          <option value="default">Default</option>
-          <option value="centered">Centered</option>
-        </select>
-      </div>
-
       <div>
         <div className="text-sm font-medium mb-1">Brand text</div>
         <input
@@ -129,7 +110,10 @@ export function HeaderEditor({ block, onSave }: Props) {
         ) : (
           <div className="space-y-2">
             {links.map((l, i) => (
-              <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-2">
+              <div
+                key={i}
+                className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-2"
+              >
                 <div>
                   <div className="text-xs opacity-70 mb-1">Label</div>
                   <input
