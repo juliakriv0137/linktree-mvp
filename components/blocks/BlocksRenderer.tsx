@@ -48,7 +48,7 @@ export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
         const entry = BlockRegistry[block.type];
         if (!entry) {
           return (
-            <div key={block.id} className="rounded-xl border p-3 text-sm opacity-70">
+            <div key={block.id} className="border p-3 text-sm opacity-70" style={{ borderRadius: "var(--radius,15px)" }}>
               Unknown block type: <span className="font-mono">{block.type}</span>
             </div>
           );

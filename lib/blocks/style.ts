@@ -87,18 +87,18 @@ function alignClass(align: string) {
 function radiusClass(radius: string) {
   switch (radius) {
     case "none":
-      return "rounded-none";
+      return "";
     case "sm":
-      return "rounded-sm";
+      return "";
     case "md":
-      return "rounded-md";
+      return "";
     case "lg":
-      return "rounded-lg";
+      return "";
     case "xl":
-      return "rounded-xl";
+      return "";
     case "2xl":
     default:
-      return "rounded-2xl";
+      return "";
   }
 }
 

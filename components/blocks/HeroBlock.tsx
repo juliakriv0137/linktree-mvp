@@ -8,8 +8,9 @@ export default function HeroBlock({
     <section
       style={{
         backgroundImage: background ? `url(${background})` : undefined,
+        borderRadius: "var(--radius,15px)",
       }}
-      className="p-8 text-center rounded-xl"
+      className="p-8 text-center "
     >
       {avatar && (
         <img

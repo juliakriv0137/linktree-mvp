@@ -61,7 +61,7 @@ export function HeaderBlockClient(props: {
 
   const Brand = () => {
     const inner = (
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-2 min-w-0" style={{ borderRadius: "var(--radius,15px)" }}>
         {logoUrl ? (
           <img
             src={logoUrl}
@@ -69,13 +69,13 @@ export function HeaderBlockClient(props: {
             className="h-7 w-7 rounded-full object-cover border border-white/10"
           />
         ) : null}
-        <div className="font-semibold text-white/90 truncate">{brandText || " "}</div>
+        <div className="font-semibold text-white/90 truncate" style={{ borderRadius: "var(--radius,15px)" }}>{brandText || " "}</div>
       </div>
     );
 
     if (brandUrl) {
       return (
-        <a href={brandUrl} className="hover:opacity-90 transition-opacity">
+        <a href={brandUrl} className="hover:opacity-90 transition-opacity" style={{ borderRadius: "var(--radius,15px)" }}>
           {inner}
         </a>
       );
@@ -139,10 +139,10 @@ export function HeaderBlockClient(props: {
             }}
           className={
             layout === "col"
-              ? "rounded-xl px-3 py-2 hover:bg-white/10 hover:text-white transition"
+              ? "px-3 py-2 hover:bg-white/10 hover:text-white transition"
               : "hover:text-white/90 transition-colors"
           }
-        >
+         style={{ borderRadius: "var(--radius,15px)" }}>
           {safeTrim(it.label)}
         </a>
       ))}
@@ -154,15 +154,15 @@ export function HeaderBlockClient(props: {
       <a
         href={ctaUrl}
         className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/15 transition border border-white/10"
-      >
+       style={{ borderRadius: "var(--radius,15px)" }}>
         {ctaLabel}
       </a>
     ) : null;
 
   if (variant === "centered") {
     return (
-      <div className="w-full">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+      <div className="w-full" style={{ borderRadius: "var(--radius,15px)" }}>
+        <div className="border border-white/10 bg-white/5 px-4 py-4">
           <div className="flex items-center justify-center">
             <Brand />
           </div>
@@ -186,7 +186,7 @@ export function HeaderBlockClient(props: {
   // default
   return (
     <div className="w-full">
-      <div className="relative rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+      <div className="relative border border-white/10 bg-white/5 px-4 py-3">
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <Brand />
@@ -246,8 +246,9 @@ export function HeaderBlockClient(props: {
 
                 <div className="absolute left-4 right-4 top-[3.25rem] z-[100]">
                   <div
+                    style={{ borderRadius: "var(--radius,15px)" }}
                     className={[
-                      "rounded-2xl border border-white/10 bg-black",
+                      "border border-white/10 bg-black",
                       "max-h-[70vh] overflow-auto pr-1",
                       "px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
                       "origin-top scale-95 opacity-0 translate-y-1",
@@ -257,7 +258,7 @@ export function HeaderBlockClient(props: {
                   >
                     <div className="flex flex-col gap-2">
                       {items.length ? (
-                        <div className="rounded-xl bg-white/5 px-3 py-3">
+                        <div className="bg-white/5 px-3 py-3">
                           <Links justify="start" layout="col" closeOnClick />
                         </div>
                       ) : null}
