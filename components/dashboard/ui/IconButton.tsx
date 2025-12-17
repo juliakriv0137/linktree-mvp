@@ -1,0 +1,40 @@
+"use client";
+
+import * as React from "react";
+
+function clsx(...xs: Array<string | false | null | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
+
+export function IconButton({
+  children,
+  title,
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      disabled={disabled}
+      onClick={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
+      className={clsx(
+        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition",
+        disabled
+          ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5"
+          : "border-white/10 bg-white/5 hover:bg-white/10",
+      )}
+    >
+      {children}
+    </button>
+  );
+}

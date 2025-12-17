@@ -4,6 +4,10 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { applyStylePreset, mergeStyle, normalizeBlockStyle } from "@/lib/blocks/style";
+import { Card } from "@/components/dashboard/ui/Card";
+import { Button } from "@/components/dashboard/ui/Button";
+import { IconButton } from "@/components/dashboard/ui/IconButton";
+import { ColorField } from "@/components/dashboard/ui/ColorField";
 import {
   DndContext,
   PointerSensor,
@@ -343,127 +347,6 @@ async function updateSiteTheme(
   const { error } = await supabase.from("sites").update(patch).eq("id", siteId);
   if (error) throw error;
 }
-
-/** UI primitives (dashboard only) */
-function Card({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={clsx(
-        "rounded-3xl border border-white/10 bg-white/5 shadow-[0_10px_40px_rgba(0,0,0,0.6)]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Button({
-  children,
-  variant = "primary",
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "ghost" | "danger";
-}) {
-  const base =
-    "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-40 disabled:cursor-not-allowed";
-
-  const styles =
-    variant === "primary"
-      ? "bg-white text-black hover:bg-white/90"
-      : variant === "danger"
-        ? "bg-red-600 text-white hover:bg-red-500"
-        : "bg-white/10 text-white hover:bg-white/15";
-
-  return (
-    <button {...props} className={clsx(base, styles, className)}>
-      {children}
-    </button>
-  );
-}
-
-function IconButton({
-  children,
-  title,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode;
-  title: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      disabled={disabled}
-      onClick={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      className={clsx(
-        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition",
-        disabled
-          ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5"
-          : "border-white/10 bg-white/5 hover:bg-white/10",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder = "#rrggbb",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  const normalized = normalizeHexOrNull(value) ?? "#000000";
-  const isValid = value ? normalizeHexOrNull(value) !== null : true;
-
-  return (
-    <div className="flex items-end gap-3">
-      <div className="flex-1">
-        <label className="block">
-          <div className="text-sm text-white/80 mb-2">{label}</div>
-          <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className={clsx(
-              "w-full rounded-2xl border bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
-              isValid ? "border-white/10" : "border-red-500/50",
-            )}
-          />
-          {!isValid && (
-            <div className="text-xs text-red-300 mt-2">Invalid hex. Use #fff or #ffffff.</div>
-          )}
-        </label>
-      </div>
-
-      <div className="w-[64px]">
-        <div className="text-xs text-white/50 mb-2">Pick</div>
-        <input
-          type="color"
-          value={normalized}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-[44px] w-full cursor-pointer rounded-xl border border-white/10 bg-transparent p-1"
-          aria-label={`${label} color picker`}
-        />
-      </div>
-    </div>
-  );
-}
-
 /** Left list item (sortable) */
 function SortableBlockRow({
   block,
