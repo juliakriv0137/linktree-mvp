@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Card } from "@/components/dashboard/ui/Card";
-import { Button } from "@/components/dashboard/ui/Button";
+import { InspectorHeader } from "@/components/dashboard/inspector/InspectorHeader";
 
 type Props = {
   tab: "block" | "theme";
@@ -13,28 +13,12 @@ type Props = {
 
 export function Inspector({ tab, onTabChange, theme, block }: Props) {
   return (
-    <Card>
-      <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">Inspector</div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={tab === "block" ? "primary" : "ghost"}
-              className="px-3 py-2 text-xs"
-              onClick={() => onTabChange("block")}
-            >
-              Block
-            </Button>
-            <Button
-              variant={tab === "theme" ? "primary" : "ghost"}
-              className="px-3 py-2 text-xs"
-              onClick={() => onTabChange("theme")}
-            >
-              Theme
-            </Button>
-          </div>
-        </div>
+    <Card className="h-full overflow-hidden flex flex-col">
+      <div className="shrink-0">
+        <InspectorHeader tab={tab} onTabChange={onTabChange} />
+      </div>
 
+      <div className="flex-1 min-h-0 overflow-auto p-4 space-y-4">
         {tab === "theme" ? theme : block}
       </div>
     </Card>
