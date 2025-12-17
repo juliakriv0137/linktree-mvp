@@ -30,6 +30,23 @@ import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { supabase } from "@/lib/supabaseClient";
 
+import { DASHBOARD_THEME_VARS } from "@/lib/dashboard/theme";
+
+
+const DASHBOARD_UI_VARS: React.CSSProperties = {
+  // Light SaaS dashboard look (like your example). Only for /dashboard UI.
+  ["--db-bg" as any]: "246 249 252",          // page background
+  ["--db-panel" as any]: "255 255 255",       // cards/panels
+  ["--db-border" as any]: "226 232 240",      // subtle borders (slate-200)
+  ["--db-text" as any]: "15 23 42",           // slate-900
+  ["--db-muted" as any]: "100 116 139",       // slate-500/600
+  ["--db-accent" as any]: "45 212 191",       // mint/teal (accent)
+  ["--db-accent-weak" as any]: "204 251 241", // teal-100-ish for active pills
+  ["--db-ring" as any]: "45 212 191",
+  ["--db-radius" as any]: "18px",
+};
+
+
 import {
   HeaderEditor,
   HeroEditor,
@@ -738,7 +755,7 @@ export default function DashboardPage() {
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))] min-h-screen bg-black text-white" style={{ ...(DASHBOARD_THEME_VARS as any) }}>
       <div className="sticky top-0 z-30 border-b border-white/10 bg-black">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
