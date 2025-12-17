@@ -748,7 +748,10 @@ export default function DashboardPage() {
       const targetIndex = Math.max(0, Math.min(index, bs.length - 1));
       if (oldIndex === targetIndex) return;
 
-      const next = arrayMove(bs, oldIndex, targetIndex).map((b, idx) => ({ ...b, position: idx + 1 }));
+      const next = arrayMove(bs, oldIndex, targetIndex).map((b, idx) => ({
+        ...b,
+        position: idx + 1,
+      }));
 
       await persistOrder(next);
       setInsertMenuIndex(null);
@@ -765,7 +768,13 @@ export default function DashboardPage() {
   }
 
   async function saveColorField(
-    key: "bg_color" | "text_color" | "muted_color" | "border_color" | "button_color" | "button_text_color",
+    key:
+      | "bg_color"
+      | "text_color"
+      | "muted_color"
+      | "border_color"
+      | "button_color"
+      | "button_text_color",
     rawValue: string,
   ) {
     if (!site) return;
@@ -906,6 +915,98 @@ export default function DashboardPage() {
               >
                 Sign out
               </Button>
+
+              {/* Theme quick controls (top bar) */}
+              <div className="hidden lg:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1">
+                <span className="text-[11px] font-semibold text-white/70 px-2">Theme</span>
+
+                <select
+                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  value={site?.theme_key ?? "midnight"}
+                  disabled={!canAct}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const theme_key = e.target.value;
+                    try {
+                      setError(null);
+                      await updateSiteTheme(site.id, { theme_key } as any);
+                      setSite({ ...site, theme_key } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                >
+                  {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  value={(site?.layout_width ?? "compact") as any}
+                  disabled={!canAct}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const layout_width = e.target.value as any;
+                    try {
+                      setError(null);
+                      await updateSiteTheme(site.id, { layout_width } as any);
+                      setSite({ ...site, layout_width } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                >
+                  <option value="compact">compact</option>
+                  <option value="wide">wide</option>
+                  <option value="full">full</option>
+                </select>
+
+                <select
+                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  value={(site?.font_scale ?? "md") as any}
+                  disabled={!canAct}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const font_scale = e.target.value as any;
+                    try {
+                      setError(null);
+                      await updateSiteTheme(site.id, { font_scale } as any);
+                      setSite({ ...site, font_scale } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                >
+                  <option value="sm">sm</option>
+                  <option value="md">md</option>
+                  <option value="lg">lg</option>
+                </select>
+
+                <select
+                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  value={(site?.button_radius ?? "2xl") as any}
+                  disabled={!canAct}
+                  onChange={async (e) => {
+                    if (!site) return;
+                    const button_radius = e.target.value as any;
+                    try {
+                      setError(null);
+                      await updateSiteTheme(site.id, { button_radius } as any);
+                      setSite({ ...site, button_radius } as any);
+                    } catch (err: any) {
+                      setError(err?.message ?? String(err));
+                    }
+                  }}
+                >
+                  <option value="md">md</option>
+                  <option value="xl">xl</option>
+                  <option value="2xl">2xl</option>
+                  <option value="full">full</option>
+                </select>
+              </div>
 
               <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
                 <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/15 transition">
