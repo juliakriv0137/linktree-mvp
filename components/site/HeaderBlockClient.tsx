@@ -162,7 +162,7 @@ export function HeaderBlockClient(props: {
   if (variant === "centered") {
     return (
       <div className="w-full" style={{ borderRadius: "var(--radius,15px)" }}>
-        <div className="border border-white/10 bg-white/5 px-4 py-4 overflow-hidden" style={{ borderRadius: "var(--radius,15px)" }}>
+        <div className="border border-white/10 bg-white/5 px-4 py-4" style={{ borderRadius: "var(--radius,15px)" }}>
           <div className="flex items-center justify-center">
             <Brand />
           </div>
@@ -186,7 +186,7 @@ export function HeaderBlockClient(props: {
   // default
   return (
     <div className="w-full">
-      <div className="relative border border-white/10 bg-white/5 px-4 py-3 overflow-hidden" style={{ borderRadius: "var(--radius,15px)" }}>
+      <div className="relative border border-white/10 bg-white/5 px-4 py-3" style={{ borderRadius: "var(--radius,15px)" }}>
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <Brand />
