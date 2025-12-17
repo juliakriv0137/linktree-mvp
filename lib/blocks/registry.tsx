@@ -240,7 +240,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
                     
 
         return (
-          <div className={`relative overflow-hidden min-w-0 w-full ${radiusClass}`}>
+          <div className="relative overflow-hidden min-w-0 w-full" style={{ borderRadius: "var(--radius,15px)" }}>
             <div
               className="absolute inset-0 w-full h-full"
               style={{
