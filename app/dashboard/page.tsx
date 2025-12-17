@@ -433,7 +433,6 @@ export default function DashboardPage() {
   const [previewNonce, setPreviewNonce] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
   const [blockTab, setBlockTab] = useState<"content" | "style" | "advanced">("content");
-
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.id === selectedBlockId) ?? null,
     [blocks, selectedBlockId],
@@ -739,7 +738,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="sticky top-0 z-30 border-b border-white/10 bg-black/60 backdrop-blur">
+      <div className="sticky top-0 z-30 border-b border-white/10 bg-black">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -769,11 +768,11 @@ export default function DashboardPage() {
                 Sign out
               </Button>
 
-              <div className="hidden lg:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1">
+              <div className="hidden lg:flex items-center gap-2 rounded-full border border-white/10 bg-black px-2 py-1">
                 <span className="text-[11px] font-semibold text-white/70 px-2">Theme</span>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
                   value={site?.theme_key ?? "midnight"}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -796,7 +795,7 @@ export default function DashboardPage() {
                 </select>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
                   value={(site?.layout_width ?? "compact") as any}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -817,7 +816,7 @@ export default function DashboardPage() {
                 </select>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
                   value={(site?.font_scale ?? "md") as any}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -838,7 +837,7 @@ export default function DashboardPage() {
                 </select>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black/20 px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
                   value={(site?.button_radius ?? "2xl") as any}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -858,6 +857,71 @@ export default function DashboardPage() {
                   <option value="2xl">2xl</option>
                   <option value="full">full</option>
                 </select>
+{/* Custom colors moved from Inspector */}
+                <details className="relative">
+                  <summary className="cursor-pointer select-none rounded-full border border-white/10 bg-black px-3 py-2 text-xs text-white/80 hover:bg-white/5">
+                    Colors
+                  </summary>
+                  <div className="absolute right-0 z-50 mt-2 w-[340px] max-w-[90vw] rounded-2xl border border-white/10 bg-black p-3 shadow-2xl">
+                    <div className="text-sm font-semibold">Custom colors</div>
+                    <div className="text-xs text-white/50 mt-1">
+                      Optional. Leave empty to use theme defaults.
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      <ColorField
+                        label="Background"
+                        value={colors.bg_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, bg_color: v }));
+                          saveColorField("bg_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Text"
+                        value={colors.text_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, text_color: v }));
+                          saveColorField("text_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Muted"
+                        value={colors.muted_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, muted_color: v }));
+                          saveColorField("muted_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Border"
+                        value={colors.border_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, border_color: v }));
+                          saveColorField("border_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Button"
+                        value={colors.button_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, button_color: v }));
+                          saveColorField("button_color", v);
+                        }}
+                      />
+                      <ColorField
+                        label="Button text"
+                        value={colors.button_text_color}
+                        onChange={(v) => {
+                          setColors((p) => ({ ...p, button_text_color: v }));
+                          saveColorField("button_text_color", v);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </details>
+
+
               </div>
 
               <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
@@ -1154,6 +1218,10 @@ export default function DashboardPage() {
                         </select>
                       </label>
 
+                
+
+
+
                       <label className="block">
                         <div className="text-xs text-white/50 mb-2">Layout width</div>
                         <select
@@ -1299,63 +1367,7 @@ export default function DashboardPage() {
 
                     <div className="pt-2 border-t border-white/10" />
 
-                    <div className="space-y-4">
-                      <div>
-                        <div className="text-sm font-semibold">Custom colors</div>
-                        <div className="text-xs text-white/50 mt-1">
-                          Optional. Leave empty to use theme defaults.
-                        </div>
-                      </div>
-
-                      <ColorField
-                        label="Background"
-                        value={colors.bg_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, bg_color: v }));
-                          saveColorField("bg_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Text"
-                        value={colors.text_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, text_color: v }));
-                          saveColorField("text_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Muted"
-                        value={colors.muted_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, muted_color: v }));
-                          saveColorField("muted_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Border"
-                        value={colors.border_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, border_color: v }));
-                          saveColorField("border_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Button"
-                        value={colors.button_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, button_color: v }));
-                          saveColorField("button_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Button text"
-                        value={colors.button_text_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, button_text_color: v }));
-                          saveColorField("button_text_color", v);
-                        }}
-                      />
-                    </div>
+                    
                   </div>
                 </Card>
               ) : !selectedBlock ? (
