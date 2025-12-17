@@ -7,20 +7,116 @@ export type BackgroundStyle = "solid" | "gradient" | "dots";
  * CSS variables (RGB triplets "r g b")
  */
 export type ThemeVars = {
+  /** Page background */
   "--bg": string;
+  /** Card/surface background */
   "--card": string;
+  /** Primary text */
   "--text": string;
+  /** Muted/secondary text */
   "--muted": string;
+  /** Borders and subtle separators */
   "--border": string;
+  /** Divider lines (fallback to --border) */
   "--divider": string;
+  /** Primary accent (buttons/links) */
   "--primary": string;
+  /** Secondary accent (gradients/highlights) */
   "--primary-2": string;
+  /** Button text (on primary) */
   "--button-text": string;
 };
+
+export type ThemeRole =
+  | "bg"
+  | "card"
+  | "text"
+  | "muted"
+  | "border"
+  | "divider"
+  | "primary"
+  | "primary-2"
+  | "button-text";
+
+export type ThemeRoleMeta = {
+  role: ThemeRole;
+  cssVar: keyof ThemeVars;
+  label: string;
+  description: string;
+  /** If true, role can be overridden from site custom colors UI */
+  overridable?: boolean;
+};
+
+export const THEME_ROLE_META: ThemeRoleMeta[] = [
+  {
+    role: "bg",
+    cssVar: "--bg",
+    label: "Background",
+    description: "Page background color.",
+    overridable: true,
+  },
+  {
+    role: "card",
+    cssVar: "--card",
+    label: "Card",
+    description: "Surface/background for cards and blocks.",
+    overridable: false,
+  },
+  {
+    role: "text",
+    cssVar: "--text",
+    label: "Text",
+    description: "Main text color.",
+    overridable: true,
+  },
+  {
+    role: "muted",
+    cssVar: "--muted",
+    label: "Muted text",
+    description: "Secondary text and subtle labels.",
+    overridable: true,
+  },
+  {
+    role: "border",
+    cssVar: "--border",
+    label: "Border",
+    description: "Borders and subtle outlines.",
+    overridable: true,
+  },
+  {
+    role: "divider",
+    cssVar: "--divider",
+    label: "Divider",
+    description: "Dividers between sections. Falls back to Border if not set.",
+    overridable: false,
+  },
+  {
+    role: "primary",
+    cssVar: "--primary",
+    label: "Primary accent",
+    description: "Primary accent color (buttons/links).",
+    overridable: true,
+  },
+  {
+    role: "primary-2",
+    cssVar: "--primary-2",
+    label: "Secondary accent",
+    description: "Secondary accent for gradients and highlights.",
+    overridable: false,
+  },
+  {
+    role: "button-text",
+    cssVar: "--button-text",
+    label: "Button text",
+    description: "Text color on primary buttons.",
+    overridable: true,
+  },
+];
 
 export type ThemeDefinition = {
   key: ThemeKey;
   label: string;
+  description: string;
   vars: ThemeVars;
 };
 
@@ -28,6 +124,7 @@ export const THEMES: ThemeDefinition[] = [
   {
     key: "midnight",
     label: "Midnight",
+    description: "Dark, neutral base with indigo accents. Good default for most sites.",
     vars: {
       "--bg": "10 12 16",
       "--card": "16 19 26",
@@ -43,6 +140,7 @@ export const THEMES: ThemeDefinition[] = [
   {
     key: "rose",
     label: "Rose",
+    description: "Dark romantic palette with pink accents. Great for beauty/lifestyle.",
     vars: {
       "--bg": "12 10 14",
       "--card": "20 14 22",
@@ -58,6 +156,7 @@ export const THEMES: ThemeDefinition[] = [
   {
     key: "emerald",
     label: "Emerald",
+    description: "Dark green palette with fresh accents. Works for eco/brands/tech too.",
     vars: {
       "--bg": "8 12 10",
       "--card": "14 20 16",
@@ -73,6 +172,7 @@ export const THEMES: ThemeDefinition[] = [
   {
     key: "light",
     label: "Light",
+    description: "Clean light theme with strong contrast. Best for professional sites.",
     vars: {
       "--bg": "245 246 250",
       "--card": "255 255 255",
@@ -103,7 +203,7 @@ export function cssVarsFromTheme(key: string | null | undefined): ThemeVars {
 function hexToRgbTriplet(hex: string | null | undefined): string | null {
   if (!hex) return null;
 
-  const raw = hex.trim();
+  const raw = String(hex).trim();
 
   // already "r g b"
   if (/^\d+\s+\d+\s+\d+$/.test(raw)) return raw;
