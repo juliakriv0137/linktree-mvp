@@ -30,7 +30,7 @@ type SiteRow = {
 type BlockRow = {
   id: string;
   site_id: string;
-  type: "hero" | "links" | "image" | "text" | "divider";
+  type: "header" | "hero" | "links" | "image" | "text" | "divider";
   variant?: string | null;
   style?: Record<string, unknown> | null;
   content: any;
@@ -42,7 +42,8 @@ function layoutToContainerClasses(
   layout: "compact" | "wide" | "full" | null | undefined,
 ) {
   if (layout === "full") {
-    return "mx-auto w-full max-w-7xl px-6 sm:px-10 lg:px-14 py-12";
+    // Full should feel like a real full-width website: no max-width clamp.
+    return "w-full px-6 sm:px-10 lg:px-14 py-12";
   }
   if (layout === "wide") {
     return "mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-14 py-12";
@@ -92,6 +93,16 @@ export default async function PublicPage({
   const containerClass = layoutToContainerClasses(layoutWidth);
   const fontSize = fontScaleToCss(s.font_scale ?? "md");
 
+  const firstBlock = (visibleBlocks as any[])[0] as any | undefined;
+
+  // System rule: full-bleed is an explicit block style (no one-off hacks).
+  // Enable by setting site_blocks.style.full_bleed = true for the Header block.
+  const headerStyle = (firstBlock?.style && typeof firstBlock.style === "object") ? (firstBlock.style as any) : {};
+  const isFullBleedHeader = firstBlock?.type === "header" && headerStyle?.full_bleed === true;
+
+  const headerBlock = isFullBleedHeader ? [firstBlock] : [];
+  const restBlocks = isFullBleedHeader ? (visibleBlocks as any[]).slice(1) : (visibleBlocks as any[]);
+
   return (
     <SiteShell
       themeKey={s.theme_key ?? "midnight"}
@@ -112,19 +123,24 @@ export default async function PublicPage({
     >
       {/* Fallback font scale */}
       <div style={{ fontSize }}>
+        {isFullBleedHeader ? (
+          <div className="w-full">
+            <BlocksRenderer
+              blocks={(headerBlock as any) ?? []}
+              mode="public"
+              site={{
+                layout_width: layoutWidth,
+                button_style: (s.button_style ?? "solid") as any,
+              }}
+            />
+          </div>
+        ) : null}
+
         <div className={containerClass}>
-          <div
-            style={{
-              background: "var(--card-bg)",
-              border: "var(--card-border)",
-              boxShadow: "var(--card-shadow)",
-              padding: "var(--card-padding)",
-              borderRadius: "var(--button-radius)",
-            }}
-          >
+          {layoutWidth === "full" ? (
             <div className="space-y-6">
               <BlocksRenderer
-                blocks={(visibleBlocks as any) ?? []}
+                blocks={(restBlocks as any) ?? []}
                 mode="public"
                 site={{
                   layout_width: layoutWidth,
@@ -136,7 +152,32 @@ export default async function PublicPage({
                 Powered by Mini-Site Builder
               </div>
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                background: "var(--card-bg)",
+                border: "var(--card-border)",
+                boxShadow: "var(--card-shadow)",
+                padding: "var(--card-padding)",
+                borderRadius: "var(--radius)",
+              }}
+            >
+              <div className="space-y-6">
+                <BlocksRenderer
+                  blocks={(restBlocks as any) ?? []}
+                  mode="public"
+                  site={{
+                    layout_width: layoutWidth,
+                    button_style: (s.button_style ?? "solid") as any,
+                  }}
+                />
+
+                <div className="pt-2 text-center text-xs text-white/35">
+                  Powered by Mini-Site Builder
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </SiteShell>
