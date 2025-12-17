@@ -13,13 +13,13 @@ export default function Home() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/login"
-            className="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className="bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200" style={{ borderRadius: "var(--radius,15px)" }}
           >
             Login
           </Link>
           <Link
             href="/dashboard"
-            className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800" style={{ borderRadius: "var(--radius,15px)" }}
           >
             Dashboard
           </Link>
@@ -28,7 +28,7 @@ export default function Home() {
         <div className="mt-8 text-sm text-zinc-600 dark:text-zinc-400">
           <p className="font-semibold text-zinc-900 dark:text-zinc-100">Demo URL format</p>
           <p className="mt-1">
-            <span className="rounded-lg bg-zinc-100 px-2 py-1 font-mono dark:bg-zinc-900">
+            <span className="bg-zinc-100 px-2 py-1 font-mono dark:bg-zinc-900" style={{ borderRadius: "var(--radius,15px)" }}>
               /your_username
             </span>
           </p>

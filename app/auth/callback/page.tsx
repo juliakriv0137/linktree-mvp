@@ -63,7 +63,7 @@ function CallbackInner() {
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-6">
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-6">
+      <div className="w-full max-w-md border border-white/10 bg-white/5 p-6" style={{ borderRadius: "var(--radius,15px)" }}>
         {status !== "error" ? (
           <>
             <div className="text-lg font-semibold">Signing you in…</div>
@@ -79,9 +79,7 @@ function CallbackInner() {
               Sign-in failed
             </div>
             <div className="mt-2 text-sm text-white/70 break-words">{error}</div>
-            <button
-              className="mt-4 inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm hover:bg-white/15"
-              onClick={() => router.replace("/login")}
+            <button className="mt-4 inline-flex items-center justify-center border border-white/10 bg-white/10 px-4 py-2 text-sm hover:bg-white/15" style={{ borderRadius: "var(--radius,15px)" }} onClick={() => router.replace("/login")}
             >
               Back to login
             </button>
