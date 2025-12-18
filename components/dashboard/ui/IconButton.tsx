@@ -28,10 +28,10 @@ export function IconButton({
         onClick();
       }}
       className={clsx(
-        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition",
+        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] text-sm transition",
         disabled
-          ? "cursor-not-allowed opacity-40 border-white/10 bg-white/5"
-          : "border-white/10 bg-white/5 hover:bg-white/10",
+          ? "cursor-not-allowed opacity-40"
+          : "hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-border-strong))]",
       )}
     >
       {children}

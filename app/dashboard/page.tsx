@@ -37,7 +37,9 @@ const DASHBOARD_UI_VARS: React.CSSProperties = {
   // Light SaaS dashboard look (like your example). Only for /dashboard UI.
   ["--db-bg" as any]: "246 249 252",          // page background
   ["--db-panel" as any]: "255 255 255",       // cards/panels
-  ["--db-border" as any]: "226 232 240",      // subtle borders (slate-200)
+  ["--db-soft" as any]: "241 245 249",        // soft fill (slate-100)
+  ["--db-border" as any]: "203 213 225",      // borders (slate-300)
+  ["--db-border-strong" as any]: "148 163 184", // stronger borders (slate-400)
   ["--db-text" as any]: "15 23 42",           // slate-900
   ["--db-muted" as any]: "100 116 139",       // slate-500/600
   ["--db-accent" as any]: "45 212 191",       // mint/teal (accent)
@@ -374,13 +376,13 @@ function SortableBlockRow({
       <div
         className={clsx(
           "w-full rounded-2xl border px-3 py-3 text-left transition",
-          selected ? "border-white/25 bg-white/10" : "border-white/10 bg-white/5 hover:bg-white/10",
+          selected ? "border-[rgb(var(--db-accent) / 0.55)] bg-[rgb(var(--db-accent) / 0.14)] shadow-sm" : "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] hover:bg-[rgb(var(--db-soft))]",
           !block.is_visible && "opacity-70",
         )}
       >
         <div className="flex items-center gap-2">
           <div
-            className="flex items-center justify-center rounded-xl border border-white/10 bg-black/30 px-2 py-1 text-xs text-white/70 cursor-grab active:cursor-grabbing"
+            className="flex items-center justify-center rounded-xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-2 py-1 text-xs text-[rgb(var(--db-muted))] cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
             aria-label="Drag to reorder"
@@ -399,10 +401,10 @@ function SortableBlockRow({
             className="min-w-0 flex-1 text-left"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs rounded-full bg-white/10 px-2 py-1">{block.type}</span>
+              <span className="text-xs rounded-full border border-[rgb(var(--db-accent) / 0.35)] bg-[rgb(var(--db-accent) / 0.12)] px-2 py-1 text-[rgb(var(--db-text))]">{block.type}</span>
               {!block.is_visible && <span className="text-xs text-yellow-200/80">hidden</span>}
             </div>
-            <div className="text-xs text-white/40 mt-1">pos {block.position}</div>
+            <div className="text-xs text-[rgb(var(--db-muted))] mt-1">pos {block.position}</div>
           </button>
 
           <div className="flex items-center gap-2">
@@ -755,19 +757,19 @@ export default function DashboardPage() {
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
   return (
-    <main className="bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))] min-h-screen bg-black text-white" style={{ ...(DASHBOARD_THEME_VARS as any) }}>
-      <div className="sticky top-0 z-30 border-b border-white/10 bg-black">
+    <main className="min-h-screen bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))]" style={{ ...(DASHBOARD_THEME_VARS as any) }}>
+      <div className="sticky top-0 z-30 border-b border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))]">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-3">
                 <div className="text-lg font-bold">Dashboard</div>
-                <span className="hidden sm:inline text-xs rounded-full bg-white/10 px-2 py-1 text-white/70">
+                <span className="hidden sm:inline text-xs rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-2 py-1 text-[rgb(var(--db-muted))]">
                   Mini-site builder (A.1)
                 </span>
               </div>
-              <div className="text-xs text-white/50 mt-1 truncate">
-                Site: <span className="text-white/70">{site?.slug ?? "..."}</span>
+              <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
+                Site: <span className="text-[rgb(var(--db-text))]">{site?.slug ?? "..."}</span>
               </div>
             </div>
 
@@ -786,11 +788,11 @@ export default function DashboardPage() {
                 Sign out
               </Button>
 
-              <div className="hidden lg:flex items-center gap-2 rounded-full border border-white/10 bg-black px-2 py-1">
-                <span className="text-[11px] font-semibold text-white/70 px-2">Theme</span>
+              <div className="hidden lg:flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-2 py-1">
+                <span className="text-[11px] font-semibold text-[rgb(var(--db-muted))] px-2">Theme</span>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
                   value={site?.theme_key ?? "midnight"}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -813,7 +815,7 @@ export default function DashboardPage() {
                 </select>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
                   value={(site?.layout_width ?? "compact") as any}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -834,7 +836,7 @@ export default function DashboardPage() {
                 </select>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
                   value={(site?.font_scale ?? "md") as any}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -855,7 +857,7 @@ export default function DashboardPage() {
                 </select>
 
                 <select
-                  className="h-9 rounded-full border border-white/10 bg-black px-3 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
                   value={(site?.button_radius ?? "2xl") as any}
                   disabled={!canAct}
                   onChange={async (e) => {
@@ -877,12 +879,12 @@ export default function DashboardPage() {
                 </select>
 {/* Custom colors moved from Inspector */}
                 <details className="relative">
-                  <summary className="cursor-pointer select-none rounded-full border border-white/10 bg-black px-3 py-2 text-xs text-white/80 hover:bg-white/5">
+                  <summary className="cursor-pointer select-none rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 py-2 text-xs text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-soft))]">
                     Colors
                   </summary>
-                  <div className="absolute right-0 z-50 mt-2 w-[340px] max-w-[90vw] rounded-2xl border border-white/10 bg-black p-3 shadow-2xl">
+                  <div className="absolute right-0 z-50 mt-2 w-[340px] max-w-[90vw] rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] p-3 shadow-2xl">
                     <div className="text-sm font-semibold">Custom colors</div>
-                    <div className="text-xs text-white/50 mt-1">
+                    <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
                       Optional. Leave empty to use theme defaults.
                     </div>
 
@@ -943,7 +945,7 @@ export default function DashboardPage() {
               </div>
 
               <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
-                <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/15 transition">
+                <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-soft))] transition">
                   Open public page
                 </span>
               </Link>
@@ -962,11 +964,11 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_380px]">
           {/* LEFT */}
           <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-white/10">
+            <div className="p-4 border-b border-[rgb(var(--db-border))]">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold">Blocks</div>
-                  <div className="text-xs text-white/50 mt-1">
+                  <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
                     Select a block to edit. Drag to reorder.
                   </div>
                 </div>
@@ -1053,14 +1055,14 @@ export default function DashboardPage() {
 
           {/* CENTER */}
           <Card>
-            <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3">
+            <div className="p-4 border-b border-[rgb(var(--db-border))] flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Preview</div>
-                <div className="text-xs text-white/50 mt-1">What your public page looks like (live).</div>
+                <div className="text-xs text-[rgb(var(--db-muted))] mt-1">What your public page looks like (live).</div>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                <div className="hidden sm:flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -1068,10 +1070,10 @@ export default function DashboardPage() {
                       setPreviewNonce(Date.now());
                     }}
                     className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
                       previewDevice === "desktop"
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:text-white",
+                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
                     )}
                   >
                     Desktop
@@ -1083,10 +1085,10 @@ export default function DashboardPage() {
                       setPreviewNonce(Date.now());
                     }}
                     className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
                       previewDevice === "mobile"
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:text-white",
+                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
                     )}
                   >
                     Mobile
@@ -1102,7 +1104,7 @@ export default function DashboardPage() {
                 </Button>
 
                 <Link href={publicUrl} target="_blank" className="inline-flex sm:hidden">
-                  <span className="inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-semibold bg-white/10 hover:bg-white/15 transition">
+                  <span className="inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-soft))] transition">
                     Open
                   </span>
                 </Link>
@@ -1113,7 +1115,7 @@ export default function DashboardPage() {
               <div className="p-4">
                 <div
                   className={clsx(
-                    "mx-auto overflow-hidden rounded-2xl border border-white/10",
+                    "mx-auto overflow-hidden rounded-2xl border border-[rgb(var(--db-border))]",
                     previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full",
                   )}
                 >
@@ -1156,30 +1158,30 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="p-6 text-sm text-white/50">Preview is collapsed.</div>
+              <div className="p-6 text-sm text-[rgb(var(--db-muted))]">Preview is collapsed.</div>
             )}
           </Card>
 
           {/* RIGHT (Inspector inline) */}
           <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-auto">
-            <div className="p-4 border-b border-white/10">
+            <div className="p-4 border-b border-[rgb(var(--db-border))]">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold">Inspector</div>
-                  <div className="text-xs text-white/50 mt-1">
+                  <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
                     {inspectorTab === "theme" ? "Site-wide settings" : "Selected block settings"}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                <div className="flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-1">
                   <button
                     type="button"
                     onClick={() => setInspectorTab("block")}
                     className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
                       inspectorTab === "block"
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:text-white",
+                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
                     )}
                   >
                     Block
@@ -1188,10 +1190,10 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setInspectorTab("theme")}
                     className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition",
+                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
                       inspectorTab === "theme"
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:text-white",
+                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
                     )}
                   >
                     Theme
@@ -1202,18 +1204,18 @@ export default function DashboardPage() {
 
             <div className="p-4 space-y-4">
               {inspectorTab === "theme" ? (
-                <Card className="bg-white/3 shadow-none">
+                <Card className="bg-[rgb(var(--db-soft))] shadow-none">
                   <div className="p-4 space-y-5">
                     <div>
                       <div className="text-sm font-semibold">Theme</div>
-                      <div className="text-xs text-white/50 mt-1">Applies to the whole site.</div>
+                      <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Applies to the whole site.</div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Theme</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Theme</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={site?.theme_key ?? "midnight"}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1241,9 +1243,9 @@ export default function DashboardPage() {
 
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Layout width</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Layout width</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={(site?.layout_width ?? "compact") as any}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1265,9 +1267,9 @@ export default function DashboardPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Background style</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background style</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={(site?.background_style ?? "solid") as any}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1288,9 +1290,9 @@ export default function DashboardPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Button style</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Button style</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={(site?.button_style ?? "solid") as any}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1311,9 +1313,9 @@ export default function DashboardPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Font scale</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Font scale</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={(site?.font_scale ?? "md") as any}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1335,9 +1337,9 @@ export default function DashboardPage() {
                       </label>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">Button radius</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Button radius</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={(site?.button_radius ?? "2xl") as any}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1360,9 +1362,9 @@ export default function DashboardPage() {
                       </label>
 
                       <label className="block sm:col-span-2">
-                        <div className="text-xs text-white/50 mb-2">Card style</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Card style</div>
                         <select
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                           value={(site?.card_style ?? "card") as any}
                           disabled={!canAct}
                           onChange={async (e) => {
@@ -1383,24 +1385,24 @@ export default function DashboardPage() {
                       </label>
                     </div>
 
-                    <div className="pt-2 border-t border-white/10" />
+                    <div className="pt-2 border-t border-[rgb(var(--db-border))]" />
 
                     
                   </div>
                 </Card>
               ) : !selectedBlock ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 text-[rgb(var(--db-text))]">
                   Select a block on the left to edit.
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                  <div className="flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-1">
   <button
     type="button"
     onClick={() => setBlockTab("style")}
     className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold transition",
-      blockTab === "style" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+      blockTab === "style" ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]" : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
     )}
   >
     Style
@@ -1410,8 +1412,8 @@ export default function DashboardPage() {
     type="button"
     onClick={() => setBlockTab("content")}
     className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold transition",
-      blockTab === "content" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+      blockTab === "content" ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]" : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
     )}
   >
     Content
@@ -1421,8 +1423,8 @@ export default function DashboardPage() {
     type="button"
     onClick={() => setBlockTab("advanced")}
     className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold transition",
-      blockTab === "advanced" ? "bg-white/10 text-white" : "text-white/60 hover:text-white",
+      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+      blockTab === "advanced" ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]" : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
     )}
   >
     Advanced
@@ -1432,14 +1434,14 @@ export default function DashboardPage() {
                   {blockTab === "advanced" && (
 
 
-                  <Card className="bg-white/3 shadow-none">
+                  <Card className="bg-[rgb(var(--db-soft))] shadow-none">
                     <div className="p-4 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold">Selected</div>
-                          <div className="text-xs text-white/50 mt-1 truncate">
+                          <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
                             {selectedBlock.type} · id{" "}
-                            <span className="font-mono text-white/70">{selectedBlock.id}</span>
+                            <span className="font-mono text-[rgb(var(--db-text))]">{selectedBlock.id}</span>
                           </div>
                         </div>
 
@@ -1465,17 +1467,17 @@ export default function DashboardPage() {
                       </div>
 
                       <label className="block">
-                        <div className="text-xs text-white/50 mb-2">anchor_id (optional)</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">anchor_id (optional)</div>
                         <input
                           value={anchorDraft}
                           disabled={!canAct}
                           onChange={(e) => setAnchorDraft(e.target.value)}
                           placeholder="e.g. about / pricing / faq"
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm text-white placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
                         />
-                        <div className="text-xs text-white/50 mt-2">
-                          Use in links as <span className="font-mono text-white/70">#anchor</span> (e.g.{" "}
-                          <span className="font-mono text-white/70">/#about</span>).
+                        <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
+                          Use in links as <span className="font-mono text-[rgb(var(--db-text))]">#anchor</span> (e.g.{" "}
+                          <span className="font-mono text-[rgb(var(--db-text))]">/#about</span>).
                         </div>
                       </label>
                     </div>
@@ -1484,18 +1486,18 @@ export default function DashboardPage() {
 
                   {blockTab === "style" && (
 
-                  <Card className="bg-white/3 shadow-none">
+                  <Card className="bg-[rgb(var(--db-soft))] shadow-none">
                     <div className="p-4 space-y-3">
                       {/* Header-specific style controls */}
                         {selectedBlock && (selectedBlock as any).type === "header" ? (
-                          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-3">
+                          <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-3">
                             <div className="text-sm font-semibold">Header style</div>
 
                             <div>
-                              <div className="text-xs text-white/50 mb-2">Variant</div>
+                              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Variant</div>
                               <select
                                 disabled={!canAct}
-                                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50"
+                                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)] disabled:opacity-50"
                                 value={
                                   (((selectedBlock as any).variant ?? "default") as any) === "centered"
                                     ? "centered"
@@ -1506,12 +1508,12 @@ export default function DashboardPage() {
                                 <option value="default">Default</option>
                                 <option value="centered">Centered</option>
                               </select>
-                              <div className="text-xs text-white/50 mt-2">
+                              <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
                                 Variant — стиль/компоновка блока (site_blocks.variant).
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                            <div className="flex items-center justify-between rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2">
                               <div className="text-sm font-medium">Full width (edge-to-edge)</div>
                               <input
                                 disabled={!canAct}
@@ -1520,7 +1522,7 @@ export default function DashboardPage() {
                                 onChange={(e) => onPatchBlockStyle({ full_bleed: e.target.checked })}
                               />
                             </div>
-                            <div className="text-xs text-white/50">
+                            <div className="text-xs text-[rgb(var(--db-muted))]">
                               Делает хедер на всю ширину. Это style (site_blocks.style.full_bleed).
                             </div>
                           </div>
@@ -1528,13 +1530,13 @@ export default function DashboardPage() {
 
 <div>
                         <div className="text-sm font-semibold">Block style</div>
-                        <div className="text-xs text-white/50 mt-1">
+                        <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
                           Applies to this block (via BlockFrame).
                         </div>
                       </div>
 
                       <div className="mt-2">
-                        <div className="text-xs text-white/50 mb-2">Presets</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Presets</div>
                         <div className="flex flex-wrap gap-2">
                           {[
                             ["card", "Card"],
@@ -1547,7 +1549,7 @@ export default function DashboardPage() {
                               key={String(k)}
                               type="button"
                               disabled={!canAct}
-                              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40"
+                              className="rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-soft))] disabled:opacity-40"
                               onClick={() => onApplyStylePreset(String(k))}
                             >
                               {label}
@@ -1558,9 +1560,9 @@ export default function DashboardPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label className="block">
-                          <div className="text-xs text-white/50 mb-2">Padding</div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Padding</div>
                           <select
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                             value={getStyleView().padding}
                             disabled={!canAct}
                             onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
@@ -1573,9 +1575,9 @@ export default function DashboardPage() {
                         </label>
 
                         <label className="block">
-                          <div className="text-xs text-white/50 mb-2">Width</div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Width</div>
                           <select
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                             value={getStyleView().width}
                             disabled={!canAct}
                             onChange={(e) => {
@@ -1590,9 +1592,9 @@ export default function DashboardPage() {
                         </label>
 
                         <label className="block sm:col-span-2">
-                          <div className="text-xs text-white/50 mb-2">Background</div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background</div>
                           <select
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                             value={getStyleView().background}
                             disabled={!canAct}
                             onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
@@ -1601,15 +1603,15 @@ export default function DashboardPage() {
                             <option value="card">Card</option>
                             <option value="highlight">Highlight</option>
                           </select>
-                          <div className="text-xs text-white/50 mt-1">
+                          <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
                             Leave empty to use preset theme colors.
                           </div>
                         </label>
 
                         <label className="block">
-                          <div className="text-xs text-white/50 mb-2">Align</div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Align</div>
                           <select
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                             value={getStyleView().align}
                             disabled={!canAct}
                             onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
@@ -1621,9 +1623,9 @@ export default function DashboardPage() {
                         </label>
 
                         <label className="block">
-                          <div className="text-xs text-white/50 mb-2">Radius</div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Radius</div>
                           <select
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                             value={getStyleView().radius}
                             disabled={!canAct}
                             onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
@@ -1638,9 +1640,9 @@ export default function DashboardPage() {
                         </label>
 
                         <label className="block sm:col-span-2">
-                          <div className="text-xs text-white/50 mb-2">Border</div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Border</div>
                           <select
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
                             value={getStyleView().border}
                             disabled={!canAct}
                             onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
@@ -1668,7 +1670,7 @@ export default function DashboardPage() {
                   ) : selectedBlock.type === "divider" ? (
                     <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
                   ) : (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/70">
+                    <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 text-[rgb(var(--db-text))]">
                       No editor wired for:{" "}
                       <span className="font-mono">{String((selectedBlock as any).type)}</span>
                     </div>
