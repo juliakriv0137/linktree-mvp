@@ -29,18 +29,18 @@ export function ThemeInspector({
   if (!site) return null;
 
   return (
-    <Card className="bg-white/3 shadow-none">
+    <Card className="bg-[rgb(var(--db-panel))] shadow-none">
       <div className="p-4 space-y-5">
         <div>
           <div className="text-sm font-semibold">Theme</div>
-          <div className="text-xs text-white/50 mt-1">Applies to the whole site.</div>
+          <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Applies to the whole site.</div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
-            <div className="text-xs text-white/50 mb-2">Theme</div>
+            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Theme</div>
             <select
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm"
               value={site.theme_key}
               disabled={!canAct}
               onChange={async (e) => {
@@ -58,9 +58,9 @@ export function ThemeInspector({
           </label>
 
           <label className="block">
-            <div className="text-xs text-white/50 mb-2">Layout width</div>
+            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Layout width</div>
             <select
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm"
               value={site.layout_width}
               disabled={!canAct}
               onChange={async (e) => {
@@ -76,7 +76,7 @@ export function ThemeInspector({
           </label>
         </div>
 
-        <div className="pt-2 border-t border-white/10" />
+        <div className="pt-2 border-t border-[rgb(var(--db-border))]" />
 
         <div className="space-y-4">
           <ColorField

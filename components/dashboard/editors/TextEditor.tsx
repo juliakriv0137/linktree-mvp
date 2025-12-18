@@ -3,7 +3,14 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { SiteBlockRow as BlockRow } from "@/components/blocks/BlocksRenderer";
-import { Button } from "@/components/Button";
+import { Button } from "@/components/dashboard/ui/Button";
+import {
+  inspectorLabel,
+  inspectorHint,
+  inspectorInput,
+  inspectorSelect,
+  inspectorTextarea,
+} from "@/components/dashboard/ui/InspectorField";
 
 type TextContent = {
   text?: string | null;
@@ -40,32 +47,34 @@ export function TextEditor({
     setAlign((c.align as any) ?? "left");
   }, [block.id, block.content]);
 
-  const sizeClass = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
-  const alignClass = align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+  const sizeClass =
+    size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
+  const alignClass =
+    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
 
   const cleanedText = useMemo(() => safeTrim(text), [text]);
   const canSave = cleanedText.length > 0;
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-white/50">Text block</div>
+      <div className={inspectorHint}>Text block</div>
 
       <label className="block">
-        <div className="text-sm text-white/80 mb-2">Text</div>
+        <div className={inspectorLabel}>Text</div>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Write something..."
+          placeholder="Write something…"
           rows={6}
-          className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className={inspectorTextarea}
         />
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">Text size</div>
+          <div className={inspectorLabel}>Text size</div>
           <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className={inspectorSelect}
             value={size}
             onChange={(e) => setSize(e.target.value as any)}
           >
@@ -76,9 +85,9 @@ export function TextEditor({
         </label>
 
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">Align</div>
+          <div className={inspectorLabel}>Align</div>
           <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className={inspectorSelect}
             value={align}
             onChange={(e) => setAlign(e.target.value as any)}
           >
@@ -89,22 +98,13 @@ export function TextEditor({
         </label>
       </div>
 
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "var(--card-border)",
-          boxShadow: "var(--card-shadow)",
-          padding: "var(--card-padding)",
-          borderRadius: "var(--button-radius)",
-        }}
-        className="space-y-2 min-w-0"
-      >
-        <div className="text-xs text-white/50">Preview</div>
+      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 space-y-2 min-w-0">
+        <div className={inspectorHint}>Preview</div>
         <div
-          className={`${sizeClass} ${alignClass} text-[rgb(var(--text))] whitespace-pre-wrap min-w-0`}
+          className={`${sizeClass} ${alignClass} text-[rgb(var(--db-text))] whitespace-pre-wrap min-w-0`}
           style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
         >
-          {cleanedText ? cleanedText : "Write something to see preview…"}
+          {cleanedText || "Write something to see preview…"}
         </div>
       </div>
 

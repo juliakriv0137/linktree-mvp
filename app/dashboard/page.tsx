@@ -757,7 +757,7 @@ export default function DashboardPage() {
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
   return (
-    <main className="min-h-screen bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))]" style={{ ...(DASHBOARD_THEME_VARS as any) }}>
+    <main className="min-h-screen bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))]" style={{ ...(DASHBOARD_THEME_VARS as any), ...(DASHBOARD_UI_VARS as any) }}>
       <div className="sticky top-0 z-30 border-b border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))]">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -975,49 +975,67 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {(["header", "hero", "links", "image", "text", "divider"] as const).map((t) => (
-                  <Button
-                    key={t}
-                    variant="primary"
-                    disabled={!site || loading || !!creating || !!inserting}
-                    onClick={async () => {
-                      if (!site) return;
-                      setCreating(t);
-                      try {
-                        await createBlock(site.id, t);
-                        const bs = await loadBlocks(site.id);
-                        setBlocks(bs);
-                        const last = bs.reduce(
-                          (acc, cur) => (cur.position > acc.position ? cur : acc),
-                          bs[0],
-                        );
-                        if (last?.id) setSelectedBlockId(last.id);
-                      } catch (e: any) {
-                        setError(e?.message ?? String(e));
-                      } finally {
-                        setCreating(null);
-                      }
-                    }}
-                    className="px-3 py-2 text-xs"
-                  >
-                    {creating === t ? "Adding..." : `+ ${t}`}
-                  </Button>
-                ))}
-              </div>
+  {(["header", "hero", "links", "image", "text", "divider"] as const).map((t) => {
+    const isBusy = creating === t;
+
+    return (
+      <button
+        key={t}
+        type="button"
+        disabled={!site || loading || !!creating || !!inserting}
+        onClick={async () => {
+          if (!site) return;
+          setCreating(t);
+          try {
+            await createBlock(site.id, t);
+            const bs = await loadBlocks(site.id);
+            setBlocks(bs);
+            const last = bs.reduce(
+              (acc, cur) => (cur.position > acc.position ? cur : acc),
+              bs[0],
+            );
+            if (last?.id) setSelectedBlockId(last.id);
+          } catch (e: any) {
+            setError(e?.message ?? String(e));
+          } finally {
+            setCreating(null);
+          }
+        }}
+        className={clsx(
+          "inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
+          "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] shadow-sm",
+          "hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-accent)/0.55)]",
+          "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          isBusy && "border-[rgb(var(--db-accent)/0.65)] bg-[rgb(var(--db-accent)/0.12)]",
+        )}
+        title={`Add ${t} block`}
+      >
+        <span className="text-sm leading-none">＋</span>
+        <span className="capitalize">{isBusy ? "Adding..." : t}</span>
+      </button>
+    );
+  })}
+</div>
+
             </div>
 
             <div className="p-4 lg:h-[calc(100%-92px)] lg:overflow-auto">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
-                    <InsertBlockMenu
-                      insertIndex={0}
-                      isOpen={insertMenuIndex === 0}
-                      onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
-                      onInsert={(t) => insertBlockAt(0, t)}
-                      disabled={!site || loading || !!creating || !!inserting}
-                      inserting={inserting}
-                    />
+                  <InsertBlockMenu
+  insertIndex={0}
+  isOpen={insertMenuIndex === 0}
+  onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
+  onInsert={(t) => insertBlockAt(0, t)}
+  disabled={!site || loading || !!creating || !!inserting}
+  inserting={inserting}
+  showLabel={true}
+  showOnHover={false}
+/>
+
+
 
                     {blocks.map((b, idx) => {
                       const insertIndex = idx + 1;
@@ -1070,11 +1088,14 @@ export default function DashboardPage() {
                       setPreviewNonce(Date.now());
                     }}
                     className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+                      "rounded-full px-3 py-2 text-xs font-semibold transition border",
+                      "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
                       previewDevice === "desktop"
-                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
-                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
+                        ? "border-[rgb(var(--db-accent)/0.55)] bg-[rgb(var(--db-accent-weak))] text-[rgb(var(--db-text))]"
+                        : "border-transparent bg-transparent text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))] hover:border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]",
                     )}
+                    
+                    
                   >
                     Desktop
                   </button>
@@ -1085,11 +1106,13 @@ export default function DashboardPage() {
                       setPreviewNonce(Date.now());
                     }}
                     className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+                      "rounded-full px-3 py-2 text-xs font-semibold transition border",
+                      "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
                       previewDevice === "mobile"
-                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
-                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
+                        ? "border-[rgb(var(--db-accent)/0.55)] bg-[rgb(var(--db-accent-weak))] text-[rgb(var(--db-text))]"
+                        : "border-transparent bg-transparent text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))] hover:border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]",
                     )}
+                    
                   >
                     Mobile
                   </button>
@@ -1473,7 +1496,8 @@ export default function DashboardPage() {
                           disabled={!canAct}
                           onChange={(e) => setAnchorDraft(e.target.value)}
                           placeholder="e.g. about / pricing / faq"
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm text-white placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
+
                         />
                         <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
                           Use in links as <span className="font-mono text-[rgb(var(--db-text))]">#anchor</span> (e.g.{" "}
@@ -1658,7 +1682,7 @@ export default function DashboardPage() {
                   )}
                   {blockTab === "content" && (
                   selectedBlock.type === "header" ? (
-                    <HeaderEditor block={selectedBlock as any} onSave={saveSelectedBlockPatch} />
+                    <HeaderEditor block={selectedBlock as any} onSave={(next) => saveSelectedBlockPatch({ content: next })} />
                   ) : selectedBlock.type === "hero" ? (
                     <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
                   ) : selectedBlock.type === "text" ? (

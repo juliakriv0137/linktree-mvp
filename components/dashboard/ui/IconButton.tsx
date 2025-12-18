@@ -28,10 +28,10 @@ export function IconButton({
         onClick();
       }}
       className={clsx(
-        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] text-sm transition",
+        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring)/0.35)]",
         disabled
-          ? "cursor-not-allowed opacity-40"
-          : "hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-border-strong))]",
+          ? "cursor-not-allowed opacity-40 border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))]"
+          : "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-accent)/0.55)]",
       )}
     >
       {children}

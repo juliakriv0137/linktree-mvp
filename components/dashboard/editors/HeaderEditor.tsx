@@ -1,184 +1,172 @@
 "use client";
 
 import * as React from "react";
-import type { SiteBlockRow } from "@/components/blocks/BlocksRenderer";
-import { Button } from "@/components/Button";
+import { useEffect, useMemo, useState } from "react";
+import type { SiteBlockRow as BlockRow } from "@/components/blocks/BlocksRenderer";
+import { Button } from "@/components/dashboard/ui/Button";
+
+type HeaderLink = { label?: string | null; url?: string | null };
 
 type HeaderContent = {
-  brand_text?: string;
-  brand_url?: string;
-  links?: { label: string; url: string }[];
-  show_cta?: boolean;
-  cta_label?: string;
-  cta_url?: string;
+  brandText?: string | null;
+  brandUrl?: string | null;
+  links?: HeaderLink[] | null;
 };
 
-type Props = {
-  block: SiteBlockRow;
-  onSave: (patch: { content?: any }) => void;
-};
+function safeTrim(v: any) {
+  return String(v ?? "").trim();
+}
 
 function asObj(v: unknown): Record<string, any> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as any) : {};
 }
 
-export function HeaderEditor({ block, onSave }: Props) {
-  const c0 = asObj((block as any).content) as HeaderContent;
+function asArr(v: unknown): any[] {
+  return Array.isArray(v) ? v : [];
+}
 
-  const [brandText, setBrandText] = React.useState<string>(c0.brand_text ?? "");
-  const [brandUrl, setBrandUrl] = React.useState<string>(c0.brand_url ?? "");
+export function HeaderEditor({
+  block,
+  onSave,
+}: {
+  block: BlockRow;
+  onSave: (next: HeaderContent) => Promise<void>;
+}) {
+  const initial = asObj(block.content) as HeaderContent;
 
-  const [showCta, setShowCta] = React.useState<boolean>(Boolean((c0 as any).show_cta));
-  const [ctaLabel, setCtaLabel] = React.useState<string>(c0.cta_label ?? "");
-  const [ctaUrl, setCtaUrl] = React.useState<string>(c0.cta_url ?? "");
-
-  const [links, setLinks] = React.useState<Array<{ label: string; url: string }>>(
-    Array.isArray(c0.links) ? c0.links : [],
-  );
-
-  // sync when switching selected block
-  React.useEffect(() => {
-    const c = asObj((block as any).content) as HeaderContent;
-
-    setBrandText(c.brand_text ?? "");
-    setBrandUrl(c.brand_url ?? "");
-    setShowCta(Boolean((c as any).show_cta));
-    setCtaLabel(c.cta_label ?? "");
-    setCtaUrl(c.cta_url ?? "");
-    setLinks(Array.isArray(c.links) ? c.links : []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(block as any).id]);
-
-  function updateLink(i: number, patch: Partial<{ label: string; url: string }>) {
-    setLinks((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
-  }
-
-  function addLink() {
-    setLinks((prev) => [...prev, { label: "", url: "" }]);
-  }
-
-  function removeLink(i: number) {
-    setLinks((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  function save() {
-    onSave({
-      content: {
-        brand_text: brandText,
-        brand_url: brandUrl,
-        links,
-        show_cta: showCta,
-        cta_label: ctaLabel,
-        cta_url: ctaUrl,
-      },
+  const [brandText, setBrandText] = useState<string>(safeTrim(initial.brandText ?? "My Site"));
+  const [brandUrl, setBrandUrl] = useState<string>(safeTrim(initial.brandUrl ?? "/"));
+  const [links, setLinks] = useState<HeaderLink[]>(() => {
+    const raw = asArr(initial.links);
+    const norm = raw.map((x) => {
+      const o = asObj(x) as HeaderLink;
+      return { label: safeTrim(o.label ?? ""), url: safeTrim(o.url ?? "") };
     });
-  }
+    return norm.length ? norm : [{ label: "ppp", url: "#about" }];
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const c = asObj(block.content) as HeaderContent;
+    setBrandText(safeTrim(c.brandText ?? "My Site"));
+    setBrandUrl(safeTrim(c.brandUrl ?? "/"));
+
+    const raw = asArr(c.links);
+    const norm = raw.map((x) => {
+      const o = asObj(x) as HeaderLink;
+      return { label: safeTrim(o.label ?? ""), url: safeTrim(o.url ?? "") };
+    });
+    setLinks(norm.length ? norm : [{ label: "ppp", url: "#about" }]);
+  }, [block.id, block.content]);
+
+  const labelCls = "text-sm text-[rgb(var(--db-text))] mb-2";
+  const hintCls = "text-xs text-[rgb(var(--db-muted))]";
+  const fieldBase =
+    "w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]";
+
+  const canSave = useMemo(() => {
+    // можно сохранять всегда, но хоть какой-то бренд-текст лучше иметь
+    return safeTrim(brandText).length > 0;
+  }, [brandText]);
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="text-sm font-medium mb-1">Brand text</div>
+      <div className={hintCls}>Header block</div>
+
+      <label className="block">
+        <div className={labelCls}>Brand text</div>
         <input
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
           value={brandText}
           onChange={(e) => setBrandText(e.target.value)}
           placeholder="My Site"
+          className={fieldBase}
         />
-      </div>
+      </label>
 
-      <div>
-        <div className="text-sm font-medium mb-1">Brand URL</div>
+      <label className="block">
+        <div className={labelCls}>Brand URL</div>
         <input
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
           value={brandUrl}
           onChange={(e) => setBrandUrl(e.target.value)}
-          placeholder="/"
+          placeholder="/ or https://..."
+          className={fieldBase}
         />
-        <div className="mt-1 text-xs opacity-70">Можно "/" (внутренний путь) или https://...</div>
-      </div>
+        <div className={hintCls + " mt-2"}>Можно “/” (внутренний путь) или https://…</div>
+      </label>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">Links</div>
-          <Button variant="secondary" onClick={addLink}>
+      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-[rgb(var(--db-text))]">Links</div>
+          <Button
+            variant="ghost"
+            onClick={() => setLinks((prev) => [...prev, { label: "", url: "" }])}
+            disabled={saving}
+          >
             Add link
           </Button>
         </div>
 
-        {links.length === 0 ? (
-          <div className="text-xs opacity-70">No links yet.</div>
-        ) : (
-          <div className="space-y-2">
-            {links.map((l, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-2"
+        {links.map((l, idx) => (
+          <div key={idx} className="space-y-3 rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+            <label className="block">
+              <div className={labelCls}>Label</div>
+              <input
+                value={l.label ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setLinks((prev) => prev.map((x, i) => (i === idx ? { ...x, label: v } : x)));
+                }}
+                placeholder="Text"
+                className={fieldBase}
+              />
+            </label>
+
+            <label className="block">
+              <div className={labelCls}>URL</div>
+              <input
+                value={l.url ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setLinks((prev) => prev.map((x, i) => (i === idx ? { ...x, url: v } : x)));
+                }}
+                placeholder="https://... or #anchor"
+                className={fieldBase}
+              />
+            </label>
+
+            <div className="flex justify-end">
+              <Button
+                variant="danger"
+                onClick={() => setLinks((prev) => prev.filter((_, i) => i !== idx))}
+                disabled={saving}
               >
-                <div>
-                  <div className="text-xs opacity-70 mb-1">Label</div>
-                  <input
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm"
-                    value={l.label}
-                    onChange={(e) => updateLink(i, { label: e.target.value })}
-                    placeholder="About"
-                  />
-                </div>
-
-                <div>
-                  <div className="text-xs opacity-70 mb-1">URL</div>
-                  <input
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm"
-                    value={l.url}
-                    onChange={(e) => updateLink(i, { url: e.target.value })}
-                    placeholder="https://example.com"
-                  />
-                </div>
-
-                <div className="flex justify-end">
-                  <Button variant="danger" onClick={() => removeLink(i)}>
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ))}
+                Remove
+              </Button>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-          <div className="text-sm font-medium">Show CTA</div>
-          <input
-            type="checkbox"
-            checked={showCta}
-            onChange={(e) => setShowCta(e.target.checked)}
-          />
-        </div>
-
-        <div>
-          <div className="text-sm font-medium mb-1">CTA label</div>
-          <input
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-            value={ctaLabel}
-            onChange={(e) => setCtaLabel(e.target.value)}
-            placeholder="Buy"
-          />
-        </div>
-
-        <div>
-          <div className="text-sm font-medium mb-1">CTA URL</div>
-          <input
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-            value={ctaUrl}
-            onChange={(e) => setCtaUrl(e.target.value)}
-            placeholder="https://example.com"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button variant="primary" onClick={save}>
-          Save
+      <div className="flex gap-2">
+        <Button
+          variant="primary"
+          disabled={saving || !canSave}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              const next: HeaderContent = {
+                brandText: safeTrim(brandText),
+                brandUrl: safeTrim(brandUrl),
+                links: links.map((x) => ({ label: safeTrim(x.label ?? ""), url: safeTrim(x.url ?? "") })),
+              };
+              await onSave(next);
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {saving ? "Saving..." : "Save"}
         </Button>
       </div>
     </div>

@@ -16,9 +16,9 @@ function Input({
 }) {
   return (
     <label className="block">
-      <div className="text-sm text-white/80 mb-2">{label}</div>
+      <div className="text-sm text-[rgb(var(--db-text))] mb-2">{label}</div>
       <input
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
@@ -42,9 +42,9 @@ function Textarea({
 }) {
   return (
     <label className="block">
-      <div className="text-sm text-white/80 mb-2">{label}</div>
+      <div className="text-sm text-[rgb(var(--db-text))] mb-2">{label}</div>
       <textarea
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
         value={value}
         placeholder={placeholder}
         rows={rows}
@@ -70,11 +70,11 @@ function Button({
   variant?: "primary" | "secondary";
 }) {
   const base =
-    "inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)] disabled:opacity-50 disabled:cursor-not-allowed";
 
   const cls =
     variant === "secondary"
-      ? `${base} border border-white/10 bg-white/5 text-white hover:bg-white/10`
+      ? `${base} border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] hover:bg-white/10`
       : `${base} bg-white text-black hover:opacity-90`;
 
   return (
@@ -193,7 +193,7 @@ setVariant(((block as any).variant ?? "default") as string);
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-white/50">Hero block</div>
+      <div className="text-xs text-[rgb(var(--db-muted))]">Hero block</div>
 
       <Input label="Title" value={title} onChange={setTitle} placeholder="Your name / brand" />
 
@@ -206,9 +206,9 @@ setVariant(((block as any).variant ?? "default") as string);
       />
 
       <label className="block">
-        <div className="text-sm text-white/80 mb-2">Variant</div>
+        <div className="text-sm text-[rgb(var(--db-text))] mb-2">Variant</div>
         <select
-          className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
           value={variant}
           onChange={(e) => setVariant(e.target.value)}
         >
@@ -220,9 +220,9 @@ setVariant(((block as any).variant ?? "default") as string);
       </label>
       {variant === "background" ? (
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">Section height</div>
+          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Section height</div>
           <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
             value={bgHeight}
             onChange={(e) => setBgHeight(e.target.value as any)}
           >
@@ -231,7 +231,7 @@ setVariant(((block as any).variant ?? "default") as string);
             <option value="lg">Large</option>
             <option value="xl">X-Large</option>
           </select>
-          <div className="text-xs text-white/50 mt-2">
+          <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
             Controls vertical padding / minimum height for background hero.
           </div>
         </label>
@@ -239,9 +239,9 @@ setVariant(((block as any).variant ?? "default") as string);
 
 {variant === "background" ? (
   <label className="block">
-    <div className="text-sm text-white/80 mb-2">Corner radius</div>
+    <div className="text-sm text-[rgb(var(--db-text))] mb-2">Corner radius</div>
     <select
-      className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+      className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
       value={bgRadius}
       onChange={(e) => setBgRadius(e.target.value as any)}
     >
@@ -253,19 +253,19 @@ setVariant(((block as any).variant ?? "default") as string);
       <option value="2xl">2X-Large</option>
       <option value="full">Full</option>
     </select>
-    <div className="text-xs text-white/50 mt-2">
+    <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
       Controls rounding of background hero block.
     </div>
   </label>
 ) : null}
 
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-        <div className="text-sm text-white/80">Buttons (optional)</div>
+      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4 space-y-3">
+        <div className="text-sm text-[rgb(var(--db-text))]">Buttons (optional)</div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-3">
-            <div className="text-xs text-white/50">Primary button</div>
+            <div className="text-xs text-[rgb(var(--db-muted))]">Primary button</div>
             <Input
               label="Title"
               value={primaryBtnTitle}
@@ -281,7 +281,7 @@ setVariant(((block as any).variant ?? "default") as string);
           </div>
 
           <div className="space-y-3">
-            <div className="text-xs text-white/50">Secondary button</div>
+            <div className="text-xs text-[rgb(var(--db-muted))]">Secondary button</div>
             <Input
               label="Title"
               value={secondaryBtnTitle}
@@ -297,7 +297,7 @@ setVariant(((block as any).variant ?? "default") as string);
           </div>
         </div>
 
-        <div className="text-xs text-white/50">
+        <div className="text-xs text-[rgb(var(--db-muted))]">
           To show a button, fill both Title and URL. You can use only Primary, or both.
         </div>
       </div>
@@ -312,9 +312,9 @@ setVariant(((block as any).variant ?? "default") as string);
 ) : null}
 {variant === "background" ? (
   <label className="block">
-    <div className="text-sm text-white/80 mb-2">Overlay</div>
+    <div className="text-sm text-[rgb(var(--db-text))] mb-2">Overlay</div>
     <select
-      className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+      className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
       value={bgOverlay}
       onChange={(e) => setBgOverlay(e.target.value as any)}
     >
@@ -330,9 +330,9 @@ setVariant(((block as any).variant ?? "default") as string);
   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 
     <label className="block">
-      <div className="text-sm text-white/80 mb-2">Image side</div>
+      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Image side</div>
       <select
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
         value={imageSide}
         onChange={(e) => setImageSide(e.target.value as any)}
       >
@@ -342,9 +342,9 @@ setVariant(((block as any).variant ?? "default") as string);
     </label>
 
     <label className="block">
-      <div className="text-sm text-white/80 mb-2">Image size</div>
+      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Image size</div>
       <select
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
         value={imageSize ?? "md"}
         onChange={(e) => setImageSize(e.target.value as any)}
       >
@@ -358,9 +358,9 @@ setVariant(((block as any).variant ?? "default") as string);
     </label>
 
     <label className="block">
-      <div className="text-sm text-white/80 mb-2">Image ratio</div>
+      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Image ratio</div>
       <select
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
         value={imageRatio ?? "square"}
         onChange={(e) => setImageRatio(e.target.value as any)}
       >
@@ -378,9 +378,9 @@ setVariant(((block as any).variant ?? "default") as string);
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">Title size</div>
+          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Title size</div>
           <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
             value={titleSize ?? "lg"}
             onChange={(e) => setTitleSize(e.target.value as any)}
           >
@@ -391,9 +391,9 @@ setVariant(((block as any).variant ?? "default") as string);
         </label>
 
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">Subtitle size</div>
+          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Subtitle size</div>
           <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
             value={subtitleSize ?? "md"}
             onChange={(e) => setSubtitleSize(e.target.value as any)}
           >
@@ -404,9 +404,9 @@ setVariant(((block as any).variant ?? "default") as string);
         </label>
 
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">Align</div>
+          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Align</div>
           <select
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
             value={align ?? "center"}
             onChange={(e) => setAlign(e.target.value as any)}
           >
@@ -417,9 +417,9 @@ setVariant(((block as any).variant ?? "default") as string);
         </label>
         {variant === "background" ? (
     <label className="block">
-      <div className="text-sm text-white/80 mb-2">Vertical align</div>
+      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Vertical align</div>
       <select
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
         value={verticalAlign ?? "center"}
         onChange={(e) => setVerticalAlign(e.target.value as any)}
       >
@@ -441,7 +441,7 @@ setVariant(((block as any).variant ?? "default") as string);
         }}
         className="space-y-2 min-w-0"
       >
-        <div className="text-xs text-white/50">Preview</div>
+        <div className="text-xs text-[rgb(var(--db-muted))]">Preview</div>
         <div
           className={`space-y-1 ${alignClass} min-w-0`}
           style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}

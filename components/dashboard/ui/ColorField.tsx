@@ -25,29 +25,34 @@ export function ColorField({
     <div className="flex items-end gap-3">
       <div className="flex-1">
         <label className="block">
-          <div className="text-sm text-white/80 mb-2">{label}</div>
+          <div className="text-sm text-[rgb(var(--db-text))] mb-2">{label}</div>
           <input
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             className={clsx(
-              "w-full rounded-2xl border bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
-              isValid ? "border-white/10" : "border-red-500/50",
+              "w-full rounded-2xl border px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))]",
+              "bg-[rgb(var(--db-panel))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
+              isValid ? "border-[rgb(var(--db-border))]" : "border-red-500/50",
             )}
           />
           {!isValid && (
-            <div className="text-xs text-red-300 mt-2">Invalid hex. Use #fff or #ffffff.</div>
+            <div className="text-xs text-red-600 mt-2">Invalid hex. Use #fff or #ffffff.</div>
           )}
         </label>
       </div>
 
       <div className="w-[64px]">
-        <div className="text-xs text-white/50 mb-2">Pick</div>
+        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Pick</div>
         <input
           type="color"
           value={normalized}
           onChange={(e) => onChange(e.target.value)}
-          className="h-[44px] w-full cursor-pointer rounded-xl border border-white/10 bg-transparent p-1"
+          className={clsx(
+            "h-[44px] w-full cursor-pointer rounded-xl border p-1",
+            "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))]",
+            "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
+          )}
           aria-label={`${label} color picker`}
         />
       </div>
