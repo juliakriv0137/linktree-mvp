@@ -297,15 +297,32 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
       if (variant === "split") {
         const splitAlign = safeTrim((c as any)?.align || "left");
-        const splitCtaJustifyClass =
-          splitAlign === "center"
-            ? "justify-center"
-            : splitAlign === "right"
-              ? "justify-end"
-              : "justify-start";
 
-        const textCol = (
-          <div className="space-y-4 min-w-0">
+const textAlignClass =
+  splitAlign === "center"
+    ? "text-center"
+    : splitAlign === "right"
+      ? "text-right"
+      : "text-left";
+
+const textWrapClass =
+  splitAlign === "center"
+    ? "mx-auto"
+    : splitAlign === "right"
+      ? "ml-auto"
+      : "";
+
+const splitCtaJustifyClass =
+  splitAlign === "center"
+    ? "justify-center"
+    : splitAlign === "right"
+      ? "justify-end"
+      : "justify-start";
+
+
+      const textCol = (
+        <div className={`space-y-4 min-w-0 ${textAlignClass} ${textWrapClass}`}>
+      
             <div className="space-y-3 min-w-0">
               <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>
                 {title}

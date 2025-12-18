@@ -19,3 +19,25 @@ html, body {
 body {
   @apply bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100;
 }
+/* =========================
+   Dashboard UI theme tokens
+   ========================= */
+   .dashboard-ui {
+    /* surfaces */
+    --db-bg: 0 0 0;
+    --db-panel: 12 12 12;
+    --db-panel-2: 16 16 16;
+  
+    /* text */
+    --db-text: 245 245 245;
+    --db-muted: 170 170 170;
+  
+    /* lines */
+    --db-border: 255 255 255 / 0.12;
+  
+    /* states */
+    --db-hover: 255 255 255 / 0.06;
+    --db-active: 255 255 255 / 0.10;
+    --db-ring: 255 255 255 / 0.20;
+  }
+  

@@ -1,16 +1,12 @@
 "use client";
 
-import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { SiteBlockRow as BlockRow } from "@/components/blocks/BlocksRenderer";
 import { Button } from "@/components/dashboard/ui/Button";
-import {
-  inspectorLabel,
-  inspectorHint,
-  inspectorInput,
-  inspectorSelect,
-  inspectorTextarea,
-} from "@/components/dashboard/ui/InspectorField";
+import { DbFieldRow } from "@/components/dashboard/ui/DbFieldRow";
+import { DbInput } from "@/components/dashboard/ui/DbInput";
+import { DbTextarea } from "@/components/dashboard/ui/DbTextarea";
+import { DbSelect } from "@/components/dashboard/ui/DbSelect";
 
 type TextContent = {
   text?: string | null;
@@ -57,49 +53,43 @@ export function TextEditor({
 
   return (
     <div className="space-y-4">
-      <div className={inspectorHint}>Text block</div>
+      <div className="text-xs text-[rgb(var(--db-muted))]">Text block</div>
 
-      <label className="block">
-        <div className={inspectorLabel}>Text</div>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Write something…"
+      <DbFieldRow label="Text">
+        <DbTextarea
           rows={6}
-          className={inspectorTextarea}
+          placeholder="Write something…"
+          value={text}
+          onChange={(e) => setText((e.target as HTMLTextAreaElement).value)}
         />
-      </label>
+      </DbFieldRow>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label className="block">
-          <div className={inspectorLabel}>Text size</div>
-          <select
-            className={inspectorSelect}
+        <DbFieldRow label="Text size">
+          <DbSelect
             value={size}
-            onChange={(e) => setSize(e.target.value as any)}
+            onChange={(e) => setSize((e.target as HTMLSelectElement).value as any)}
           >
             <option value="sm">Small</option>
             <option value="md">Medium</option>
             <option value="lg">Large</option>
-          </select>
-        </label>
+          </DbSelect>
+        </DbFieldRow>
 
-        <label className="block">
-          <div className={inspectorLabel}>Align</div>
-          <select
-            className={inspectorSelect}
+        <DbFieldRow label="Align">
+          <DbSelect
             value={align}
-            onChange={(e) => setAlign(e.target.value as any)}
+            onChange={(e) => setAlign((e.target as HTMLSelectElement).value as any)}
           >
             <option value="left">Left</option>
             <option value="center">Center</option>
             <option value="right">Right</option>
-          </select>
-        </label>
+          </DbSelect>
+        </DbFieldRow>
       </div>
 
       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 space-y-2 min-w-0">
-        <div className={inspectorHint}>Preview</div>
+        <div className="text-xs text-[rgb(var(--db-muted))]">Preview</div>
         <div
           className={`${sizeClass} ${alignClass} text-[rgb(var(--db-text))] whitespace-pre-wrap min-w-0`}
           style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}

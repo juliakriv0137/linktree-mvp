@@ -31,6 +31,13 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { supabase } from "@/lib/supabaseClient";
 
 import { DASHBOARD_THEME_VARS } from "@/lib/dashboard/theme";
+import { DbSelect } from "@/components/dashboard/ui/DbSelect";
+import { DbSummaryButton } from "@/components/dashboard/ui/DbSummaryButton";
+import { DbPopoverPanel } from "@/components/dashboard/ui/DbPopoverPanel";
+import { DbDetails } from "@/components/dashboard/ui/DbDetails";
+import { DbPill } from "@/components/dashboard/ui/DbPill";
+
+
 
 
 const DASHBOARD_UI_VARS: React.CSSProperties = {
@@ -757,7 +764,11 @@ export default function DashboardPage() {
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
   return (
-    <main className="min-h-screen bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))]" style={{ ...(DASHBOARD_THEME_VARS as any), ...(DASHBOARD_UI_VARS as any) }}>
+    <main
+      className="dashboard-ui min-h-screen bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))]"
+      style={{ ...(DASHBOARD_THEME_VARS as any), ...(DASHBOARD_UI_VARS as any) }}
+    >
+
       <div className="sticky top-0 z-30 border-b border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))]">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -788,161 +799,162 @@ export default function DashboardPage() {
                 Sign out
               </Button>
 
-              <div className="hidden lg:flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-2 py-1">
-                <span className="text-[11px] font-semibold text-[rgb(var(--db-muted))] px-2">Theme</span>
+              <DbPill className="hidden lg:flex items-center gap-2">
+  <span className="text-[11px] font-semibold text-[rgb(var(--db-muted))] px-2">Theme</span>
 
-                <select
-                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
-                  value={site?.theme_key ?? "midnight"}
-                  disabled={!canAct}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const theme_key = e.target.value;
-                    try {
-                      setError(null);
-                      await updateSiteTheme(site.id, { theme_key } as any);
-                      setSite({ ...site, theme_key } as any);
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                >
-                  {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
-                    <option key={k} value={k}>
-                      {k}
-                    </option>
-                  ))}
-                </select>
+  <DbSelect
+    value={site?.theme_key ?? "midnight"}
+    disabled={!canAct}
+    onChange={async (e) => {
+      if (!site) return;
+      const theme_key = (e.target as HTMLSelectElement).value;
+      try {
+        setError(null);
+        await updateSiteTheme(site.id, { theme_key } as any);
+        setSite({ ...site, theme_key } as any);
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+      }
+    }}
+  >
+    {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
+      <option key={k} value={k}>
+        {k}
+      </option>
+    ))}
+  </DbSelect>
 
-                <select
-                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
-                  value={(site?.layout_width ?? "compact") as any}
-                  disabled={!canAct}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const layout_width = e.target.value as any;
-                    try {
-                      setError(null);
-                      await updateSiteTheme(site.id, { layout_width } as any);
-                      setSite({ ...site, layout_width } as any);
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                >
-                  <option value="compact">compact</option>
-                  <option value="wide">wide</option>
-                  <option value="full">full</option>
-                </select>
+  <DbSelect
+    value={(site?.layout_width ?? "compact") as any}
+    disabled={!canAct}
+    onChange={async (e) => {
+      if (!site) return;
+      const layout_width = (e.target as HTMLSelectElement).value as any;
+      try {
+        setError(null);
+        await updateSiteTheme(site.id, { layout_width } as any);
+        setSite({ ...site, layout_width } as any);
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+      }
+    }}
+  >
+    <option value="compact">compact</option>
+    <option value="wide">wide</option>
+    <option value="full">full</option>
+  </DbSelect>
 
-                <select
-                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
-                  value={(site?.font_scale ?? "md") as any}
-                  disabled={!canAct}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const font_scale = e.target.value as any;
-                    try {
-                      setError(null);
-                      await updateSiteTheme(site.id, { font_scale } as any);
-                      setSite({ ...site, font_scale } as any);
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                >
-                  <option value="sm">sm</option>
-                  <option value="md">md</option>
-                  <option value="lg">lg</option>
-                </select>
+  <DbSelect
+    value={(site?.font_scale ?? "md") as any}
+    disabled={!canAct}
+    onChange={async (e) => {
+      if (!site) return;
+      const font_scale = (e.target as HTMLSelectElement).value as any;
+      try {
+        setError(null);
+        await updateSiteTheme(site.id, { font_scale } as any);
+        setSite({ ...site, font_scale } as any);
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+      }
+    }}
+  >
+    <option value="sm">sm</option>
+    <option value="md">md</option>
+    <option value="lg">lg</option>
+  </DbSelect>
 
-                <select
-                  className="h-9 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 text-xs text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
-                  value={(site?.button_radius ?? "2xl") as any}
-                  disabled={!canAct}
-                  onChange={async (e) => {
-                    if (!site) return;
-                    const button_radius = e.target.value as any;
-                    try {
-                      setError(null);
-                      await updateSiteTheme(site.id, { button_radius } as any);
-                      setSite({ ...site, button_radius } as any);
-                    } catch (err: any) {
-                      setError(err?.message ?? String(err));
-                    }
-                  }}
-                >
-                  <option value="md">md</option>
-                  <option value="xl">xl</option>
-                  <option value="2xl">2xl</option>
-                  <option value="full">full</option>
-                </select>
-{/* Custom colors moved from Inspector */}
-                <details className="relative">
-                  <summary className="cursor-pointer select-none rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] px-3 py-2 text-xs text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-soft))]">
-                    Colors
-                  </summary>
-                  <div className="absolute right-0 z-50 mt-2 w-[340px] max-w-[90vw] rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))] p-3 shadow-2xl">
-                    <div className="text-sm font-semibold">Custom colors</div>
-                    <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                      Optional. Leave empty to use theme defaults.
-                    </div>
+  <DbSelect
+    value={(site?.button_radius ?? "2xl") as any}
+    disabled={!canAct}
+    onChange={async (e) => {
+      if (!site) return;
+      const button_radius = (e.target as HTMLSelectElement).value as any;
+      try {
+        setError(null);
+        await updateSiteTheme(site.id, { button_radius } as any);
+        setSite({ ...site, button_radius } as any);
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+      }
+    }}
+  >
+    <option value="md">md</option>
+    <option value="xl">xl</option>
+    <option value="2xl">2xl</option>
+    <option value="full">full</option>
+  </DbSelect>
 
-                    <div className="mt-3 space-y-3">
-                      <ColorField
-                        label="Background"
-                        value={colors.bg_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, bg_color: v }));
-                          saveColorField("bg_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Text"
-                        value={colors.text_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, text_color: v }));
-                          saveColorField("text_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Muted"
-                        value={colors.muted_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, muted_color: v }));
-                          saveColorField("muted_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Border"
-                        value={colors.border_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, border_color: v }));
-                          saveColorField("border_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Button"
-                        value={colors.button_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, button_color: v }));
-                          saveColorField("button_color", v);
-                        }}
-                      />
-                      <ColorField
-                        label="Button text"
-                        value={colors.button_text_color}
-                        onChange={(v) => {
-                          setColors((p) => ({ ...p, button_text_color: v }));
-                          saveColorField("button_text_color", v);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </details>
+  {/* Custom colors moved from Inspector */}
+  <DbDetails>
+    <DbSummaryButton>Colors</DbSummaryButton>
+    <DbPopoverPanel
+  className="absolute right-0 z-50 mt-2 w-[340px] max-w-[90vw]"
+  onClick={(e) => e.stopPropagation()}
+>
+
+      <div className="text-sm font-semibold">Custom colors</div>
+      <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
+        Optional. Leave empty to use theme defaults.
+      </div>
+
+      <div className="mt-3 space-y-3">
+        <ColorField
+          label="Background"
+          value={colors.bg_color}
+          onChange={(v) => {
+            setColors((p) => ({ ...p, bg_color: v }));
+            saveColorField("bg_color", v);
+          }}
+        />
+        <ColorField
+          label="Text"
+          value={colors.text_color}
+          onChange={(v) => {
+            setColors((p) => ({ ...p, text_color: v }));
+            saveColorField("text_color", v);
+          }}
+        />
+        <ColorField
+          label="Muted"
+          value={colors.muted_color}
+          onChange={(v) => {
+            setColors((p) => ({ ...p, muted_color: v }));
+            saveColorField("muted_color", v);
+          }}
+        />
+        <ColorField
+          label="Border"
+          value={colors.border_color}
+          onChange={(v) => {
+            setColors((p) => ({ ...p, border_color: v }));
+            saveColorField("border_color", v);
+          }}
+        />
+        <ColorField
+          label="Button"
+          value={colors.button_color}
+          onChange={(v) => {
+            setColors((p) => ({ ...p, button_color: v }));
+            saveColorField("button_color", v);
+          }}
+        />
+        <ColorField
+          label="Button text"
+          value={colors.button_text_color}
+          onChange={(v) => {
+            setColors((p) => ({ ...p, button_text_color: v }));
+            saveColorField("button_text_color", v);
+          }}
+        />
+      </div>
+    </DbPopoverPanel>
+  </DbDetails>
+</DbPill>
 
 
-              </div>
+
+             
 
               <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
                 <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-soft))] transition">

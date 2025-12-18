@@ -1,90 +1,15 @@
 "use client";
 
-import * as React from "react";
 import { useEffect, useState } from "react";
-
-function Input({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm text-[rgb(var(--db-text))] mb-2">{label}</div>
-      <input
-        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </label>
-  );
-}
-
-function Textarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-  rows = 3,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  rows?: number;
-}) {
-  return (
-    <label className="block">
-      <div className="text-sm text-[rgb(var(--db-text))] mb-2">{label}</div>
-      <textarea
-        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-        value={value}
-        placeholder={placeholder}
-        rows={rows}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </label>
-  );
-}
+import { Button } from "@/components/dashboard/ui/Button";
+import { DbFieldRow } from "@/components/dashboard/ui/DbFieldRow";
+import { DbInput } from "@/components/dashboard/ui/DbInput";
+import { DbTextarea } from "@/components/dashboard/ui/DbTextarea";
+import { DbSelect } from "@/components/dashboard/ui/DbSelect";
 
 function safeTrim(v: any) {
   return String(v ?? "").trim();
 }
-
-function Button({
-  children,
-  disabled,
-  onClick,
-  variant,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick?: () => void | Promise<void>;
-  variant?: "primary" | "secondary";
-}) {
-  const base =
-    "inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)] disabled:opacity-50 disabled:cursor-not-allowed";
-
-  const cls =
-    variant === "secondary"
-      ? `${base} border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] hover:bg-white/10`
-      : `${base} bg-white text-black hover:opacity-90`;
-
-  return (
-    <button type="button" className={cls} disabled={disabled} onClick={onClick as any}>
-      {children}
-    </button>
-  );
-}
-
-
 
 export function HeroEditor({
   block,
@@ -95,65 +20,29 @@ export function HeroEditor({
 }) {
   const initial = (block.content ?? {}) as any;
 
-
-
   const [title, setTitle] = useState(initial.title ?? "");
   const [subtitle, setSubtitle] = useState(initial.subtitle ?? "");
   const [titleSize, setTitleSize] = useState(initial.title_size ?? "lg");
+  const [subtitleSize, setSubtitleSize] = useState(initial.subtitle_size ?? "md");
+  const [align, setAlign] = useState(initial.align ?? "center");
+  const [verticalAlign, setVerticalAlign] = useState(initial.vertical_align ?? "center");
 
-  const [subtitleSize, setSubtitleSize] = useState(
-    initial.subtitle_size ?? "md",
-  );
-  
-  const [align, setAlign] = useState(
-    initial.align ?? "center",
-  );
-  
-  const [verticalAlign, setVerticalAlign] = useState(
-    (initial as any)?.vertical_align ?? "center",
-  );
-  
-  const [variant, setVariant] = useState(
-    (block as any).variant ?? "default",
-  );
-  
-  const [imageSide, setImageSide] = useState<"left" | "right">(
-    (initial as any)?.image_side ?? "right",
-  );
-  
-  const [imageSize, setImageSize] = useState(
-    (initial as any)?.image_size ?? "md",
-  );
-  
-  const [bgHeight, setBgHeight] = useState<"sm" | "md" | "lg" | "xl">(
-    (initial as any)?.bg_height ?? "md",
-  );
-  
-  const [bgOverlay, setBgOverlay] = useState<"soft" | "medium" | "strong">(
-    (initial as any)?.bg_overlay ?? "medium",
-  );
-  
-  const [bgRadius, setBgRadius] = useState<
-    "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full"
-  >(
-    (initial as any)?.bg_radius ?? "2xl",
-  );
-  
-  const [imageRatio, setImageRatio] = useState(
-    (initial as any)?.image_ratio ?? "square",
-  );
-  
+  const [variant, setVariant] = useState((block as any).variant ?? "default");
 
+  const [imageSide, setImageSide] = useState<"left" | "right">(initial.image_side ?? "right");
+  const [imageSize, setImageSize] = useState(initial.image_size ?? "md");
+  const [imageRatio, setImageRatio] = useState(initial.image_ratio ?? "square");
 
+  const [bgHeight, setBgHeight] = useState(initial.bg_height ?? "md");
+  const [bgOverlay, setBgOverlay] = useState(initial.bg_overlay ?? "medium");
+  const [bgRadius, setBgRadius] = useState(initial.bg_radius ?? "2xl");
 
+  const [primaryBtnTitle, setPrimaryBtnTitle] = useState(initial.primary_button_title ?? "");
+  const [primaryBtnUrl, setPrimaryBtnUrl] = useState(initial.primary_button_url ?? "");
+  const [secondaryBtnTitle, setSecondaryBtnTitle] = useState(initial.secondary_button_title ?? "");
+  const [secondaryBtnUrl, setSecondaryBtnUrl] = useState(initial.secondary_button_url ?? "");
 
-  const [primaryBtnTitle, setPrimaryBtnTitle] = useState((initial as any)?.primary_button_title ?? "");
-  const [primaryBtnUrl, setPrimaryBtnUrl] = useState((initial as any)?.primary_button_url ?? "");
-  const [secondaryBtnTitle, setSecondaryBtnTitle] = useState((initial as any)?.secondary_button_title ?? "");
-  const [secondaryBtnUrl, setSecondaryBtnUrl] = useState((initial as any)?.secondary_button_url ?? "");
-
-  const [avatar, setAvatar] = useState<string>((initial.avatar as any) ?? "");
-
+  const [avatar, setAvatar] = useState(initial.avatar ?? "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -161,274 +50,171 @@ export function HeroEditor({
 
     setTitle(c.title ?? "");
     setSubtitle(c.subtitle ?? "");
-    setTitleSize((c.title_size as any) ?? "lg");
-    setSubtitleSize((c.subtitle_size as any) ?? "md");
-setAlign((c.align as any) ?? "center");
-setVerticalAlign(((c as any)?.vertical_align ?? "center") as any);
-setVariant(((block as any).variant ?? "default") as string);
+    setTitleSize(c.title_size ?? "lg");
+    setSubtitleSize(c.subtitle_size ?? "md");
+    setAlign(c.align ?? "center");
+    setVerticalAlign(c.vertical_align ?? "center");
 
-    setImageSide(((c as any)?.image_side ?? "right") as any);
-    setImageSize(((c as any)?.image_size ?? "md") as any);
-    setBgOverlay(((c as any)?.bg_overlay ?? "medium") as any);
-    setImageRatio(((c as any)?.image_ratio ?? "square") as any);
-    setBgHeight(((c as any)?.bg_height ?? "md") as any);
-    setBgRadius(((c as any)?.bg_radius ?? "2xl") as any);
+    setVariant((block as any).variant ?? "default");
 
+    setImageSide(c.image_side ?? "right");
+    setImageSize(c.image_size ?? "md");
+    setImageRatio(c.image_ratio ?? "square");
 
+    setBgHeight(c.bg_height ?? "md");
+    setBgOverlay(c.bg_overlay ?? "medium");
+    setBgRadius(c.bg_radius ?? "2xl");
 
+    setPrimaryBtnTitle(c.primary_button_title ?? "");
+    setPrimaryBtnUrl(c.primary_button_url ?? "");
+    setSecondaryBtnTitle(c.secondary_button_title ?? "");
+    setSecondaryBtnUrl(c.secondary_button_url ?? "");
 
-    setPrimaryBtnTitle(((c as any)?.primary_button_title ?? "") as string);
-    setPrimaryBtnUrl(((c as any)?.primary_button_url ?? "") as string);
-    setSecondaryBtnTitle(((c as any)?.secondary_button_title ?? "") as string);
-    setSecondaryBtnUrl(((c as any)?.secondary_button_url ?? "") as string);
-
-    setAvatar((c.avatar as any) ?? "");
+    setAvatar(c.avatar ?? "");
   }, [block.id, block.content]);
 
   const titleClass =
     titleSize === "sm" ? "text-xl" : titleSize === "md" ? "text-2xl" : "text-3xl";
   const subtitleClass =
     subtitleSize === "sm" ? "text-sm" : subtitleSize === "lg" ? "text-lg" : "text-base";
-  const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
+  const alignClass =
+    align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
   return (
     <div className="space-y-4">
       <div className="text-xs text-[rgb(var(--db-muted))]">Hero block</div>
 
-      <Input label="Title" value={title} onChange={setTitle} placeholder="Your name / brand" />
+      <DbFieldRow label="Title">
+        <DbInput value={title} onChange={(e) => setTitle(e.target.value)} />
+      </DbFieldRow>
 
-      <Textarea
-        label="Subtitle"
-        value={subtitle}
-        onChange={setSubtitle}
-        placeholder="Short bio / tagline"
-        rows={3}
-      />
+      <DbFieldRow label="Subtitle">
+        <DbTextarea
+          rows={3}
+          value={subtitle}
+          onChange={(e) => setSubtitle((e.target as HTMLTextAreaElement).value)}
+        />
+      </DbFieldRow>
 
-      <label className="block">
-        <div className="text-sm text-[rgb(var(--db-text))] mb-2">Variant</div>
-        <select
-          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-          value={variant}
-          onChange={(e) => setVariant(e.target.value)}
-        >
+      <DbFieldRow label="Variant">
+        <DbSelect value={variant} onChange={(e) => setVariant(e.target.value)}>
           <option value="default">Default</option>
-<option value="split">Split (text + image)</option>
-<option value="background">Background image</option>
+          <option value="split">Split (text + image)</option>
+          <option value="background">Background image</option>
+        </DbSelect>
+      </DbFieldRow>
 
-        </select>
-      </label>
-      {variant === "background" ? (
-        <label className="block">
-          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Section height</div>
-          <select
-            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-            value={bgHeight}
-            onChange={(e) => setBgHeight(e.target.value as any)}
-          >
+      {variant === "background" && (
+        <DbFieldRow label="Section height">
+          <DbSelect value={bgHeight} onChange={(e) => setBgHeight(e.target.value as any)}>
             <option value="sm">Small</option>
             <option value="md">Medium</option>
             <option value="lg">Large</option>
             <option value="xl">X-Large</option>
-          </select>
-          <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
-            Controls vertical padding / minimum height for background hero.
-          </div>
-        </label>
-      ) : null}
+          </DbSelect>
+        </DbFieldRow>
+      )}
 
-{variant === "background" ? (
-  <label className="block">
-    <div className="text-sm text-[rgb(var(--db-text))] mb-2">Corner radius</div>
-    <select
-      className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-      value={bgRadius}
-      onChange={(e) => setBgRadius(e.target.value as any)}
-    >
-      <option value="none">None</option>
-      <option value="sm">Small</option>
-      <option value="md">Medium</option>
-      <option value="lg">Large</option>
-      <option value="xl">X-Large</option>
-      <option value="2xl">2X-Large</option>
-      <option value="full">Full</option>
-    </select>
-    <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
-      Controls rounding of background hero block.
-    </div>
-  </label>
-) : null}
+      {variant === "background" && (
+        <DbFieldRow label="Corner radius">
+          <DbSelect value={bgRadius} onChange={(e) => setBgRadius(e.target.value as any)}>
+            <option value="none">None</option>
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+            <option value="xl">X-Large</option>
+            <option value="2xl">2X-Large</option>
+            <option value="full">Full</option>
+          </DbSelect>
+        </DbFieldRow>
+      )}
 
+      {(variant === "split" || variant === "background") && (
+        <DbFieldRow label={variant === "background" ? "Background image URL" : "Avatar / Image URL"}>
+          <DbInput value={avatar} onChange={(e) => setAvatar(e.target.value)} />
+        </DbFieldRow>
+      )}
 
-      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4 space-y-3">
-        <div className="text-sm text-[rgb(var(--db-text))]">Buttons (optional)</div>
+      {variant === "background" && (
+        <DbFieldRow label="Overlay">
+          <DbSelect value={bgOverlay} onChange={(e) => setBgOverlay(e.target.value as any)}>
+            <option value="soft">Soft</option>
+            <option value="medium">Medium</option>
+            <option value="strong">Strong</option>
+          </DbSelect>
+        </DbFieldRow>
+      )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-3">
-            <div className="text-xs text-[rgb(var(--db-muted))]">Primary button</div>
-            <Input
-              label="Title"
-              value={primaryBtnTitle}
-              onChange={setPrimaryBtnTitle}
-              placeholder="Request a demo"
-            />
-            <Input
-              label="URL"
-              value={primaryBtnUrl}
-              onChange={setPrimaryBtnUrl}
-              placeholder="https://..."
-            />
-          </div>
+      {variant === "split" && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <DbFieldRow label="Image side">
+            <DbSelect value={imageSide} onChange={(e) => setImageSide(e.target.value as any)}>
+              <option value="right">Right</option>
+              <option value="left">Left</option>
+            </DbSelect>
+          </DbFieldRow>
 
-          <div className="space-y-3">
-            <div className="text-xs text-[rgb(var(--db-muted))]">Secondary button</div>
-            <Input
-              label="Title"
-              value={secondaryBtnTitle}
-              onChange={setSecondaryBtnTitle}
-              placeholder="Learn more"
-            />
-            <Input
-              label="URL"
-              value={secondaryBtnUrl}
-              onChange={setSecondaryBtnUrl}
-              placeholder="https://..."
-            />
-          </div>
+          <DbFieldRow label="Image size">
+            <DbSelect value={imageSize} onChange={(e) => setImageSize(e.target.value as any)}>
+              <option value="xs">X-Small</option>
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+              <option value="xl">X-Large</option>
+              <option value="2xl">2X-Large</option>
+            </DbSelect>
+          </DbFieldRow>
+
+          <DbFieldRow label="Image ratio">
+            <DbSelect value={imageRatio} onChange={(e) => setImageRatio(e.target.value as any)}>
+              <option value="square">Square (1:1)</option>
+              <option value="4:3">4:3</option>
+              <option value="16:9">16:9</option>
+              <option value="3:4">3:4</option>
+              <option value="9:16">9:16</option>
+              <option value="auto">Auto</option>
+            </DbSelect>
+          </DbFieldRow>
         </div>
-
-        <div className="text-xs text-[rgb(var(--db-muted))]">
-          To show a button, fill both Title and URL. You can use only Primary, or both.
-        </div>
-      </div>
-
-      {variant === "split" || variant === "background" ? (
-  <Input
-    label={variant === "background" ? "Background image URL" : "Avatar / Image URL"}
-    value={avatar}
-    onChange={setAvatar}
-    placeholder="https://example.com/image.png"
-  />
-) : null}
-{variant === "background" ? (
-  <label className="block">
-    <div className="text-sm text-[rgb(var(--db-text))] mb-2">Overlay</div>
-    <select
-      className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-      value={bgOverlay}
-      onChange={(e) => setBgOverlay(e.target.value as any)}
-    >
-      <option value="soft">Soft</option>
-      <option value="medium">Medium</option>
-      <option value="strong">Strong</option>
-    </select>
-  </label>
-) : null}
-
-
-{variant === "split" ? (
-  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-
-    <label className="block">
-      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Image side</div>
-      <select
-        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-        value={imageSide}
-        onChange={(e) => setImageSide(e.target.value as any)}
-      >
-        <option value="right">Right</option>
-        <option value="left">Left</option>
-      </select>
-    </label>
-
-    <label className="block">
-      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Image size</div>
-      <select
-        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-        value={imageSize ?? "md"}
-        onChange={(e) => setImageSize(e.target.value as any)}
-      >
-        <option value="xs">X-Small</option>
-        <option value="sm">Small</option>
-        <option value="md">Medium</option>
-        <option value="lg">Large</option>
-        <option value="xl">X-Large</option>
-        <option value="2xl">2X-Large</option>
-      </select>
-    </label>
-
-    <label className="block">
-      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Image ratio</div>
-      <select
-        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-        value={imageRatio ?? "square"}
-        onChange={(e) => setImageRatio(e.target.value as any)}
-      >
-        <option value="square">Square (1:1)</option>
-        <option value="4:3">4:3</option>
-        <option value="16:9">16:9</option>
-        <option value="3:4">3:4</option>
-        <option value="9:16">9:16</option>
-        <option value="auto">Auto</option>
-      </select>
-    </label>
-  </div>
-) : null}
-
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <label className="block">
-          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Title size</div>
-          <select
-            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-            value={titleSize ?? "lg"}
-            onChange={(e) => setTitleSize(e.target.value as any)}
-          >
+        <DbFieldRow label="Title size">
+          <DbSelect value={titleSize} onChange={(e) => setTitleSize(e.target.value as any)}>
             <option value="sm">Small</option>
             <option value="md">Medium</option>
             <option value="lg">Large</option>
-          </select>
-        </label>
+          </DbSelect>
+        </DbFieldRow>
 
-        <label className="block">
-          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Subtitle size</div>
-          <select
-            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-            value={subtitleSize ?? "md"}
-            onChange={(e) => setSubtitleSize(e.target.value as any)}
-          >
+        <DbFieldRow label="Subtitle size">
+          <DbSelect value={subtitleSize} onChange={(e) => setSubtitleSize(e.target.value as any)}>
             <option value="sm">Small</option>
             <option value="md">Medium</option>
             <option value="lg">Large</option>
-          </select>
-        </label>
+          </DbSelect>
+        </DbFieldRow>
 
-        <label className="block">
-          <div className="text-sm text-[rgb(var(--db-text))] mb-2">Align</div>
-          <select
-            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-            value={align ?? "center"}
-            onChange={(e) => setAlign(e.target.value as any)}
-          >
+        <DbFieldRow label="Align">
+          <DbSelect value={align} onChange={(e) => setAlign(e.target.value as any)}>
             <option value="left">Left</option>
             <option value="center">Center</option>
             <option value="right">Right</option>
-          </select>
-        </label>
-        {variant === "background" ? (
-    <label className="block">
-      <div className="text-sm text-[rgb(var(--db-text))] mb-2">Vertical align</div>
-      <select
-        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]"
-        value={verticalAlign ?? "center"}
-        onChange={(e) => setVerticalAlign(e.target.value as any)}
-      >
-        <option value="top">Top</option>
-        <option value="center">Center</option>
-        <option value="bottom">Bottom</option>
-      </select>
-    </label>
-  ) : null}
+          </DbSelect>
+        </DbFieldRow>
+
+        {variant === "background" && (
+          <DbFieldRow label="Vertical align">
+            <DbSelect
+              value={verticalAlign}
+              onChange={(e) => setVerticalAlign(e.target.value as any)}
+            >
+              <option value="top">Top</option>
+              <option value="center">Center</option>
+              <option value="bottom">Bottom</option>
+            </DbSelect>
+          </DbFieldRow>
+        )}
       </div>
 
       <div
@@ -442,18 +228,11 @@ setVariant(((block as any).variant ?? "default") as string);
         className="space-y-2 min-w-0"
       >
         <div className="text-xs text-[rgb(var(--db-muted))]">Preview</div>
-        <div
-          className={`space-y-1 ${alignClass} min-w-0`}
-          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-        >
-          <div className={`${titleClass} font-bold text-[rgb(var(--text))]`}>
-            {safeTrim(title) ? title : "Your title…"}
+        <div className={`space-y-1 ${alignClass}`} style={{ overflowWrap: "anywhere" }}>
+          <div className={`${titleClass} font-bold`}>{safeTrim(title) || "Your title…"}</div>
+          <div className={`${subtitleClass} text-[rgb(var(--db-muted))]`}>
+            {safeTrim(subtitle) || "Your subtitle…"}
           </div>
-          {safeTrim(subtitle) ? (
-            <div className={`${subtitleClass} text-[rgb(var(--muted))]`}>{subtitle}</div>
-          ) : (
-            <div className={`${subtitleClass} text-[rgb(var(--muted))] opacity-60`}>Your subtitle…</div>
-          )}
         </div>
       </div>
 
@@ -466,32 +245,25 @@ setVariant(((block as any).variant ?? "default") as string);
             try {
               await onSave({
                 content: {
-  title: safeTrim(title),
-  subtitle: safeTrim(subtitle),
-  avatar: safeTrim(avatar) ? safeTrim(avatar) : null,
-  title_size: titleSize ?? "lg",
-  subtitle_size: subtitleSize ?? "md",
-  align: (align as any) ?? "center",
-vertical_align: (verticalAlign as any) ?? "center",
-
-image_side: imageSide,
-
-  image_size: imageSize,
-  image_ratio: imageRatio,
-
-  bg_height: bgHeight,
-bg_radius: bgRadius,
-
-
-  primary_button_title: safeTrim(primaryBtnTitle),
-  primary_button_url: safeTrim(primaryBtnUrl),
-  secondary_button_title: safeTrim(secondaryBtnTitle),
-  secondary_button_url: safeTrim(secondaryBtnUrl),
-},
-
+                  title: safeTrim(title),
+                  subtitle: safeTrim(subtitle),
+                  avatar: safeTrim(avatar) || null,
+                  title_size: titleSize,
+                  subtitle_size: subtitleSize,
+                  align,
+                  vertical_align: verticalAlign,
+                  image_side: imageSide,
+                  image_size: imageSize,
+                  image_ratio: imageRatio,
+                  bg_height: bgHeight,
+                  bg_radius: bgRadius,
+                  primary_button_title: safeTrim(primaryBtnTitle),
+                  primary_button_url: safeTrim(primaryBtnUrl),
+                  secondary_button_title: safeTrim(secondaryBtnTitle),
+                  secondary_button_url: safeTrim(secondaryBtnUrl),
+                },
                 variant,
               });
-              
             } finally {
               setSaving(false);
             }
@@ -503,5 +275,3 @@ bg_radius: bgRadius,
     </div>
   );
 }
-
-
