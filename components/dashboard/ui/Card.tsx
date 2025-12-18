@@ -16,7 +16,8 @@ export function Card({
   return (
     <div
       className={clsx(
-        "rounded-3xl border border-white/10 bg-white/5 shadow-[0_10px_40px_rgba(0,0,0,0.6)]",
+        // Light dashboard panel (like NINEMAGS). Uses --db-* vars from /dashboard.
+        "rounded-[var(--db-radius)] border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] shadow-[0_18px_40px_rgba(15,23,42,0.10)]",
         className,
       )}
     >
