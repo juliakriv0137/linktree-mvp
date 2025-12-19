@@ -409,7 +409,11 @@ function SortableBlockRow({
           >
             <div className="flex items-center gap-2">
               <span className="text-xs rounded-full border border-[rgb(var(--db-accent) / 0.35)] bg-[rgb(var(--db-accent) / 0.12)] px-2 py-1 text-[rgb(var(--db-text))]">{block.type}</span>
-              {!block.is_visible && <span className="text-xs text-yellow-200/80">hidden</span>}
+              {!block.is_visible && (
+  <span className="text-xs text-red-400/80">hidden</span>
+)}
+
+
             </div>
             <div className="text-xs text-[rgb(var(--db-muted))] mt-1">pos {block.position}</div>
           </button>

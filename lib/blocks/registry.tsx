@@ -17,6 +17,8 @@ export type BlockEntry = {
   render: (props: RenderProps) => React.ReactElement | null;
 };
 
+type ButtonStyle = "solid" | "outline" | "soft";
+
 function safeTrim(v: any) {
   return String(v ?? "").trim();
 }
@@ -40,7 +42,6 @@ function normalizeUrl(raw: any) {
   // fallback: domain → https
   return `https://${v}`;
 }
-
 
 function asObj(v: unknown): Record<string, any> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as any) : {};
@@ -100,10 +101,34 @@ function heroAspectRatioStyle(ratio: string): React.CSSProperties | undefined {
   }
 }
 
-function heroRadiusClass(radius: string) {
-  // Radius is controlled by design-system CSS vars (e.g. --radius / --button-radius).
-  // Keep this helper for backward compatibility with existing calls.
-  return "";
+function heroRadiusValue(radius: string) {
+  switch (String(radius || "").toLowerCase()) {
+    case "none":
+      return "0px";
+    case "sm":
+      return "12px";
+    case "md":
+      return "16px";
+    case "lg":
+      return "20px";
+    case "xl":
+      return "24px";
+    case "2xl":
+      return "32px";
+    case "full":
+      return "9999px";
+    default:
+      // fallback – как было раньше
+      return "var(--radius,15px)";
+  }
+}
+
+function coerceButtonStyle(v: any): ButtonStyle {
+  return v === "solid" || v === "outline" || v === "soft" ? v : "solid";
+}
+
+function normalizeAlign(v: any): "left" | "center" | "right" {
+  return v === "left" || v === "right" || v === "center" ? v : "left";
 }
 
 export const BlockRegistry: Record<string, BlockEntry> = {
@@ -154,7 +179,6 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     },
   },
 
-
   hero: {
     title: "Hero",
     render: ({ block }) => {
@@ -201,13 +225,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
         const bgHeight = String((c as any)?.bg_height ?? "md");
         const bgRadius = String((c as any)?.bg_radius ?? "2xl");
-        const align = String((c as any)?.align ?? "left") as "left" | "center" | "right";
+        const radius = heroRadiusValue(bgRadius);
 
-        // ✅ NEW: vertical align (top/center/bottom) for background hero
-        const verticalAlign = String((c as any)?.vertical_align ?? "center") as
-          | "top"
-          | "center"
-          | "bottom";
+        const align = normalizeAlign((c as any)?.align ?? "left");
+
+        const verticalAlign = String((c as any)?.vertical_align ?? "center") as "top" | "center" | "bottom";
 
         const verticalAlignClass =
           verticalAlign === "top"
@@ -226,25 +248,21 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               ? "justify-end"
               : "justify-start";
 
-        const radiusClass = "";
-
         const heightClass =
-  bgHeight === "sm"
-    ? "min-h-[320px] py-10 md:py-14"
-    : bgHeight === "lg"
-      ? "min-h-[560px] py-24 md:py-32"
-      : bgHeight === "xl"
-        ? "min-h-[720px] py-28 md:py-40"
-        : "min-h-[420px] py-14 md:py-20";
-
-                    
+          bgHeight === "sm"
+            ? "min-h-[320px] py-10 md:py-14"
+            : bgHeight === "lg"
+              ? "min-h-[560px] py-24 md:py-32"
+              : bgHeight === "xl"
+                ? "min-h-[720px] py-28 md:py-40"
+                : "min-h-[420px] py-14 md:py-20";
 
         return (
-          <div className="relative overflow-hidden min-w-0 w-full" style={{ borderRadius: "var(--radius,15px)" }}>
+          <div className="relative overflow-hidden min-w-0 w-full" style={{ borderRadius: radius }}>
             <div
               className="absolute inset-0 w-full h-full"
               style={{
-                borderRadius: "var(--radius,15px)",
+                borderRadius: radius,
                 backgroundImage: bgUrl ? `url(${normalizeUrl(bgUrl)})` : undefined,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
@@ -252,7 +270,6 @@ export const BlockRegistry: Record<string, BlockEntry> = {
             />
             <div className={overlayClass + " absolute inset-0"} />
 
-            {/* ✅ verticalAlignClass applied here */}
             <div className={`relative ${heightClass} px-6 md:px-10 min-w-0 flex flex-col ${verticalAlignClass}`}>
               <div
                 className={`space-y-3 min-w-0 max-w-3xl ${textAlignClass} ${
@@ -274,19 +291,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               {hasPrimary || hasSecondary ? (
                 <div className={`flex flex-wrap items-center gap-3 pt-6 w-full ${ctaJustifyClass}`}>
                   {hasPrimary ? (
-                    <LinkButton
-                      href={normalizeUrl(primaryUrl)}
-                      label={primaryTitle}
-                      buttonStyle={"solid"}
-                    />
+                    <LinkButton href={normalizeUrl(primaryUrl)} label={primaryTitle} buttonStyle={"solid"} />
                   ) : null}
 
                   {hasSecondary ? (
-                    <LinkButton
-                      href={normalizeUrl(secondaryUrl)}
-                      label={secondaryTitle}
-                      buttonStyle={"outline"}
-                    />
+                    <LinkButton href={normalizeUrl(secondaryUrl)} label={secondaryTitle} buttonStyle={"outline"} />
                   ) : null}
                 </div>
               ) : null}
@@ -296,75 +305,54 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       }
 
       if (variant === "split") {
-        const splitAlign = safeTrim((c as any)?.align || "left");
+        // Align for split: use the same field `content.align`, normalize + reuse for text and CTA
+        const splitAlign = normalizeAlign((c as any)?.align);
 
-const textAlignClass =
-  splitAlign === "center"
-    ? "text-center"
-    : splitAlign === "right"
-      ? "text-right"
-      : "text-left";
+        const textAlignClass =
+          splitAlign === "center" ? "text-center" : splitAlign === "right" ? "text-right" : "text-left";
 
-const textWrapClass =
-  splitAlign === "center"
-    ? "mx-auto"
-    : splitAlign === "right"
-      ? "ml-auto"
-      : "";
+        // text wrapper position inside its column
+        const textWrapClass = splitAlign === "center" ? "mx-auto" : splitAlign === "right" ? "ml-auto" : "";
 
-const splitCtaJustifyClass =
-  splitAlign === "center"
-    ? "justify-center"
-    : splitAlign === "right"
-      ? "justify-end"
-      : "justify-start";
+        const splitCtaJustifyClass =
+          splitAlign === "center" ? "justify-center" : splitAlign === "right" ? "justify-end" : "justify-start";
 
+        const textCol = (
+          <div className="min-w-0 w-full">
+            <div className={`space-y-4 min-w-0 ${textAlignClass} ${textWrapClass} max-w-xl`}>
+              <div className="space-y-3 min-w-0">
+                <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
 
-      const textCol = (
-        <div className={`space-y-4 min-w-0 ${textAlignClass} ${textWrapClass}`}>
-      
-            <div className="space-y-3 min-w-0">
-              <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>
-                {title}
+                {subtitle ? (
+                  <div
+                    className={`${subtitleClass} text-[rgb(var(--muted))] leading-relaxed min-w-0 whitespace-pre-wrap`}
+                    style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                  >
+                    {subtitle}
+                  </div>
+                ) : null}
               </div>
 
-              {subtitle ? (
-                <div
-                  className={`${subtitleClass} text-[rgb(var(--muted))] leading-relaxed min-w-0 whitespace-pre-wrap`}
-                  style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-                >
-                  {subtitle}
+              {hasPrimary || hasSecondary ? (
+                <div className={`flex flex-wrap items-center gap-3 pt-2 w-full ${splitCtaJustifyClass}`}>
+                  {hasPrimary ? (
+                    <LinkButton href={normalizeUrl(primaryUrl)} label={primaryTitle} buttonStyle={"solid"} />
+                  ) : null}
+
+                  {hasSecondary ? (
+                    <LinkButton href={normalizeUrl(secondaryUrl)} label={secondaryTitle} buttonStyle={"outline"} />
+                  ) : null}
                 </div>
               ) : null}
             </div>
-
-            {hasPrimary || hasSecondary ? (
-              <div className={`flex flex-wrap items-center gap-3 pt-2 w-full ${splitCtaJustifyClass}`}>
-                {hasPrimary ? (
-                  <LinkButton
-                    href={normalizeUrl(primaryUrl)}
-                    label={primaryTitle}
-                    buttonStyle={"solid"}
-                  />
-                ) : null}
-
-                {hasSecondary ? (
-                  <LinkButton
-                    href={normalizeUrl(secondaryUrl)}
-                    label={secondaryTitle}
-                    buttonStyle={"outline"}
-                  />
-                ) : null}
-              </div>
-            ) : null}
           </div>
         );
 
         const imgUrl = safeTrim((c as any)?.avatar);
 
+        // split: radius for the image box stays from design system var (safe fallback)
         const imgCol = imgUrl ? (
           <div className="flex justify-center md:justify-end min-w-0">
-            {/* ВАЖНО: не задаём высоту. Только width + aspectRatio */}
             <div
               className={`${imgBoxWClass} overflow-hidden bg-white/5`}
               style={{
@@ -382,8 +370,13 @@ const splitCtaJustifyClass =
           </div>
         ) : null;
 
+        // split: vertical align for both columns in the grid (optional, defaults to center)
+        const splitVerticalAlign = String((c as any)?.vertical_align ?? "center") as "top" | "center" | "bottom";
+        const splitItemsAlignClass =
+          splitVerticalAlign === "top" ? "items-start" : splitVerticalAlign === "bottom" ? "items-end" : "items-center";
+
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center min-w-0">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-10 min-w-0 ${splitItemsAlignClass}`}>
             {imageSide === "left" ? (
               <>
                 {imgCol}
@@ -400,7 +393,7 @@ const splitCtaJustifyClass =
       }
 
       // default hero
-      const align = (c?.align ?? "center") as "left" | "center" | "right";
+      const align = normalizeAlign(c?.align ?? "center");
       const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
       return (
@@ -451,7 +444,7 @@ const splitCtaJustifyClass =
       if (!text) return null;
 
       const size = (c?.size as "sm" | "md" | "lg" | undefined) ?? "md";
-      const align = (c?.align as "left" | "center" | "right" | undefined) ?? "left";
+      const align = normalizeAlign(c?.align ?? "left");
 
       const sizeClass = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
       const alignClass = align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
@@ -488,7 +481,7 @@ const splitCtaJustifyClass =
       if (!items.length) return null;
 
       const blockAlign = (c?.align as "left" | "center" | "right" | undefined) ?? "center";
-      const buttonStyle = (((site as any)?.button_style as "solid" | "outline" | "soft" | undefined) ?? "solid");
+      const buttonStyle = coerceButtonStyle(site?.button_style);
 
       return (
         <div className="w-full">
