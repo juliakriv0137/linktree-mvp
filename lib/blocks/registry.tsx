@@ -120,6 +120,28 @@ function heroRadiusValue(radius: string) {
   }
 }
 
+function isCssLengthOrVar(v: string) {
+  const s = v.trim();
+  if (!s) return false;
+  if (s.startsWith("var(")) return true;
+  // allow common units
+  return /(\d)(px|rem|em|%|vh|vw)$/.test(s) || s === "0" || s === "0px";
+}
+
+// ✅ Unify radius parsing (number / css value / token)
+function normalizeRadiusValue(radiusRaw: any): string {
+  if (typeof radiusRaw === "number") return `${radiusRaw}px`;
+
+  if (typeof radiusRaw === "string") {
+    const r = radiusRaw.trim();
+    if (!r) return "var(--radius,15px)";
+    if (isCssLengthOrVar(r)) return r;
+    return heroRadiusValue(r); // token -> px
+  }
+
+  return "var(--radius,15px)";
+}
+
 /* ---------------- registry ---------------- */
 
 export const BlockRegistry: Record<string, BlockEntry> = {
@@ -206,8 +228,10 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           overlay === "soft" ? "bg-black/30" : overlay === "strong" ? "bg-black/70" : "bg-black/50";
 
         const bgHeight = String(c.bg_height ?? "md");
-        const bgRadius = String(c.bg_radius ?? "2xl");
-        const radius = heroRadiusValue(bgRadius);
+        const radiusRaw = (s as any)?.radius ?? c.bg_radius ?? "2xl";
+const radius = normalizeRadiusValue(radiusRaw);
+
+
 
         const align = normalizeAlign(c.align ?? "left");
         const verticalAlign = String(c.vertical_align ?? "center") as "top" | "center" | "bottom";
@@ -277,7 +301,6 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
       /* ---------- SPLIT ---------- */
       if (variant === "split") {
-        // сначала style.align (если зададим в Style табе), иначе content.align
         const splitAlign = normalizeAlign(s.align ?? c.align);
 
         const textAlignClass =
@@ -286,15 +309,9 @@ export const BlockRegistry: Record<string, BlockEntry> = {
         const splitCtaJustifyClass =
           splitAlign === "center" ? "justify-center" : splitAlign === "right" ? "justify-end" : "justify-start";
 
-        // ✅ Radius: берём из block.style.radius (приоритет), иначе из content.radius, иначе var(--radius)
+        // ✅ Radius (style.radius first, then content.radius)
         const radiusRaw = (s as any)?.radius ?? (c as any)?.radius;
-        const radiusValue =
-          typeof radiusRaw === "number"
-            ? `${radiusRaw}px`
-            : typeof radiusRaw === "string" && radiusRaw.trim()
-              ? radiusRaw.trim()
-              : "var(--radius)";
-        const radiusStyle: React.CSSProperties = { borderRadius: radiusValue };
+        const radiusStyle: React.CSSProperties = { borderRadius: normalizeRadiusValue(radiusRaw) };
 
         const textCol = (
           <div className="min-w-0 w-full">
@@ -333,15 +350,17 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               className={`${imgBoxWClass} overflow-hidden bg-white/5 border border-white/10`}
               style={{
                 ...(ratioStyle ?? {}),
-                ...radiusStyle, // ✅ применяем radius именно сюда (а не фиксированный var(--radius,15px))
+                ...radiusStyle,
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={normalizeUrl(imgUrl)}
-                alt="Hero image"
-                className={ratioStyle ? "w-full h-full object-cover" : "w-full h-auto object-contain"}
-              />
+  src={normalizeUrl(imgUrl)}
+  alt="Hero image"
+  className={ratioStyle ? "w-full h-full object-cover" : "w-full h-auto object-contain"}
+  style={radiusStyle}
+/>
+
             </div>
           </div>
         ) : null;
@@ -371,8 +390,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       const align = normalizeAlign(c.align ?? "center");
       const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
-      return (
-        <div className={`${alignClass} space-y-2 min-w-0`}>
+      const radiusRaw = (s as any)?.radius ?? (c as any)?.radius;
+const radiusStyle: React.CSSProperties = { borderRadius: normalizeRadiusValue(radiusRaw) };
+
+return (
+  <div className={`${alignClass} space-y-2 min-w-0`} style={radiusStyle}>
           <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
 
           {subtitle ? (
@@ -392,22 +414,43 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     title: "Image",
     render: ({ block }) => {
       const c = asObj(block.content);
+      const s = asObj((block as any).style);
 
       const url = normalizeUrl(c.url);
       const alt = safeTrim(c.alt) || "Image";
       const shape = (c.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
-      const radius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
 
       if (!url) return null;
+
+      // ✅ radius priority:
+      // 1) circle всегда круг
+      // 2) если в Style tab задан radius -> применяем его
+      // 3) иначе старое поведение от shape
+      const styleRadiusRaw = (s as any)?.radius;
+      const fallbackRadius =
+        shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+
+      const radiusValue =
+        shape === "circle"
+          ? "9999px"
+          : styleRadiusRaw != null
+            ? normalizeRadiusValue(styleRadiusRaw)
+            : fallbackRadius;
 
       return (
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={alt} className="h-28 w-28 object-cover" style={{ borderRadius: radius }} />
+          <img
+            src={url}
+            alt={alt}
+            className="h-28 w-28 object-cover"
+            style={{ borderRadius: radiusValue }}
+          />
         </div>
       );
     },
   },
+
 
   text: {
     title: "Text",
