@@ -754,16 +754,34 @@ export default function DashboardPage() {
     }
   };
 
-  const saveSelectedHero = async (next: any) => {
+  const saveSelectedHero = async (next: {
+    content?: any;
+    variant?: string;
+  }) => {
     if (!selectedBlock || !site) return;
+  
     try {
       setError(null);
-      await updateBlock(selectedBlock.id, next as BlockPatch);
-      await reloadBlocksAfterSave();
+  
+      const patch: {
+        content?: any;
+        variant?: string;
+      } = {};
+  
+      if (next.content !== undefined) {
+        patch.content = next.content;
+      }
+  
+      if (typeof next.variant === "string") {
+        patch.variant = next.variant;
+      }
+  
+      await saveSelectedBlockPatch(patch);
     } catch (e: any) {
       setError(e?.message ?? String(e));
     }
   };
+  
 
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
