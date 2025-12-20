@@ -19,6 +19,8 @@ export type BlockEntry = {
 
 type ButtonStyle = "solid" | "outline" | "soft";
 
+/* ---------------- helpers ---------------- */
+
 function safeTrim(v: any) {
   return String(v ?? "").trim();
 }
@@ -26,25 +28,23 @@ function safeTrim(v: any) {
 function normalizeUrl(raw: any) {
   const v = safeTrim(raw);
   if (!v) return "";
-
-  // anchors inside the page
-  if (v.startsWith("#")) return v;
-
-  // relative paths
-  if (v.startsWith("/")) return v;
-
-  // non-http schemes
-  if (/^(mailto:|tel:|sms:)/i.test(v)) return v;
-
-  // already absolute
-  if (/^https?:\/\//i.test(v)) return v;
-
-  // fallback: domain → https
-  return `https://${v}`;
+  if (v.startsWith("#")) return v; // anchors
+  if (v.startsWith("/")) return v; // relative
+  if (/^(mailto:|tel:|sms:)/i.test(v)) return v; // non-http
+  if (/^https?:\/\//i.test(v)) return v; // absolute
+  return `https://${v}`; // domain -> https
 }
 
 function asObj(v: unknown): Record<string, any> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as any) : {};
+}
+
+function normalizeAlign(v: any): "left" | "center" | "right" {
+  return v === "left" || v === "center" || v === "right" ? v : "left";
+}
+
+function coerceButtonStyle(v: any): ButtonStyle {
+  return v === "solid" || v === "outline" || v === "soft" ? v : "solid";
 }
 
 function linksBlockWidthClass(layoutWidth: "compact" | "wide" | "full") {
@@ -60,8 +60,7 @@ function buttonRowWidthClass(layoutWidth: "compact" | "wide" | "full") {
 }
 
 /**
- * ВАЖНО:
- * Возвращаем ТОЛЬКО ширину.
+ * ВАЖНО: возвращаем ТОЛЬКО ширину.
  * Высоту будет считать aspectRatio.
  */
 function heroImageSizeClass(size: string) {
@@ -77,7 +76,7 @@ function heroImageSizeClass(size: string) {
     case "xl":
       return "w-96";
     case "2xl":
-      return "w-[28rem]"; // 448px
+      return "w-[28rem]";
     default:
       return "w-56";
   }
@@ -95,7 +94,6 @@ function heroAspectRatioStyle(ratio: string): React.CSSProperties | undefined {
       return { aspectRatio: "3 / 4" };
     case "9:16":
       return { aspectRatio: "9 / 16" };
-    case "auto":
     default:
       return undefined;
   }
@@ -118,18 +116,11 @@ function heroRadiusValue(radius: string) {
     case "full":
       return "9999px";
     default:
-      // fallback – как было раньше
       return "var(--radius,15px)";
   }
 }
 
-function coerceButtonStyle(v: any): ButtonStyle {
-  return v === "solid" || v === "outline" || v === "soft" ? v : "solid";
-}
-
-function normalizeAlign(v: any): "left" | "center" | "right" {
-  return v === "left" || v === "right" || v === "center" ? v : "left";
-}
+/* ---------------- registry ---------------- */
 
 export const BlockRegistry: Record<string, BlockEntry> = {
   divider: {
@@ -147,22 +138,18 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       const c = asObj(block.content);
       const variant = String((block as any).variant ?? "default");
 
-      const brandText = safeTrim((c as any)?.brand_text ?? "My Site");
-      const brandUrl = normalizeUrl((c as any)?.brand_url ?? "");
-      const logoUrl = safeTrim((c as any)?.logo_url ?? "");
+      const brandText = safeTrim(c.brand_text ?? "My Site");
+      const brandUrl = normalizeUrl(c.brand_url ?? "");
+      const logoUrl = safeTrim(c.logo_url ?? "");
 
-      const links = Array.isArray((c as any)?.links) ? ((c as any).links as any[]) : [];
+      const links = Array.isArray(c.links) ? c.links : [];
       const items = links
-        .map((x) => ({
-          label: safeTrim(x?.label),
-          url: normalizeUrl(x?.url),
-        }))
-        .filter((x) => x.label && x.url);
+        .map((x: any) => ({ label: safeTrim(x.label), url: normalizeUrl(x.url) }))
+        .filter((x: any) => x.label && x.url);
 
-      const showCta = Boolean((c as any)?.show_cta);
-      const ctaLabel = safeTrim((c as any)?.cta_label ?? "");
-      const ctaUrl = normalizeUrl((c as any)?.cta_url ?? "");
-      const hasCta = showCta && !!ctaLabel && !!ctaUrl;
+      const showCta = Boolean(c.show_cta);
+      const ctaLabel = safeTrim(c.cta_label ?? "");
+      const ctaUrl = normalizeUrl(c.cta_url ?? "");
 
       return (
         <HeaderBlockClient
@@ -171,7 +158,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           brandUrl={brandUrl}
           logoUrl={logoUrl}
           items={items}
-          hasCta={hasCta}
+          hasCta={showCta && !!ctaLabel && !!ctaUrl}
           ctaLabel={ctaLabel}
           ctaUrl={ctaUrl}
         />
@@ -183,70 +170,54 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     title: "Hero",
     render: ({ block }) => {
       const c = asObj(block.content);
+      const s = asObj((block as any).style);
       const variant = (block as any).variant ?? "default";
 
-      const title = safeTrim(c?.title) || " ";
-      const subtitle = safeTrim(c?.subtitle);
+      const title = safeTrim(c.title) || " ";
+      const subtitle = safeTrim(c.subtitle);
 
-      const primaryTitle = safeTrim((c as any)?.primary_button_title ?? "");
-      const primaryUrl = safeTrim((c as any)?.primary_button_url ?? "");
-      const secondaryTitle = safeTrim((c as any)?.secondary_button_title ?? "");
-      const secondaryUrl = safeTrim((c as any)?.secondary_button_url ?? "");
+      const primaryTitle = safeTrim(c.primary_button_title);
+      const primaryUrl = safeTrim(c.primary_button_url);
+      const secondaryTitle = safeTrim(c.secondary_button_title);
+      const secondaryUrl = safeTrim(c.secondary_button_url);
 
       const hasPrimary = !!primaryTitle && !!primaryUrl;
       const hasSecondary = !!secondaryTitle && !!secondaryUrl;
 
-      const titleSize = (c?.title_size ?? "lg") as "sm" | "md" | "lg";
-      const subtitleSize = (c?.subtitle_size ?? "md") as "sm" | "md" | "lg";
+      const titleSize = (c.title_size ?? "lg") as "sm" | "md" | "lg";
+      const subtitleSize = (c.subtitle_size ?? "md") as "sm" | "md" | "lg";
 
-      const titleClass =
-        titleSize === "sm" ? "text-xl" : titleSize === "md" ? "text-2xl" : "text-3xl";
-      const subtitleClass =
-        subtitleSize === "sm" ? "text-sm" : subtitleSize === "lg" ? "text-lg" : "text-base";
+      const titleClass = titleSize === "sm" ? "text-xl" : titleSize === "md" ? "text-2xl" : "text-3xl";
+      const subtitleClass = subtitleSize === "sm" ? "text-sm" : subtitleSize === "lg" ? "text-lg" : "text-base";
 
-      // split extras
-      const imageSide = ((c as any)?.image_side ?? "right") as "left" | "right";
-      const imageSize = String((c as any)?.image_size ?? "md");
-      const imageRatio = String((c as any)?.image_ratio ?? "square");
+      const imageSide = (c.image_side ?? "right") as "left" | "right";
+      const imageSize = String(c.image_size ?? "md");
+      const imageRatio = String(c.image_ratio ?? "square");
 
       const imgBoxWClass = heroImageSizeClass(imageSize);
       const ratioStyle = heroAspectRatioStyle(imageRatio);
 
+      /* ---------- BACKGROUND ---------- */
       if (variant === "background") {
-        const bgUrl = safeTrim((c as any)?.avatar ?? "");
-        const overlay = String((c as any)?.bg_overlay ?? "medium");
+        const bgUrl = safeTrim(c.avatar ?? "");
+        const overlay = String(c.bg_overlay ?? "medium");
 
         const overlayClass =
-          overlay === "soft"
-            ? "bg-black/30"
-            : overlay === "strong"
-              ? "bg-black/70"
-              : "bg-black/50";
+          overlay === "soft" ? "bg-black/30" : overlay === "strong" ? "bg-black/70" : "bg-black/50";
 
-        const bgHeight = String((c as any)?.bg_height ?? "md");
-        const bgRadius = String((c as any)?.bg_radius ?? "2xl");
+        const bgHeight = String(c.bg_height ?? "md");
+        const bgRadius = String(c.bg_radius ?? "2xl");
         const radius = heroRadiusValue(bgRadius);
 
-        const align = normalizeAlign((c as any)?.align ?? "left");
-
-        const verticalAlign = String((c as any)?.vertical_align ?? "center") as "top" | "center" | "bottom";
+        const align = normalizeAlign(c.align ?? "left");
+        const verticalAlign = String(c.vertical_align ?? "center") as "top" | "center" | "bottom";
 
         const verticalAlignClass =
-          verticalAlign === "top"
-            ? "justify-start"
-            : verticalAlign === "bottom"
-              ? "justify-end"
-              : "justify-center";
+          verticalAlign === "top" ? "justify-start" : verticalAlign === "bottom" ? "justify-end" : "justify-center";
 
-        const textAlignClass =
-          align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
-
+        const textAlignClass = align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
         const ctaJustifyClass =
-          align === "center"
-            ? "justify-center"
-            : align === "right"
-              ? "justify-end"
-              : "justify-start";
+          align === "center" ? "justify-center" : align === "right" ? "justify-end" : "justify-start";
 
         const heightClass =
           bgHeight === "sm"
@@ -291,11 +262,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
               {hasPrimary || hasSecondary ? (
                 <div className={`flex flex-wrap items-center gap-3 pt-6 w-full ${ctaJustifyClass}`}>
                   {hasPrimary ? (
-                    <LinkButton href={normalizeUrl(primaryUrl)} label={primaryTitle} buttonStyle={"solid"} />
+                    <LinkButton href={normalizeUrl(primaryUrl)} label={primaryTitle} buttonStyle="solid" />
                   ) : null}
 
                   {hasSecondary ? (
-                    <LinkButton href={normalizeUrl(secondaryUrl)} label={secondaryTitle} buttonStyle={"outline"} />
+                    <LinkButton href={normalizeUrl(secondaryUrl)} label={secondaryTitle} buttonStyle="outline" />
                   ) : null}
                 </div>
               ) : null}
@@ -304,43 +275,49 @@ export const BlockRegistry: Record<string, BlockEntry> = {
         );
       }
 
+      /* ---------- SPLIT ---------- */
       if (variant === "split") {
-        // Align for split: use the same field `content.align`, normalize + reuse for text and CTA
-        const splitAlign = normalizeAlign((c as any)?.align);
+        // сначала style.align (если зададим в Style табе), иначе content.align
+        const splitAlign = normalizeAlign(s.align ?? c.align);
 
         const textAlignClass =
           splitAlign === "center" ? "text-center" : splitAlign === "right" ? "text-right" : "text-left";
-
-        // text wrapper position inside its column
         const textWrapClass = splitAlign === "center" ? "mx-auto" : splitAlign === "right" ? "ml-auto" : "";
-
         const splitCtaJustifyClass =
           splitAlign === "center" ? "justify-center" : splitAlign === "right" ? "justify-end" : "justify-start";
 
+        // ✅ Radius: берём из block.style.radius (приоритет), иначе из content.radius, иначе var(--radius)
+        const radiusRaw = (s as any)?.radius ?? (c as any)?.radius;
+        const radiusValue =
+          typeof radiusRaw === "number"
+            ? `${radiusRaw}px`
+            : typeof radiusRaw === "string" && radiusRaw.trim()
+              ? radiusRaw.trim()
+              : "var(--radius)";
+        const radiusStyle: React.CSSProperties = { borderRadius: radiusValue };
+
         const textCol = (
           <div className="min-w-0 w-full">
-            <div className={`space-y-4 min-w-0 ${textAlignClass} ${textWrapClass} max-w-xl`}>
-              <div className="space-y-3 min-w-0">
-                <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
+            <div className={`space-y-4 min-w-0 max-w-xl ${textAlignClass} ${textWrapClass}`}>
+              <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
 
-                {subtitle ? (
-                  <div
-                    className={`${subtitleClass} text-[rgb(var(--muted))] leading-relaxed min-w-0 whitespace-pre-wrap`}
-                    style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-                  >
-                    {subtitle}
-                  </div>
-                ) : null}
-              </div>
+              {subtitle ? (
+                <div
+                  className={`${subtitleClass} text-[rgb(var(--muted))] leading-relaxed whitespace-pre-wrap min-w-0`}
+                  style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                >
+                  {subtitle}
+                </div>
+              ) : null}
 
               {hasPrimary || hasSecondary ? (
                 <div className={`flex flex-wrap items-center gap-3 pt-2 w-full ${splitCtaJustifyClass}`}>
                   {hasPrimary ? (
-                    <LinkButton href={normalizeUrl(primaryUrl)} label={primaryTitle} buttonStyle={"solid"} />
+                    <LinkButton href={normalizeUrl(primaryUrl)} label={primaryTitle} buttonStyle="solid" />
                   ) : null}
 
                   {hasSecondary ? (
-                    <LinkButton href={normalizeUrl(secondaryUrl)} label={secondaryTitle} buttonStyle={"outline"} />
+                    <LinkButton href={normalizeUrl(secondaryUrl)} label={secondaryTitle} buttonStyle="outline" />
                   ) : null}
                 </div>
               ) : null}
@@ -348,16 +325,15 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           </div>
         );
 
-        const imgUrl = safeTrim((c as any)?.avatar);
+        const imgUrl = safeTrim(c.avatar);
 
-        // split: radius for the image box stays from design system var (safe fallback)
         const imgCol = imgUrl ? (
           <div className="flex justify-center md:justify-end min-w-0">
             <div
-              className={`${imgBoxWClass} overflow-hidden bg-white/5`}
+              className={`${imgBoxWClass} overflow-hidden bg-white/5 border border-white/10`}
               style={{
                 ...(ratioStyle ?? {}),
-                borderRadius: "var(--radius,15px)",
+                ...radiusStyle, // ✅ применяем radius именно сюда (а не фиксированный var(--radius,15px))
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -370,8 +346,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           </div>
         ) : null;
 
-        // split: vertical align for both columns in the grid (optional, defaults to center)
-        const splitVerticalAlign = String((c as any)?.vertical_align ?? "center") as "top" | "center" | "bottom";
+        const splitVerticalAlign = String(c.vertical_align ?? "center") as "top" | "center" | "bottom";
         const splitItemsAlignClass =
           splitVerticalAlign === "top" ? "items-start" : splitVerticalAlign === "bottom" ? "items-end" : "items-center";
 
@@ -392,8 +367,8 @@ export const BlockRegistry: Record<string, BlockEntry> = {
         );
       }
 
-      // default hero
-      const align = normalizeAlign(c?.align ?? "center");
+      /* ---------- DEFAULT ---------- */
+      const align = normalizeAlign(c.align ?? "center");
       const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
       return (
@@ -418,10 +393,9 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     render: ({ block }) => {
       const c = asObj(block.content);
 
-      const url = normalizeUrl(c?.url);
-      const alt = safeTrim(c?.alt) || "Image";
-      const shape = (c?.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
-
+      const url = normalizeUrl(c.url);
+      const alt = safeTrim(c.alt) || "Image";
+      const shape = (c.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
       const radius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
 
       if (!url) return null;
@@ -440,11 +414,11 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     render: ({ block }) => {
       const c = asObj(block.content);
 
-      const text = safeTrim(c?.text);
+      const text = safeTrim(c.text);
       if (!text) return null;
 
-      const size = (c?.size as "sm" | "md" | "lg" | undefined) ?? "md";
-      const align = normalizeAlign(c?.align ?? "left");
+      const size = (c.size as "sm" | "md" | "lg" | undefined) ?? "md";
+      const align = normalizeAlign(c.align ?? "left");
 
       const sizeClass = size === "sm" ? "text-sm" : size === "lg" ? "text-lg" : "text-base";
       const alignClass = align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
@@ -469,18 +443,18 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       const blockWidth = linksBlockWidthClass(layoutWidth);
       const rowWidth = buttonRowWidthClass(layoutWidth);
 
-      const itemsRaw = Array.isArray(c?.items) ? c.items : [];
+      const itemsRaw = Array.isArray(c.items) ? c.items : [];
       const items = itemsRaw
         .map((x: any) => ({
-          title: safeTrim(x?.title),
-          url: normalizeUrl(x?.url),
-          align: (x?.align as "left" | "center" | "right" | undefined) ?? null,
+          title: safeTrim(x.title),
+          url: normalizeUrl(x.url),
+          align: (x.align as "left" | "center" | "right" | undefined) ?? null,
         }))
         .filter((x: any) => x.title && x.url);
 
       if (!items.length) return null;
 
-      const blockAlign = (c?.align as "left" | "center" | "right" | undefined) ?? "center";
+      const blockAlign = (c.align as "left" | "center" | "right" | undefined) ?? "center";
       const buttonStyle = coerceButtonStyle(site?.button_style);
 
       return (
