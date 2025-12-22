@@ -32,6 +32,7 @@ export type LayoutPreset =
   | (string & {});
 
 type Props = {
+
   children: React.ReactNode;
   themeKey?: string | null;
   backgroundStyle?: BackgroundStyle;
@@ -82,7 +83,11 @@ export function SiteShell({
   cardStyle = "card",
   themeOverrides,
   layoutWidth = "compact",
-}: Props) {
+  ...rest
+}: Props & React.HTMLAttributes<HTMLDivElement>) {
+  const safeRest = Object.fromEntries(
+    Object.entries(rest || {}).filter(([k]) => k.startsWith("data-") || k.startsWith("aria-"))
+  ) as React.HTMLAttributes<HTMLDivElement>;
   const layoutVariant = mapPresetToVariant(layoutWidth);
   const layout = LAYOUT_DEFAULTS[layoutVariant];
 
@@ -170,7 +175,7 @@ export function SiteShell({
         : "bg-[rgb(var(--bg))]";
 
   return (
-    <div
+    <div {...safeRest}
       style={
         {
           ...(vars as React.CSSProperties),

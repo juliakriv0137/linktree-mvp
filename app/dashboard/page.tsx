@@ -822,7 +822,7 @@ export default function DashboardPage() {
       style={{ ...(DASHBOARD_THEME_VARS as any), ...(DASHBOARD_UI_VARS as any) }}
     >
       {/* ✅ NEW: красивый топ-бар без огромной “капсулы” */}
-      <div className="sticky top-0 z-30 border-b border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))]">
+      <div className="sticky top-0 z-[5000] border-b border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))]">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Left: title */}
@@ -860,9 +860,10 @@ export default function DashboardPage() {
                   <DbSummaryButton>Site settings</DbSummaryButton>
 
                   <DbPopoverPanel
-                    className="absolute right-0 z-50 mt-2 w-[520px] max-w-[92vw]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+  className="fixed right-4 top-[72px] z-[2000] w-[520px] max-w-[92vw]"
+  onClick={(e) => e.stopPropagation()}
+>
+
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold">Site settings</div>
@@ -1350,7 +1351,7 @@ export default function DashboardPage() {
               <div className="p-4">
                 <div
                   className={clsx(
-                    "mx-auto overflow-hidden rounded-2xl border border-[rgb(var(--db-border))]",
+                    "relative isolate z-0 mx-auto overflow-hidden rounded-2xl border border-[rgb(var(--db-border))]",
                     previewDevice === "mobile" ? "w-[390px] max-w-full" : "w-full",
                   )}
                 >
@@ -1362,6 +1363,7 @@ export default function DashboardPage() {
                     />
                   ) : (
                     <SiteShell
+                        data-preview="true"
                       themeKey={site?.theme_key ?? "midnight"}
                       backgroundStyle={(site?.background_style ?? "solid") as any}
                       buttonStyle={(site?.button_style ?? "solid") as any}

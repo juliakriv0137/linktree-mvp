@@ -9,7 +9,7 @@ function safeTrim(v: any) {
 function normalizeUrl(raw: any) {
   const v = safeTrim(raw);
   if (!v) return "";
-  if (!/^https?:\/\//i.test(v) && !v.startsWith("#")) return `https://${v}`;
+  if (!/^https?:\/\//i.test(v) && !v.startsWith("#") && !v.startsWith("/")) return `https://${v}`;
   return v;
 }
 
@@ -40,13 +40,22 @@ export function HeaderBlockClient(props: {
   const ctaUrl = normalizeUrl(props.ctaUrl || "");
 
   const detailsRef = React.useRef<HTMLDetailsElement | null>(null);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [inDashboardPreview, setInDashboardPreview] = React.useState(false);
 
+  // Detect: this header is rendered inside the Dashboard desktop preview (SiteShell has data-preview="true")
+  React.useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    setInDashboardPreview(!!el.closest('[data-preview="true"]'));
+  }, []);
+
+  // Close mobile menu on outside click (only when open)
   React.useEffect(() => {
     const el = detailsRef.current;
     if (!el) return;
 
     const closeIfOutside = (e: PointerEvent) => {
-      // only when open
       if (!el.hasAttribute("open")) return;
       const target = e.target as Node | null;
       if (!target) return;
@@ -54,14 +63,16 @@ export function HeaderBlockClient(props: {
       el.removeAttribute("open");
     };
 
-    // capture=true to beat inner handlers
     document.addEventListener("pointerdown", closeIfOutside, true);
     return () => document.removeEventListener("pointerdown", closeIfOutside, true);
   }, []);
 
   const Brand = () => {
     const inner = (
-      <div className="flex items-center gap-2 min-w-0" style={{ borderRadius: "var(--radius,15px)" }}>
+      <div
+        className="flex items-center gap-2 min-w-0"
+        style={{ borderRadius: "var(--radius,15px)" }}
+      >
         {logoUrl ? (
           <img
             src={logoUrl}
@@ -69,13 +80,22 @@ export function HeaderBlockClient(props: {
             className="h-7 w-7 rounded-full object-cover border border-white/10"
           />
         ) : null}
-        <div className="font-semibold text-white/90 truncate" style={{ borderRadius: "var(--radius,15px)" }}>{brandText || " "}</div>
+        <div
+          className="font-semibold text-white/90 truncate"
+          style={{ borderRadius: "var(--radius,15px)" }}
+        >
+          {brandText || " "}
+        </div>
       </div>
     );
 
     if (brandUrl) {
       return (
-        <a href={brandUrl} className="hover:opacity-90 transition-opacity" style={{ borderRadius: "var(--radius,15px)" }}>
+        <a
+          href={brandUrl}
+          className="hover:opacity-90 transition-opacity"
+          style={{ borderRadius: "var(--radius,15px)" }}
+        >
           {inner}
         </a>
       );
@@ -111,38 +131,38 @@ export function HeaderBlockClient(props: {
           key={idx}
           href={normalizeUrl(it.url)}
           onClick={(e) => {
-              const href = normalizeUrl(it.url);
+            const href = normalizeUrl(it.url);
 
-              if (closeOnClick) {
-                const d = (e.currentTarget as any)?.closest?.("details");
-                if (d && typeof d.removeAttribute === "function") d.removeAttribute("open");
+            if (closeOnClick) {
+              const d = (e.currentTarget as any)?.closest?.("details");
+              if (d && typeof d.removeAttribute === "function") d.removeAttribute("open");
+            }
+
+            if (href && href.startsWith("#")) {
+              e.preventDefault();
+              const id = href.slice(1);
+
+              if (typeof window !== "undefined") {
+                window.history.pushState(null, "", href);
               }
 
-              if (href && href.startsWith("#")) {
-                e.preventDefault();
-                const id = href.slice(1);
-
-                if (typeof window !== "undefined") {
-                  window.history.pushState(null, "", href);
-                }
-
-                // после закрытия меню/перерендера — надёжнее скроллит
-                if (typeof window !== "undefined") {
+              if (typeof window !== "undefined") {
+                window.requestAnimationFrame(() => {
                   window.requestAnimationFrame(() => {
-                    window.requestAnimationFrame(() => {
-                      const el = document.getElementById(id);
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    });
+                    const el = document.getElementById(id);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                   });
-                }
+                });
               }
-            }}
+            }
+          }}
           className={
             layout === "col"
               ? "px-3 py-2 hover:bg-white/10 hover:text-white transition"
               : "hover:text-white/90 transition-colors"
           }
-         style={{ borderRadius: "var(--radius,15px)" }}>
+          style={{ borderRadius: "var(--radius,15px)" }}
+        >
           {safeTrim(it.label)}
         </a>
       ))}
@@ -154,15 +174,23 @@ export function HeaderBlockClient(props: {
       <a
         href={ctaUrl}
         className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/15 transition border border-white/10"
-       style={{ borderRadius: "var(--radius,15px)" }}>
+        style={{ borderRadius: "var(--radius,15px)" }}
+      >
         {ctaLabel}
       </a>
     ) : null;
 
+  // In dashboard preview, keep header under UI popovers (Site settings has z-50)
+  const headerZClass = inDashboardPreview ? "relative z-10" : "relative z-40";
+  const mobileDropdownZClass = inDashboardPreview ? "z-20" : "z-[100]";
+
   if (variant === "centered") {
     return (
-      <div className="w-full" style={{ borderRadius: "var(--radius,15px)" }}>
-        <div className="border border-white/10 bg-white/5 px-4 py-4" style={{ borderRadius: "var(--radius,15px)" }}>
+      <div ref={rootRef} className={`w-full ${headerZClass}`} style={{ borderRadius: "var(--radius,15px)" }}>
+        <div
+          className="bg-white/5 border border-white/10 px-4 py-4"
+          style={{ borderRadius: "var(--radius,15px)" }}
+        >
           <div className="flex items-center justify-center">
             <Brand />
           </div>
@@ -185,8 +213,11 @@ export function HeaderBlockClient(props: {
 
   // default
   return (
-    <div className="w-full">
-      <div className="relative border border-white/10 bg-white/5 px-4 py-3" style={{ borderRadius: "var(--radius,15px)" }}>
+    <div ref={rootRef} className={`w-full ${headerZClass}`}>
+      <div
+        className="relative bg-white/5 border border-white/10 px-4 py-3"
+        style={{ borderRadius: "var(--radius,15px)" }}
+      >
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <Brand />
@@ -204,7 +235,7 @@ export function HeaderBlockClient(props: {
             </div>
           ) : null}
 
-          {(items.length || hasCta) ? (
+          {items.length || hasCta ? (
             <div className="sm:hidden">
               <details ref={detailsRef} className="group" suppressHydrationWarning>
                 <summary
@@ -244,7 +275,7 @@ export function HeaderBlockClient(props: {
                   </svg>
                 </summary>
 
-                <div className="absolute left-4 right-4 top-[3.25rem] z-[100]">
+                <div className={`hidden group-open:block absolute left-4 right-4 top-[3.25rem] ${mobileDropdownZClass}`}>
                   <div
                     style={{ borderRadius: "var(--radius,15px)" }}
                     className={[
@@ -255,10 +286,13 @@ export function HeaderBlockClient(props: {
                       "group-open:scale-100 group-open:opacity-100 group-open:translate-y-0",
                       "transition duration-150",
                     ].join(" ")}
->
+                  >
                     <div className="flex flex-col gap-2">
                       {items.length ? (
-                        <div className="bg-white/5 px-3 py-3" style={{ borderRadius: "var(--radius,15px)" }}>
+                        <div
+                          className="bg-white/5 px-3 py-3"
+                          style={{ borderRadius: "var(--radius,15px)" }}
+                        >
                           <Links justify="start" layout="col" closeOnClick />
                         </div>
                       ) : null}
