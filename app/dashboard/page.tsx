@@ -1055,27 +1055,26 @@ export default function DashboardPage() {
                           </FieldRow>
 
                           <FieldRow label="Radius">
-                            <DbSelect
-                              value={(site?.button_radius ?? "2xl") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const button_radius = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { button_radius } as any);
-                                  setSite({ ...site, button_radius } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="md">{radiusLabel("md")}</option>
-                              <option value="xl">{radiusLabel("xl")}</option>
-                              <option value="2xl">{radiusLabel("2xl")}</option>
-                              <option value="full">{radiusLabel("full")}</option>
-                            </DbSelect>
-                          </FieldRow>
+  <select
+    className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+    value={readHeaderEnum("radius", "2xl")}
+    disabled={!canAct}
+    onChange={(e) => {
+      const v = (e.target as HTMLSelectElement).value;
+      const cur = (((selectedBlock as any)?.style ?? {}) as any).header ?? {};
+      onPatchBlockStyle({ header: { ...cur, radius: v } });
+    }}
+  >
+    <option value="none">None</option>
+    <option value="sm">Small</option>
+    <option value="md">Medium</option>
+    <option value="lg">Large</option>
+    <option value="xl">XL</option>
+    <option value="2xl">2XL</option>
+    <option value="full">Full</option>
+  </select>
+</FieldRow>
+
 
                           <FieldRow label="Cards">
                             <DbSelect
