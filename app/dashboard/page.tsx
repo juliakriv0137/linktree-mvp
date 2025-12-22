@@ -8,19 +8,8 @@ import { Card } from "@/components/dashboard/ui/Card";
 import { Button } from "@/components/dashboard/ui/Button";
 import { IconButton } from "@/components/dashboard/ui/IconButton";
 import { ColorField } from "@/components/dashboard/ui/ColorField";
-import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
@@ -140,9 +129,7 @@ type TextContent = {
   align?: "left" | "center" | "right";
 };
 
-type BlockPatch = Partial<
-  Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id">
->;
+type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id">>;
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -224,11 +211,60 @@ function FieldRow(props: { label: string; children: React.ReactNode; hint?: stri
       <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">{props.label}</div>
       <div className="min-w-0">
         {props.children}
-        {props.hint ? (
-          <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">{props.hint}</div>
-        ) : null}
+        {props.hint ? <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">{props.hint}</div> : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * ✅ Unified color input for the whole dashboard settings system:
+ * - native palette picker (type="color")
+ * - optional hex override
+ * - empty => clears (inherit)
+ *
+ * We can reuse this for Header (block style) and later for other blocks.
+ */
+function PaletteColorField(props: {
+  label: string;
+  value: string; // UI value ("" means inherit)
+  disabled?: boolean;
+  onChange: (next: string) => void;
+  hint?: string;
+}) {
+  const raw = String(props.value ?? "");
+  const normalized = normalizeHexOrNull(raw);
+  const pickerValue = normalized ?? "#000000";
+
+  return (
+    <FieldRow label={props.label} hint={props.hint}>
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          value={pickerValue}
+          disabled={props.disabled}
+          onChange={(e) => props.onChange((e.target as HTMLInputElement).value)}
+          className="h-10 w-14 rounded-xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-1 disabled:opacity-50"
+        />
+
+        <input
+          value={raw}
+          disabled={props.disabled}
+          onChange={(e) => props.onChange((e.target as HTMLInputElement).value)}
+          placeholder="#RRGGBB"
+          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)] disabled:opacity-50"
+        />
+
+        <button
+          type="button"
+          disabled={props.disabled}
+          onClick={() => props.onChange("")}
+          className="shrink-0 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-panel))] disabled:opacity-40"
+        >
+          Clear
+        </button>
+      </div>
+    </FieldRow>
   );
 }
 
@@ -307,10 +343,7 @@ async function loadBlocks(siteId: string): Promise<BlockRow[]> {
   return (data ?? []) as BlockRow[];
 }
 
-async function createBlock(
-  siteId: string,
-  type: "header" | "hero" | "links" | "image" | "text" | "divider",
-) {
+async function createBlock(siteId: string, type: "header" | "hero" | "links" | "image" | "text" | "divider") {
   const { data: maxPosRow, error: maxPosErr } = await supabase
     .from("site_blocks")
     .select("position")
@@ -467,11 +500,7 @@ function SortableBlockRow({
           </button>
 
           <div className="flex items-center gap-2">
-            <IconButton
-              title={block.is_visible ? "Hide" : "Show"}
-              onClick={onToggleVisible}
-              disabled={disabled}
-            >
+            <IconButton title={block.is_visible ? "Hide" : "Show"} onClick={onToggleVisible} disabled={disabled}>
               {block.is_visible ? "🙈" : "👁️"}
             </IconButton>
 
@@ -512,10 +541,7 @@ export default function DashboardPage() {
 
   const [blockTab, setBlockTab] = useState<"content" | "style" | "advanced">("content");
 
-  const selectedBlock = useMemo(
-    () => blocks.find((b) => b.id === selectedBlockId) ?? null,
-    [blocks, selectedBlockId],
-  );
+  const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
 
   const publicUrl = site ? `/${site.slug}` : "/";
 
@@ -699,13 +725,7 @@ export default function DashboardPage() {
   }
 
   async function saveColorField(
-    key:
-      | "bg_color"
-      | "text_color"
-      | "muted_color"
-      | "border_color"
-      | "button_color"
-      | "button_text_color",
+    key: "bg_color" | "text_color" | "muted_color" | "border_color" | "button_color" | "button_text_color",
     rawValue: string,
   ) {
     if (!site) return;
@@ -782,12 +802,7 @@ export default function DashboardPage() {
     }
   };
 
-  const saveSelectedBlockPatch = async (patch: {
-    content?: any;
-    variant?: any;
-    style?: any;
-    anchor_id?: string;
-  }) => {
+  const saveSelectedBlockPatch = async (patch: { content?: any; variant?: any; style?: any; anchor_id?: string }) => {
     if (!selectedBlock || !site) return;
     try {
       setError(null);
@@ -815,6 +830,44 @@ export default function DashboardPage() {
   };
 
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
+
+  // ✅ Header style lives INSIDE the unified block style object:
+  // site_blocks.style.header = { ... }
+  const headerStyleObj = useMemo(() => {
+    if (!selectedBlock || selectedBlock.type !== "header") return null;
+    const style = ((selectedBlock as any).style ?? {}) as any;
+    const header = (style?.header ?? {}) as any;
+    return header;
+  }, [selectedBlock]);
+
+  function patchHeaderStyle(patch: Record<string, any>) {
+    if (!selectedBlock || selectedBlock.type !== "header") return;
+    const style = ((selectedBlock as any).style ?? {}) as any;
+    const header = (style?.header ?? {}) as any;
+    const nextHeader = { ...header, ...patch };
+    onPatchBlockStyle({ header: nextHeader });
+  }
+
+  function readHeaderColor(key: string) {
+    const v = String((headerStyleObj as any)?.[key] ?? "");
+    return v;
+  }
+
+  function setHeaderColor(key: string, raw: string) {
+    // empty => clear (inherit)
+    if (!raw) {
+      patchHeaderStyle({ [key]: null });
+      return;
+    }
+    const normalized = normalizeHexOrNull(raw);
+    if (normalized === null) return; // invalid hex => ignore
+    patchHeaderStyle({ [key]: normalized });
+  }
+
+  function readHeaderEnum(key: string, fallback: string) {
+    const v = String((headerStyleObj as any)?.[key] ?? "").trim();
+    return v || fallback;
+  }
 
   return (
     <main
@@ -860,16 +913,17 @@ export default function DashboardPage() {
                   <DbSummaryButton>Site settings</DbSummaryButton>
 
                   <DbPopoverPanel
-  className="fixed right-4 top-[72px] z-[2000] w-[520px] max-w-[92vw]"
-  onClick={(e) => e.stopPropagation()}
->
-
+                    className={clsx(
+                      "fixed right-4 top-[72px] z-[6000] w-[520px] max-w-[92vw]",
+                      // ✅ ensure it's not "transparent"
+                      "rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] shadow-[0_24px_60px_rgba(15,23,42,0.18)]",
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold">Site settings</div>
-                        <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                          Layout + theme. Colors are optional overrides.
-                        </div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Layout + theme. Colors are optional overrides.</div>
                       </div>
 
                       <Link href={publicUrl} target="_blank" className="shrink-0">
@@ -881,9 +935,7 @@ export default function DashboardPage() {
 
                     <div className="mt-4 grid gap-4">
                       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
-                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">
-                          Layout
-                        </div>
+                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Layout</div>
 
                         <div className="space-y-3">
                           <FieldRow label="Theme">
@@ -935,9 +987,7 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
-                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">
-                          Style
-                        </div>
+                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Style</div>
 
                         <div className="space-y-3">
                           <FieldRow label="Background">
@@ -1053,12 +1103,8 @@ export default function DashboardPage() {
                       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">
-                              Colors (optional)
-                            </div>
-                            <div className="text-[11px] text-[rgb(var(--db-muted))] mt-1">
-                              Leave empty to use theme defaults.
-                            </div>
+                            <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">Colors (optional)</div>
+                            <div className="text-[11px] text-[rgb(var(--db-muted))] mt-1">Leave empty to use theme defaults.</div>
                           </div>
                           <button
                             type="button"
@@ -1185,9 +1231,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold">Blocks</div>
-                  <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                    Select a block to edit. Drag to reorder.
-                  </div>
+                  <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Select a block to edit. Drag to reorder.</div>
                 </div>
               </div>
 
@@ -1207,10 +1251,7 @@ export default function DashboardPage() {
                           await createBlock(site.id, t);
                           const bs = await loadBlocks(site.id);
                           setBlocks(bs);
-                          const last = bs.reduce(
-                            (acc, cur) => (cur.position > acc.position ? cur : acc),
-                            bs[0],
-                          );
+                          const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
                           if (last?.id) setSelectedBlockId(last.id);
                         } catch (e: any) {
                           setError(e?.message ?? String(e));
@@ -1267,9 +1308,7 @@ export default function DashboardPage() {
                           <InsertBlockMenu
                             insertIndex={insertIndex}
                             isOpen={insertMenuIndex === insertIndex}
-                            onToggle={() =>
-                              setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)
-                            }
+                            onToggle={() => setInsertMenuIndex(insertMenuIndex === insertIndex ? null : insertIndex)}
                             onInsert={(t) => insertBlockAt(insertIndex, t)}
                             disabled={!site || loading || !!creating || !!inserting}
                             inserting={inserting}
@@ -1290,9 +1329,7 @@ export default function DashboardPage() {
             <div className="p-4 border-b border-[rgb(var(--db-border))] flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Preview</div>
-                <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                  What your public page looks like (live).
-                </div>
+                <div className="text-xs text-[rgb(var(--db-muted))] mt-1">What your public page looks like (live).</div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1331,11 +1368,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                <Button
-                  variant="ghost"
-                  onClick={() => setPreviewCollapsed((v) => !v)}
-                  className="px-3 py-2 text-xs"
-                >
+                <Button variant="ghost" onClick={() => setPreviewCollapsed((v) => !v)} className="px-3 py-2 text-xs">
                   {previewCollapsed ? "Expand" : "Collapse"}
                 </Button>
 
@@ -1363,7 +1396,7 @@ export default function DashboardPage() {
                     />
                   ) : (
                     <SiteShell
-                        data-preview="true"
+                      data-preview="true"
                       themeKey={site?.theme_key ?? "midnight"}
                       backgroundStyle={(site?.background_style ?? "solid") as any}
                       buttonStyle={(site?.button_style ?? "solid") as any}
@@ -1405,9 +1438,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold">Inspector</div>
-                  <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                    Selected block settings
-                  </div>
+                  <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Selected block settings</div>
                 </div>
               </div>
             </div>
@@ -1468,9 +1499,7 @@ export default function DashboardPage() {
                             <div className="text-sm font-semibold">Selected</div>
                             <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
                               {selectedBlock.type} · id{" "}
-                              <span className="font-mono text-[rgb(var(--db-text))]">
-                                {selectedBlock.id}
-                              </span>
+                              <span className="font-mono text-[rgb(var(--db-text))]">{selectedBlock.id}</span>
                             </div>
                           </div>
 
@@ -1496,9 +1525,7 @@ export default function DashboardPage() {
                         </div>
 
                         <label className="block">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">
-                            anchor_id (optional)
-                          </div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">anchor_id (optional)</div>
                           <input
                             value={anchorDraft}
                             disabled={!canAct}
@@ -1507,9 +1534,8 @@ export default function DashboardPage() {
                             className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
                           />
                           <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
-                            Use in links as{" "}
-                            <span className="font-mono text-[rgb(var(--db-text))]">#anchor</span>{" "}
-                            (e.g. <span className="font-mono text-[rgb(var(--db-text))]">/#about</span>).
+                            Use in links as <span className="font-mono text-[rgb(var(--db-text))]">#anchor</span> (e.g.{" "}
+                            <span className="font-mono text-[rgb(var(--db-text))]">/#about</span>).
                           </div>
                         </label>
                       </div>
@@ -1520,27 +1546,22 @@ export default function DashboardPage() {
                     <Card className="bg-[rgb(var(--db-soft))] shadow-none">
                       <div className="p-4 space-y-3">
                         {selectedBlock && (selectedBlock as any).type === "header" ? (
-                          <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-3">
+                          <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-4">
                             <div className="text-sm font-semibold">Header style</div>
 
+                            {/* ✅ Header layout options (variant + full_bleed) */}
                             <div>
                               <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Variant</div>
                               <select
                                 disabled={!canAct}
                                 className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)] disabled:opacity-50"
-                                value={
-                                  (((selectedBlock as any).variant ?? "default") as any) === "centered"
-                                    ? "centered"
-                                    : "default"
-                                }
+                                value={(((selectedBlock as any).variant ?? "default") as any) === "centered" ? "centered" : "default"}
                                 onChange={(e) => saveSelectedBlockPatch({ variant: e.target.value as any })}
                               >
                                 <option value="default">Default</option>
                                 <option value="centered">Centered</option>
                               </select>
-                              <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
-                                Variant — стиль/компоновка блока (site_blocks.variant).
-                              </div>
+                              <div className="text-xs text-[rgb(var(--db-muted))] mt-2">Variant — стиль/компоновка блока (site_blocks.variant).</div>
                             </div>
 
                             <div className="flex items-center justify-between rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2">
@@ -1555,14 +1576,112 @@ export default function DashboardPage() {
                             <div className="text-xs text-[rgb(var(--db-muted))]">
                               Делает хедер на всю ширину. Это style (site_blocks.style.full_bleed).
                             </div>
+
+                            {/* ✅ Header visual styling (unified, stored in site_blocks.style.header.*) */}
+                            <div className="h-px w-full bg-[rgb(var(--db-border))]" />
+
+                            <div className="text-xs text-[rgb(var(--db-muted))]">
+                              Визуальные настройки хедера (цвета/размеры) сохраняются в{" "}
+                              <span className="font-mono text-[rgb(var(--db-text))]">site_blocks.style.header</span>. Пусто = наследовать тему.
+                            </div>
+
+                            <div className="space-y-3">
+                              <PaletteColorField
+                                label="Header bg"
+                                value={readHeaderColor("bg_color")}
+                                disabled={!canAct}
+                                onChange={(v) => setHeaderColor("bg_color", v)}
+                              />
+                              <PaletteColorField
+                                label="Text"
+                                value={readHeaderColor("text_color")}
+                                disabled={!canAct}
+                                onChange={(v) => setHeaderColor("text_color", v)}
+                              />
+                              <PaletteColorField
+                                label="Links"
+                                value={readHeaderColor("link_color")}
+                                disabled={!canAct}
+                                onChange={(v) => setHeaderColor("link_color", v)}
+                              />
+                            </div>
+
+                            <div className="h-px w-full bg-[rgb(var(--db-border))]" />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <label className="block">
+                                <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Brand size</div>
+                                <select
+                                  className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                                  value={readHeaderEnum("brand_size", "md")}
+                                  disabled={!canAct}
+                                  onChange={(e) => patchHeaderStyle({ brand_size: (e.target as HTMLSelectElement).value })}
+                                >
+                                  <option value="sm">Small</option>
+                                  <option value="md">Medium</option>
+                                  <option value="lg">Large</option>
+                                </select>
+                              </label>
+
+                              <label className="block">
+                                <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Links size</div>
+                                <select
+                                  className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                                  value={readHeaderEnum("links_size", "md")}
+                                  disabled={!canAct}
+                                  onChange={(e) => patchHeaderStyle({ links_size: (e.target as HTMLSelectElement).value })}
+                                >
+                                  <option value="sm">Small</option>
+                                  <option value="md">Medium</option>
+                                  <option value="lg">Large</option>
+                                </select>
+                              </label>
+
+                              <label className="block sm:col-span-2">
+                                <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Logo size</div>
+                                <select
+                                  className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                                  value={readHeaderEnum("logo_size", "md")}
+                                  disabled={!canAct}
+                                  onChange={(e) => patchHeaderStyle({ logo_size: (e.target as HTMLSelectElement).value })}
+                                >
+                                  <option value="sm">Small</option>
+                                  <option value="md">Medium</option>
+                                  <option value="lg">Large</option>
+                                </select>
+                                <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">Применим в рендере хедера (HeaderBlockClient) на следующем шаге.</div>
+                              </label>
+                            </div>
+
+                            <div className="h-px w-full bg-[rgb(var(--db-border))]" />
+
+                            <div className="text-sm font-semibold">CTA colors</div>
+                            <div className="space-y-3">
+                              <PaletteColorField
+                                label="CTA bg"
+                                value={readHeaderColor("cta_bg_color")}
+                                disabled={!canAct}
+                                onChange={(v) => setHeaderColor("cta_bg_color", v)}
+                              />
+                              <PaletteColorField
+                                label="CTA text"
+                                value={readHeaderColor("cta_text_color")}
+                                disabled={!canAct}
+                                onChange={(v) => setHeaderColor("cta_text_color", v)}
+                              />
+                              <PaletteColorField
+                                label="CTA border"
+                                value={readHeaderColor("cta_border_color")}
+                                disabled={!canAct}
+                                onChange={(v) => setHeaderColor("cta_border_color", v)}
+                              />
+                            </div>
                           </div>
                         ) : null}
 
                         <div>
                           <div className="text-sm font-semibold">Block style</div>
-                          <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                            Applies to this block (via BlockFrame).
-                          </div>
+                          <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Applies to this block (via BlockFrame).</div>
                         </div>
 
                         <div className="mt-2">
@@ -1686,10 +1805,7 @@ export default function DashboardPage() {
 
                   {blockTab === "content" &&
                     (selectedBlock.type === "header" ? (
-                      <HeaderEditor
-                        block={selectedBlock as any}
-                        onSave={(next) => saveSelectedBlockPatch({ content: next })}
-                      />
+                      <HeaderEditor block={selectedBlock as any} onSave={(next) => saveSelectedBlockPatch({ content: next })} />
                     ) : selectedBlock.type === "hero" ? (
                       <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
                     ) : selectedBlock.type === "text" ? (
@@ -1702,8 +1818,7 @@ export default function DashboardPage() {
                       <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
                     ) : (
                       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 text-[rgb(var(--db-text))]">
-                        No editor wired for:{" "}
-                        <span className="font-mono">{String((selectedBlock as any).type)}</span>
+                        No editor wired for: <span className="font-mono">{String((selectedBlock as any).type)}</span>
                       </div>
                     ))}
                 </>
