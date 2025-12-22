@@ -1542,266 +1542,372 @@ export default function DashboardPage() {
                     </Card>
                   )}
 
-                  {blockTab === "style" && (
-                    <Card className="bg-[rgb(var(--db-soft))] shadow-none">
-                      <div className="p-4 space-y-3">
-                        {selectedBlock && (selectedBlock as any).type === "header" ? (
-                          <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-4">
-                            <div className="text-sm font-semibold">Header style</div>
+{blockTab === "style" && (
+  <Card className="bg-[rgb(var(--db-soft))] shadow-none">
+    <div className="p-4 space-y-3">
+      {/* HEADER STYLE */}
+      {selectedBlock?.type === "header" ? (
+        <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-4">
+          <div className="text-sm font-semibold">Header style</div>
 
-                            {/* ✅ Header layout options (variant + full_bleed) */}
-                            <div>
-                              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Variant</div>
-                              <select
-                                disabled={!canAct}
-                                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)] disabled:opacity-50"
-                                value={(((selectedBlock as any).variant ?? "default") as any) === "centered" ? "centered" : "default"}
-                                onChange={(e) => saveSelectedBlockPatch({ variant: e.target.value as any })}
-                              >
-                                <option value="default">Default</option>
-                                <option value="centered">Centered</option>
-                              </select>
-                              <div className="text-xs text-[rgb(var(--db-muted))] mt-2">Variant — стиль/компоновка блока (site_blocks.variant).</div>
-                            </div>
+          {/* Variant */}
+          <div>
+            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Variant</div>
+            <select
+              disabled={!canAct}
+              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)] disabled:opacity-50"
+              value={(((selectedBlock as any).variant ?? "default") as any) === "centered" ? "centered" : "default"}
+              onChange={(e) => saveSelectedBlockPatch({ variant: (e.target as HTMLSelectElement).value as any })}
+            >
+              <option value="default">Default</option>
+              <option value="centered">Centered</option>
+            </select>
+            <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
+              Variant — компоновка блока (site_blocks.variant).
+            </div>
+          </div>
 
-                            <div className="flex items-center justify-between rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2">
-                              <div className="text-sm font-medium">Full width (edge-to-edge)</div>
-                              <input
-                                disabled={!canAct}
-                                type="checkbox"
-                                checked={Boolean(((selectedBlock as any)?.style as any)?.full_bleed)}
-                                onChange={(e) => onPatchBlockStyle({ full_bleed: e.target.checked })}
-                              />
-                            </div>
-                            <div className="text-xs text-[rgb(var(--db-muted))]">
-                              Делает хедер на всю ширину. Это style (site_blocks.style.full_bleed).
-                            </div>
+          {/* Full width */}
+          <div className="flex items-center justify-between rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2">
+            <div className="text-sm font-medium">Full width (edge-to-edge)</div>
+            <input
+              disabled={!canAct}
+              type="checkbox"
+              checked={Boolean(((selectedBlock as any)?.style as any)?.full_bleed)}
+              onChange={(e) => onPatchBlockStyle({ full_bleed: (e.target as HTMLInputElement).checked })}
+            />
+          </div>
+          <div className="text-xs text-[rgb(var(--db-muted))]">
+            Делает хедер на всю ширину. Это style (site_blocks.style.full_bleed).
+          </div>
 
-                            {/* ✅ Header visual styling (unified, stored in site_blocks.style.header.*) */}
-                            <div className="h-px w-full bg-[rgb(var(--db-border))]" />
+          {/* Visuals */}
+          <div className="h-px w-full bg-[rgb(var(--db-border))]" />
 
-                            <div className="text-xs text-[rgb(var(--db-muted))]">
-                              Визуальные настройки хедера (цвета/размеры) сохраняются в{" "}
-                              <span className="font-mono text-[rgb(var(--db-text))]">site_blocks.style.header</span>. Пусто = наследовать тему.
-                            </div>
+          <div className="text-xs text-[rgb(var(--db-muted))]">
+            Визуальные настройки хедера сохраняются в{" "}
+            <span className="font-mono text-[rgb(var(--db-text))]">site_blocks.style.header</span>. Пусто = наследовать тему.
+          </div>
 
-                            <div className="space-y-3">
-                              <PaletteColorField
-                                label="Header bg"
-                                value={readHeaderColor("bg_color")}
-                                disabled={!canAct}
-                                onChange={(v) => setHeaderColor("bg_color", v)}
-                              />
-                              <PaletteColorField
-                                label="Text"
-                                value={readHeaderColor("text_color")}
-                                disabled={!canAct}
-                                onChange={(v) => setHeaderColor("text_color", v)}
-                              />
-                              <PaletteColorField
-                                label="Links"
-                                value={readHeaderColor("link_color")}
-                                disabled={!canAct}
-                                onChange={(v) => setHeaderColor("link_color", v)}
-                              />
-                            </div>
+          <div className="space-y-3">
+            <PaletteColorField
+              label="Header bg"
+              value={readHeaderColor("bg_color")}
+              disabled={!canAct}
+              onChange={(v) => setHeaderColor("bg_color", v)}
+            />
+            <PaletteColorField
+              label="Text"
+              value={readHeaderColor("text_color")}
+              disabled={!canAct}
+              onChange={(v) => setHeaderColor("text_color", v)}
+            />
+            <PaletteColorField
+              label="Links"
+              value={readHeaderColor("link_color")}
+              disabled={!canAct}
+              onChange={(v) => setHeaderColor("link_color", v)}
+            />
+          </div>
 
-                            <div className="h-px w-full bg-[rgb(var(--db-border))]" />
+          {/* Sizes */}
+          <div className="h-px w-full bg-[rgb(var(--db-border))]" />
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <label className="block">
-                                <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Brand size</div>
-                                <select
-                                  className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
-                                  value={readHeaderEnum("brand_size", "md")}
-                                  disabled={!canAct}
-                                  onChange={(e) => patchHeaderStyle({ brand_size: (e.target as HTMLSelectElement).value })}
-                                >
-                                  <option value="sm">Small</option>
-                                  <option value="md">Medium</option>
-                                  <option value="lg">Large</option>
-                                </select>
-                              </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Brand size</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={readHeaderEnum("brand_size", "md")}
+                disabled={!canAct}
+                onChange={(e) => patchHeaderStyle({ brand_size: (e.target as HTMLSelectElement).value })}
+              >
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+              </select>
+            </label>
 
-                              <label className="block">
-                                <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Links size</div>
-                                <select
-                                  className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
-                                  value={readHeaderEnum("links_size", "md")}
-                                  disabled={!canAct}
-                                  onChange={(e) => patchHeaderStyle({ links_size: (e.target as HTMLSelectElement).value })}
-                                >
-                                  <option value="sm">Small</option>
-                                  <option value="md">Medium</option>
-                                  <option value="lg">Large</option>
-                                </select>
-                              </label>
+            <label className="block">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Links size</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={readHeaderEnum("links_size", "md")}
+                disabled={!canAct}
+                onChange={(e) => patchHeaderStyle({ links_size: (e.target as HTMLSelectElement).value })}
+              >
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+              </select>
+            </label>
 
-                              <label className="block sm:col-span-2">
-                                <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Logo size</div>
-                                <select
-                                  className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
-                                  value={readHeaderEnum("logo_size", "md")}
-                                  disabled={!canAct}
-                                  onChange={(e) => patchHeaderStyle({ logo_size: (e.target as HTMLSelectElement).value })}
-                                >
-                                  <option value="sm">Small</option>
-                                  <option value="md">Medium</option>
-                                  <option value="lg">Large</option>
-                                </select>
-                                <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">Применим в рендере хедера (HeaderBlockClient) на следующем шаге.</div>
-                              </label>
-                            </div>
+            <label className="block sm:col-span-2">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Logo size</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={readHeaderEnum("logo_size", "md")}
+                disabled={!canAct}
+                onChange={(e) => patchHeaderStyle({ logo_size: (e.target as HTMLSelectElement).value })}
+              >
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+              </select>
+              <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">
+                Применим в рендере хедера (HeaderBlockClient) на следующем шаге.
+              </div>
+            </label>
+          </div>
 
-                            <div className="h-px w-full bg-[rgb(var(--db-border))]" />
+          {/* CTA colors */}
+          <div className="h-px w-full bg-[rgb(var(--db-border))]" />
 
-                            <div className="text-sm font-semibold">CTA colors</div>
-                            <div className="space-y-3">
-                              <PaletteColorField
-                                label="CTA bg"
-                                value={readHeaderColor("cta_bg_color")}
-                                disabled={!canAct}
-                                onChange={(v) => setHeaderColor("cta_bg_color", v)}
-                              />
-                              <PaletteColorField
-                                label="CTA text"
-                                value={readHeaderColor("cta_text_color")}
-                                disabled={!canAct}
-                                onChange={(v) => setHeaderColor("cta_text_color", v)}
-                              />
-                              <PaletteColorField
-                                label="CTA border"
-                                value={readHeaderColor("cta_border_color")}
-                                disabled={!canAct}
-                                onChange={(v) => setHeaderColor("cta_border_color", v)}
-                              />
-                            </div>
-                          </div>
-                        ) : null}
+          <div className="text-sm font-semibold">CTA colors</div>
+          <div className="space-y-3">
+            <PaletteColorField
+              label="CTA bg"
+              value={readHeaderColor("cta_bg_color")}
+              disabled={!canAct}
+              onChange={(v) => setHeaderColor("cta_bg_color", v)}
+            />
+            <PaletteColorField
+              label="CTA text"
+              value={readHeaderColor("cta_text_color")}
+              disabled={!canAct}
+              onChange={(v) => setHeaderColor("cta_text_color", v)}
+            />
+            <PaletteColorField
+              label="CTA border"
+              value={readHeaderColor("cta_border_color")}
+              disabled={!canAct}
+              onChange={(v) => setHeaderColor("cta_border_color", v)}
+            />
+          </div>
+        </div>
+      ) : null}
 
-                        <div>
-                          <div className="text-sm font-semibold">Block style</div>
-                          <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Applies to this block (via BlockFrame).</div>
-                        </div>
+      {/* IMAGE STYLE */}
+      {selectedBlock?.type === "image" ? (
+        <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-4">
+          <div className="text-sm font-semibold">Image style</div>
 
-                        <div className="mt-2">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Presets</div>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              ["card", "Card"],
-                              ["minimal", "Minimal"],
-                              ["wide_section", "Wide section"],
-                              ["centered", "Centered"],
-                              ["hero_highlight", "Hero highlight"],
-                            ].map(([k, label]) => (
-                              <button
-                                key={String(k)}
-                                type="button"
-                                disabled={!canAct}
-                                className="rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-panel))] disabled:opacity-40"
-                                onClick={() => onApplyStylePreset(String(k))}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+          <div className="text-xs text-[rgb(var(--db-muted))]">
+            Настройки изображения сохраняются в{" "}
+            <span className="font-mono text-[rgb(var(--db-text))]">site_blocks.style.image</span>. Пусто = дефолт.
+          </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <label className="block">
-                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Padding</div>
-                            <select
-                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                              value={getStyleView().padding}
-                              disabled={!canAct}
-                              onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
-                            >
-                              <option value="none">None</option>
-                              <option value="sm">Small</option>
-                              <option value="md">Medium</option>
-                              <option value="lg">Large</option>
-                            </select>
-                          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Size</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={String((((selectedBlock as any)?.style as any)?.image as any)?.size ?? "md")}
+                disabled={!canAct}
+                onChange={(e) => {
+                  const cur = ((((selectedBlock as any)?.style ?? {}) as any).image ?? {}) as any;
+                  onPatchBlockStyle({ image: { ...cur, size: (e.target as HTMLSelectElement).value } });
+                }}
+              >
+                <option value="xs">XS</option>
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+                <option value="xl">XL</option>
+                <option value="2xl">2XL</option>
+                <option value="3xl">3XL</option>
+                <option value="full">Full width</option>
+              </select>
+            </label>
 
-                          <label className="block">
-                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Width</div>
-                            <select
-                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                              value={getStyleView().width}
-                              disabled={!canAct}
-                              onChange={(e) => {
-                                const v = e.target.value === "compact" ? "content" : e.target.value;
-                                onPatchBlockStyle({ width: v });
-                              }}
-                            >
-                              <option value="compact">Compact</option>
-                              <option value="wide">Wide</option>
-                              <option value="full">Full</option>
-                            </select>
-                          </label>
+            <label className="block">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Image radius</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={String((((selectedBlock as any)?.style as any)?.image as any)?.radius ?? "none")}
+                disabled={!canAct}
+                onChange={(e) => {
+                  const cur = ((((selectedBlock as any)?.style ?? {}) as any).image ?? {}) as any;
+                  onPatchBlockStyle({ image: { ...cur, radius: (e.target as HTMLSelectElement).value } });
+                }}
+              >
+                <option value="none">None</option>
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+                <option value="xl">XL</option>
+                <option value="2xl">2XL</option>
+                <option value="full">Full</option>
+              </select>
+            </label>
 
-                          <label className="block sm:col-span-2">
-                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background</div>
-                            <select
-                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                              value={getStyleView().background}
-                              disabled={!canAct}
-                              onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
-                            >
-                              <option value="none">None</option>
-                              <option value="card">Card</option>
-                              <option value="highlight">Highlight</option>
-                            </select>
-                          </label>
+            <label className="block">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Aspect ratio</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={String((((selectedBlock as any)?.style as any)?.image as any)?.ratio ?? "")}
+                disabled={!canAct}
+                onChange={(e) => {
+                  const cur = ((((selectedBlock as any)?.style ?? {}) as any).image ?? {}) as any;
+                  onPatchBlockStyle({ image: { ...cur, ratio: (e.target as HTMLSelectElement).value } });
+                }}
+              >
+                <option value="">Default</option>
+                <option value="1:1">1:1 (Square)</option>
+                <option value="4:5">4:5</option>
+                <option value="3:4">3:4</option>
+                <option value="4:3">4:3</option>
+                <option value="3:2">3:2</option>
+                <option value="16:9">16:9</option>
+                <option value="21:9">21:9</option>
+              </select>
+            </label>
 
-                          <label className="block">
-                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Align</div>
-                            <select
-                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                              value={getStyleView().align}
-                              disabled={!canAct}
-                              onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
-                            >
-                              <option value="left">Left</option>
-                              <option value="center">Center</option>
-                              <option value="right">Right</option>
-                            </select>
-                          </label>
+            <label className="block">
+              <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Align</div>
+              <select
+                className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                value={String((((selectedBlock as any)?.style as any)?.image as any)?.align ?? "center")}
+                disabled={!canAct}
+                onChange={(e) => {
+                  const cur = ((((selectedBlock as any)?.style ?? {}) as any).image ?? {}) as any;
+                  onPatchBlockStyle({ image: { ...cur, align: (e.target as HTMLSelectElement).value } });
+                }}
+              >
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
 
-                          <label className="block">
-                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Radius</div>
-                            <select
-                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                              value={getStyleView().radius}
-                              disabled={!canAct}
-                              onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
-                            >
-                              <option value="none">None</option>
-                              <option value="sm">Small</option>
-                              <option value="md">Medium</option>
-                              <option value="lg">Large</option>
-                              <option value="xl">XL</option>
-                              <option value="2xl">2XL</option>
-                            </select>
-                          </label>
+      {/* GENERIC BLOCK STYLE */}
+      <div>
+        <div className="text-sm font-semibold">Block style</div>
+        <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Applies to this block (via BlockFrame).</div>
+      </div>
 
-                          <label className="block sm:col-span-2">
-                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Border</div>
-                            <select
-                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                              value={getStyleView().border}
-                              disabled={!canAct}
-                              onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
-                            >
-                              <option value="none">None</option>
-                              <option value="subtle">Subtle</option>
-                              <option value="strong">Strong</option>
-                            </select>
-                          </label>
-                        </div>
-                      </div>
-                    </Card>
-                  )}
+      <div className="mt-2">
+        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Presets</div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            ["card", "Card"],
+            ["minimal", "Minimal"],
+            ["wide_section", "Wide section"],
+            ["centered", "Centered"],
+            ["hero_highlight", "Hero highlight"],
+          ].map(([k, label]) => (
+            <button
+              key={String(k)}
+              type="button"
+              disabled={!canAct}
+              className="rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-panel))] disabled:opacity-40"
+              onClick={() => onApplyStylePreset(String(k))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="block">
+          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Padding</div>
+          <select
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+            value={getStyleView().padding}
+            disabled={!canAct}
+            onChange={(e) => onPatchBlockStyle({ padding: (e.target as HTMLSelectElement).value })}
+          >
+            <option value="none">None</option>
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Width</div>
+          <select
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+            value={getStyleView().width}
+            disabled={!canAct}
+            onChange={(e) => {
+              const v = (e.target as HTMLSelectElement).value === "compact" ? "content" : (e.target as HTMLSelectElement).value;
+              onPatchBlockStyle({ width: v });
+            }}
+          >
+            <option value="compact">Compact</option>
+            <option value="wide">Wide</option>
+            <option value="full">Full</option>
+          </select>
+        </label>
+
+        <label className="block sm:col-span-2">
+          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background</div>
+          <select
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+            value={getStyleView().background}
+            disabled={!canAct}
+            onChange={(e) => onPatchBlockStyle({ background: (e.target as HTMLSelectElement).value })}
+          >
+            <option value="none">None</option>
+            <option value="card">Card</option>
+            <option value="highlight">Highlight</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Align</div>
+          <select
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+            value={getStyleView().align}
+            disabled={!canAct}
+            onChange={(e) => onPatchBlockStyle({ align: (e.target as HTMLSelectElement).value })}
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Radius</div>
+          <select
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+            value={getStyleView().radius}
+            disabled={!canAct}
+            onChange={(e) => onPatchBlockStyle({ radius: (e.target as HTMLSelectElement).value })}
+          >
+            <option value="none">None</option>
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+            <option value="xl">XL</option>
+            <option value="2xl">2XL</option>
+          </select>
+        </label>
+
+        <label className="block sm:col-span-2">
+          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Border</div>
+          <select
+            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+            value={getStyleView().border}
+            disabled={!canAct}
+            onChange={(e) => onPatchBlockStyle({ border: (e.target as HTMLSelectElement).value })}
+          >
+            <option value="none">None</option>
+            <option value="subtle">Subtle</option>
+            <option value="strong">Strong</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </Card>
+)}
+
 
                   {blockTab === "content" &&
                     (selectedBlock.type === "header" ? (

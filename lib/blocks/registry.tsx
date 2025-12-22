@@ -414,47 +414,68 @@ return (
       );
     },
   },
+    image: {
+      title: "Image",
+      render: ({ block }) => {
+        const c = asObj(block.content);
+        const s = asObj((block as any).style);
 
-  image: {
-    title: "Image",
-    render: ({ block }) => {
-      const c = asObj(block.content);
-      const s = asObj((block as any).style);
+        // ✅ единая система: style.image (block-specific overrides)
+        const imgStyle = asObj((s as any).image);
 
-      const url = normalizeUrl(c.url);
-      const alt = safeTrim(c.alt) || "Image";
-      const shape = (c.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
+        const url = normalizeUrl(c.url);
+        const alt = safeTrim(c.alt) || "Image";
+        const shape = (c.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
 
-      if (!url) return null;
+        if (!url) return null;
 
-      // ✅ radius priority:
-      // 1) circle всегда круг
-      // 2) если в Style tab задан radius -> применяем его
-      // 3) иначе старое поведение от shape
-      const styleRadiusRaw = (s as any)?.radius;
-      const fallbackRadius =
-        shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+        // --- Size (optional) ---
+        // imgStyle.size: "xs" | "sm" | "md" | "lg" | "xl"
+        const sizeKey = String((imgStyle as any).size ?? "md");
+        const sizePx =
+          sizeKey === "xs"
+            ? 72
+            : sizeKey === "sm"
+              ? 96
+              : sizeKey === "lg"
+                ? 144
+                : sizeKey === "xl"
+                  ? 176
+                  : 112; // md default
 
-      const radiusValue =
-        shape === "circle"
-          ? "9999px"
-          : styleRadiusRaw != null
-            ? normalizeRadiusValue(styleRadiusRaw)
-            : fallbackRadius;
+        // --- Radius ---
+        // ✅ radius priority:
+        // 1) circle всегда круг
+        // 2) style.image.radius (новый ключ)
+        // 3) legacy: style.radius (старый ключ, на всякий случай)
+        // 4) fallback от shape
+        const styleRadiusRaw = (imgStyle as any)?.radius ?? (s as any)?.radius;
+        const fallbackRadius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
 
-      return (
-        <div className="flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={url}
-            alt={alt}
-            className="h-28 w-28 object-cover"
-            style={{ borderRadius: radiusValue }}
-          />
-        </div>
-      );
+        const radiusValue =
+          shape === "circle"
+            ? "9999px"
+            : styleRadiusRaw != null
+              ? normalizeRadiusValue(styleRadiusRaw)
+              : fallbackRadius;
+
+        return (
+          <div className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt={alt}
+              className={sizeKey === "full" ? "w-full max-w-full object-contain" : "object-cover"}
+                style={{
+                  width: sizeKey === "full" ? "100%" : sizePx,
+                  height: sizeKey === "full" ? "auto" : sizePx,
+                  borderRadius: radiusValue,
+                }}
+            />
+          </div>
+        );
+      },
     },
-  },
 
 
   text: {
