@@ -20,6 +20,40 @@ function normalizeHex(v: any) {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(x) ? x : "";
 }
 
+function normalizeRadiusValue(radiusRaw: any): string {
+  // number -> px
+  if (typeof radiusRaw === "number") return `${radiusRaw}px`;
+
+  const raw = String(radiusRaw ?? "").trim();
+  if (!raw) return "24px"; // default like rounded-2xl
+
+  const low = raw.toLowerCase();
+
+  // direct css length / var()
+  if (raw.startsWith("var(")) return raw;
+  if (/^(0|0px|\d+(\.\d+)?(px|rem|em|%|vh|vw))$/.test(low)) return raw;
+
+  // tokens
+  switch (low) {
+    case "none":
+      return "0px";
+    case "sm":
+      return "12px";
+    case "md":
+      return "16px";
+    case "lg":
+      return "20px";
+    case "xl":
+      return "24px";
+    case "2xl":
+      return "32px";
+    case "full":
+      return "9999px";
+    default:
+      return "24px";
+  }
+}
+
 export type HeaderLinkItem = {
   label: string;
   url: string;
@@ -29,6 +63,8 @@ export type HeaderStyle = {
   text_color?: string | null;
   link_color?: string | null;
   bg_color?: string | null;
+
+  radius?: string | number | null;
 
   brand_size?: "sm" | "md" | "lg" | null;
   links_size?: "sm" | "md" | "lg" | null;
@@ -91,7 +127,7 @@ export function HeaderBlockClient(props: {
     setInDashboardPreview(!!el.closest('[data-preview="true"]'));
   }, []);
 
-  // закрытие меню по клику вне
+  // close menu on outside click
   React.useEffect(() => {
     const el = detailsRef.current;
     if (!el) return;
@@ -108,8 +144,7 @@ export function HeaderBlockClient(props: {
     return () => document.removeEventListener("pointerdown", closeIfOutside, true);
   }, []);
 
-  // Важно: в превью дашборда НЕ поднимаем z-index (чтобы не залезало на Site settings)
-  // На паблике можно.
+  // In dashboard preview do not raise z-index (so header does not overlap Site settings)
   const rootZ = inDashboardPreview ? "z-0" : "z-10";
 
   const rootVars: React.CSSProperties = {
@@ -120,6 +155,8 @@ export function HeaderBlockClient(props: {
     ...(ctaText ? ({ ["--hdr-cta-text" as any]: ctaText } as any) : {}),
     ...(ctaBorder ? ({ ["--hdr-cta-border" as any]: ctaBorder } as any) : {}),
   };
+
+  const hdrRadius = normalizeRadiusValue((style as any).radius);
 
   const Brand = () => {
     const inner = (
@@ -206,14 +243,8 @@ export function HeaderBlockClient(props: {
               }
             }
           }}
-          className={
-            layout === "col"
-              ? "px-3 py-2 hover:bg-white/10 transition"
-              : "transition-colors"
-          }
-          style={{
-            color: hdrLink ? "var(--hdr-link)" : undefined,
-          }}
+          className={layout === "col" ? "px-3 py-2 hover:bg-white/10 transition" : "transition-colors"}
+          style={{ color: hdrLink ? "var(--hdr-link)" : undefined }}
         >
           {safeTrim(it.label)}
         </a>
@@ -245,7 +276,10 @@ export function HeaderBlockClient(props: {
   if (variant === "centered") {
     return (
       <div ref={rootRef} className={`w-full relative ${rootZ}`} style={rootVars}>
-        <div className={`${wrapBgCls} border border-white/10 px-4 py-4 rounded-2xl`}>
+        <div
+          className={`${wrapBgCls} border border-white/10 px-4 py-4`}
+          style={{ borderRadius: hdrRadius }}
+        >
           <div className="flex items-center justify-center">
             <Brand />
           </div>
@@ -269,7 +303,10 @@ export function HeaderBlockClient(props: {
   // default
   return (
     <div ref={rootRef} className={`w-full relative ${rootZ}`} style={rootVars}>
-      <div className={`relative ${wrapBgCls} border border-white/10 px-4 py-3 rounded-2xl`}>
+      <div
+        className={`relative ${wrapBgCls} border border-white/10 px-4 py-3`}
+        style={{ borderRadius: hdrRadius }}
+      >
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <Brand />
@@ -287,7 +324,7 @@ export function HeaderBlockClient(props: {
             </div>
           ) : null}
 
-          {(items.length || hasCta) ? (
+          {items.length || hasCta ? (
             <div className="sm:hidden">
               <details ref={detailsRef} className="group" suppressHydrationWarning>
                 <summary
@@ -325,7 +362,7 @@ export function HeaderBlockClient(props: {
                   </svg>
                 </summary>
 
-                {/* ВАЖНО: в дашборд-превью не поднимаем z, иначе перекроет Site settings */}
+                {/* In dashboard preview do not raise z, otherwise overlaps Site settings */}
                 <div className="hidden group-open:block absolute left-4 right-4 top-[3.25rem] z-0">
                   <div
                     className={[
@@ -336,12 +373,15 @@ export function HeaderBlockClient(props: {
                       "origin-top scale-95 opacity-0 translate-y-1",
                       "group-open:scale-100 group-open:opacity-100 group-open:translate-y-0",
                       "transition duration-150",
-                      "rounded-2xl",
                     ].join(" ")}
+                    style={{ borderRadius: hdrRadius }}
                   >
                     <div className="flex flex-col gap-2">
                       {items.length ? (
-                        <div className="bg-white/5 px-3 py-3 rounded-2xl">
+                        <div
+                          className="bg-white/5 px-3 py-3"
+                          style={{ borderRadius: hdrRadius }}
+                        >
                           <Links justify="start" layout="col" closeOnClick />
                         </div>
                       ) : null}
