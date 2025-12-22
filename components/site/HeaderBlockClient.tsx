@@ -13,9 +13,31 @@ function normalizeUrl(raw: any) {
   return v;
 }
 
+function normalizeHex(v: any) {
+  const s = safeTrim(v);
+  if (!s) return "";
+  const x = s.startsWith("#") ? s : `#${s}`;
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(x) ? x : "";
+}
+
 export type HeaderLinkItem = {
   label: string;
   url: string;
+};
+
+export type HeaderStyle = {
+  text_color?: string | null;
+  link_color?: string | null;
+  bg_color?: string | null;
+
+  brand_size?: "sm" | "md" | "lg" | null;
+  links_size?: "sm" | "md" | "lg" | null;
+
+  logo_size?: "sm" | "md" | "lg" | null;
+
+  cta_bg_color?: string | null;
+  cta_text_color?: string | null;
+  cta_border_color?: string | null;
 };
 
 export function HeaderBlockClient(props: {
@@ -27,6 +49,7 @@ export function HeaderBlockClient(props: {
   hasCta: boolean;
   ctaLabel?: string;
   ctaUrl?: string;
+  style?: HeaderStyle | null;
 }) {
   const variant = String(props.variant ?? "default");
 
@@ -39,18 +62,36 @@ export function HeaderBlockClient(props: {
   const ctaLabel = safeTrim(props.ctaLabel || "");
   const ctaUrl = normalizeUrl(props.ctaUrl || "");
 
+  const style = (props.style ?? {}) as HeaderStyle;
+
+  const hdrText = normalizeHex(style.text_color);
+  const hdrLink = normalizeHex(style.link_color);
+  const hdrBg = normalizeHex(style.bg_color);
+
+  const ctaBg = normalizeHex(style.cta_bg_color);
+  const ctaText = normalizeHex(style.cta_text_color);
+  const ctaBorder = normalizeHex(style.cta_border_color);
+
+  const brandSize = (style.brand_size ?? "md") as "sm" | "md" | "lg";
+  const linksSize = (style.links_size ?? "md") as "sm" | "md" | "lg";
+  const logoSize = (style.logo_size ?? "md") as "sm" | "md" | "lg";
+
+  const brandCls = brandSize === "sm" ? "text-sm" : brandSize === "lg" ? "text-lg" : "text-base";
+  const linksCls = linksSize === "sm" ? "text-xs" : linksSize === "lg" ? "text-base" : "text-sm";
+
+  const logoPx = logoSize === "sm" ? 24 : logoSize === "lg" ? 36 : 28;
+
   const detailsRef = React.useRef<HTMLDetailsElement | null>(null);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [inDashboardPreview, setInDashboardPreview] = React.useState(false);
 
-  // Detect: this header is rendered inside the Dashboard desktop preview (SiteShell has data-preview="true")
   React.useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
     setInDashboardPreview(!!el.closest('[data-preview="true"]'));
   }, []);
 
-  // Close mobile menu on outside click (only when open)
+  // закрытие меню по клику вне
   React.useEffect(() => {
     const el = detailsRef.current;
     if (!el) return;
@@ -67,22 +108,36 @@ export function HeaderBlockClient(props: {
     return () => document.removeEventListener("pointerdown", closeIfOutside, true);
   }, []);
 
+  // Важно: в превью дашборда НЕ поднимаем z-index (чтобы не залезало на Site settings)
+  // На паблике можно.
+  const rootZ = inDashboardPreview ? "z-0" : "z-10";
+
+  const rootVars: React.CSSProperties = {
+    ...(hdrText ? ({ ["--hdr-text" as any]: hdrText } as any) : {}),
+    ...(hdrLink ? ({ ["--hdr-link" as any]: hdrLink } as any) : {}),
+    ...(hdrBg ? ({ ["--hdr-bg" as any]: hdrBg } as any) : {}),
+    ...(ctaBg ? ({ ["--hdr-cta-bg" as any]: ctaBg } as any) : {}),
+    ...(ctaText ? ({ ["--hdr-cta-text" as any]: ctaText } as any) : {}),
+    ...(ctaBorder ? ({ ["--hdr-cta-border" as any]: ctaBorder } as any) : {}),
+  };
+
   const Brand = () => {
     const inner = (
-      <div
-        className="flex items-center gap-2 min-w-0"
-        style={{ borderRadius: "var(--radius,15px)" }}
-      >
+      <div className="flex items-center gap-2 min-w-0">
         {logoUrl ? (
           <img
             src={logoUrl}
             alt={brandText || "Logo"}
-            className="h-7 w-7 rounded-full object-cover border border-white/10"
+            style={{ width: logoPx, height: logoPx }}
+            className="rounded-full object-cover border border-white/10"
           />
         ) : null}
         <div
-          className="font-semibold text-white/90 truncate"
-          style={{ borderRadius: "var(--radius,15px)" }}
+          className={[
+            "font-semibold truncate",
+            brandCls,
+            hdrText ? "text-[var(--hdr-text)]" : "text-white/90",
+          ].join(" ")}
         >
           {brandText || " "}
         </div>
@@ -91,11 +146,7 @@ export function HeaderBlockClient(props: {
 
     if (brandUrl) {
       return (
-        <a
-          href={brandUrl}
-          className="hover:opacity-90 transition-opacity"
-          style={{ borderRadius: "var(--radius,15px)" }}
-        >
+        <a href={brandUrl} className="hover:opacity-90 transition-opacity">
           {inner}
         </a>
       );
@@ -114,9 +165,7 @@ export function HeaderBlockClient(props: {
   }) => (
     <div
       className={[
-        layout === "col"
-          ? "flex flex-col gap-2 text-sm text-white/80"
-          : "flex flex-wrap gap-x-4 gap-y-2 text-sm text-white/70",
+        layout === "col" ? "flex flex-col gap-2" : "flex flex-wrap gap-x-4 gap-y-2",
         layout === "col"
           ? "items-stretch"
           : justify === "center"
@@ -124,6 +173,7 @@ export function HeaderBlockClient(props: {
             : justify === "end"
               ? "justify-end"
               : "justify-start",
+        linksCls,
       ].join(" ")}
     >
       {items.map((it, idx) => (
@@ -158,10 +208,12 @@ export function HeaderBlockClient(props: {
           }}
           className={
             layout === "col"
-              ? "px-3 py-2 hover:bg-white/10 hover:text-white transition"
-              : "hover:text-white/90 transition-colors"
+              ? "px-3 py-2 hover:bg-white/10 transition"
+              : "transition-colors"
           }
-          style={{ borderRadius: "var(--radius,15px)" }}
+          style={{
+            color: hdrLink ? "var(--hdr-link)" : undefined,
+          }}
         >
           {safeTrim(it.label)}
         </a>
@@ -173,24 +225,27 @@ export function HeaderBlockClient(props: {
     hasCta && ctaLabel && ctaUrl ? (
       <a
         href={ctaUrl}
-        className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/15 transition border border-white/10"
-        style={{ borderRadius: "var(--radius,15px)" }}
+        className={[
+          "inline-flex items-center justify-center rounded-full px-4 py-2 font-semibold transition border",
+          linksCls,
+          "bg-white/10 hover:bg-white/15 border-white/10 text-white/90",
+        ].join(" ")}
+        style={{
+          background: ctaBg ? "var(--hdr-cta-bg)" : undefined,
+          color: ctaText ? "var(--hdr-cta-text)" : undefined,
+          borderColor: ctaBorder ? "var(--hdr-cta-border)" : undefined,
+        }}
       >
         {ctaLabel}
       </a>
     ) : null;
 
-  // In dashboard preview, keep header under UI popovers (Site settings has z-50)
-  const headerZClass = inDashboardPreview ? "relative z-10" : "relative z-40";
-  const mobileDropdownZClass = inDashboardPreview ? "z-20" : "z-[100]";
+  const wrapBgCls = hdrBg ? "bg-[var(--hdr-bg)]" : "bg-white/5";
 
   if (variant === "centered") {
     return (
-      <div ref={rootRef} className={`w-full ${headerZClass}`} style={{ borderRadius: "var(--radius,15px)" }}>
-        <div
-          className="bg-white/5 border border-white/10 px-4 py-4"
-          style={{ borderRadius: "var(--radius,15px)" }}
-        >
+      <div ref={rootRef} className={`w-full relative ${rootZ}`} style={rootVars}>
+        <div className={`${wrapBgCls} border border-white/10 px-4 py-4 rounded-2xl`}>
           <div className="flex items-center justify-center">
             <Brand />
           </div>
@@ -213,11 +268,8 @@ export function HeaderBlockClient(props: {
 
   // default
   return (
-    <div ref={rootRef} className={`w-full ${headerZClass}`}>
-      <div
-        className="relative bg-white/5 border border-white/10 px-4 py-3"
-        style={{ borderRadius: "var(--radius,15px)" }}
-      >
+    <div ref={rootRef} className={`w-full relative ${rootZ}`} style={rootVars}>
+      <div className={`relative ${wrapBgCls} border border-white/10 px-4 py-3 rounded-2xl`}>
         <div className="flex items-center gap-4">
           <div className="min-w-0 flex-1">
             <Brand />
@@ -235,7 +287,7 @@ export function HeaderBlockClient(props: {
             </div>
           ) : null}
 
-          {items.length || hasCta ? (
+          {(items.length || hasCta) ? (
             <div className="sm:hidden">
               <details ref={detailsRef} className="group" suppressHydrationWarning>
                 <summary
@@ -247,7 +299,6 @@ export function HeaderBlockClient(props: {
                   ].join(" ")}
                   aria-label="Toggle menu"
                 >
-                  {/* burger */}
                   <svg
                     width="18"
                     height="18"
@@ -261,7 +312,6 @@ export function HeaderBlockClient(props: {
                     <path d="M4 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
 
-                  {/* close (X) */}
                   <svg
                     width="18"
                     height="18"
@@ -275,24 +325,23 @@ export function HeaderBlockClient(props: {
                   </svg>
                 </summary>
 
-                <div className={`hidden group-open:block absolute left-4 right-4 top-[3.25rem] ${mobileDropdownZClass}`}>
+                {/* ВАЖНО: в дашборд-превью не поднимаем z, иначе перекроет Site settings */}
+                <div className="hidden group-open:block absolute left-4 right-4 top-[3.25rem] z-0">
                   <div
-                    style={{ borderRadius: "var(--radius,15px)" }}
                     className={[
-                      "border border-white/10 bg-black overflow-hidden",
+                      "border border-white/10 overflow-hidden",
+                      hdrBg ? "bg-[var(--hdr-bg)]" : "bg-black",
                       "max-h-[70vh] overflow-auto pr-1",
                       "px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.55)]",
                       "origin-top scale-95 opacity-0 translate-y-1",
                       "group-open:scale-100 group-open:opacity-100 group-open:translate-y-0",
                       "transition duration-150",
+                      "rounded-2xl",
                     ].join(" ")}
                   >
                     <div className="flex flex-col gap-2">
                       {items.length ? (
-                        <div
-                          className="bg-white/5 px-3 py-3"
-                          style={{ borderRadius: "var(--radius,15px)" }}
-                        >
+                        <div className="bg-white/5 px-3 py-3 rounded-2xl">
                           <Links justify="start" layout="col" closeOnClick />
                         </div>
                       ) : null}

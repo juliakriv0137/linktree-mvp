@@ -158,21 +158,24 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     title: "Header",
     render: ({ block }) => {
       const c = asObj(block.content);
+      const s = asObj((block as any).style);
       const variant = String((block as any).variant ?? "default");
-
+  
       const brandText = safeTrim(c.brand_text ?? "My Site");
       const brandUrl = normalizeUrl(c.brand_url ?? "");
       const logoUrl = safeTrim(c.logo_url ?? "");
-
+  
       const links = Array.isArray(c.links) ? c.links : [];
       const items = links
         .map((x: any) => ({ label: safeTrim(x.label), url: normalizeUrl(x.url) }))
         .filter((x: any) => x.label && x.url);
-
+  
       const showCta = Boolean(c.show_cta);
       const ctaLabel = safeTrim(c.cta_label ?? "");
       const ctaUrl = normalizeUrl(c.cta_url ?? "");
-
+  
+      const headerStyle = asObj(s.header);
+  
       return (
         <HeaderBlockClient
           variant={variant}
@@ -183,10 +186,12 @@ export const BlockRegistry: Record<string, BlockEntry> = {
           hasCta={showCta && !!ctaLabel && !!ctaUrl}
           ctaLabel={ctaLabel}
           ctaUrl={ctaUrl}
+          style={headerStyle as any}
         />
       );
     },
   },
+  
 
   hero: {
     title: "Hero",
