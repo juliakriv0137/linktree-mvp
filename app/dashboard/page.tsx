@@ -35,27 +35,6 @@ import { DbSelect } from "@/components/dashboard/ui/DbSelect";
 import { DbSummaryButton } from "@/components/dashboard/ui/DbSummaryButton";
 import { DbPopoverPanel } from "@/components/dashboard/ui/DbPopoverPanel";
 import { DbDetails } from "@/components/dashboard/ui/DbDetails";
-import { DbPill } from "@/components/dashboard/ui/DbPill";
-
-
-
-
-const DASHBOARD_UI_VARS: React.CSSProperties = {
-  // Light SaaS dashboard look (like your example). Only for /dashboard UI.
-  ["--db-bg" as any]: "246 249 252",          // page background
-  ["--db-panel" as any]: "255 255 255",       // cards/panels
-  ["--db-soft" as any]: "241 245 249",        // soft fill (slate-100)
-  ["--db-border" as any]: "203 213 225",      // borders (slate-300)
-  ["--db-border-strong" as any]: "148 163 184", // stronger borders (slate-400)
-  ["--db-text" as any]: "15 23 42",           // slate-900
-  ["--db-muted" as any]: "100 116 139",       // slate-500/600
-  ["--db-accent" as any]: "45 212 191",       // mint/teal (accent)
-  ["--db-accent-weak" as any]: "204 251 241", // teal-100-ish for active pills
-  ["--db-ring" as any]: "45 212 191",
-  ["--db-radius" as any]: "18px",
-};
-
-
 import {
   HeaderEditor,
   HeroEditor,
@@ -64,6 +43,21 @@ import {
   TextEditor,
   DividerEditor,
 } from "@/components/dashboard/editors";
+
+const DASHBOARD_UI_VARS: React.CSSProperties = {
+  // Light SaaS dashboard look. Only for /dashboard UI.
+  ["--db-bg" as any]: "246 249 252",
+  ["--db-panel" as any]: "255 255 255",
+  ["--db-soft" as any]: "241 245 249",
+  ["--db-border" as any]: "203 213 225",
+  ["--db-border-strong" as any]: "148 163 184",
+  ["--db-text" as any]: "15 23 42",
+  ["--db-muted" as any]: "100 116 139",
+  ["--db-accent" as any]: "45 212 191",
+  ["--db-accent-weak" as any]: "204 251 241",
+  ["--db-ring" as any]: "45 212 191",
+  ["--db-radius" as any]: "18px",
+};
 
 type SiteRow = {
   id: string;
@@ -183,6 +177,59 @@ function normalizeHexOrNull(v: string): string | null {
       .join("");
   }
   return `#${hex}`;
+}
+
+function themeLabelFromKey(key: string) {
+  const t: any = (THEMES as any)?.[key];
+  return String(t?.label ?? t?.name ?? key);
+}
+
+function fontScaleLabel(v: SiteRow["font_scale"]) {
+  if (v === "sm") return "Small";
+  if (v === "lg") return "Large";
+  return "Normal";
+}
+
+function radiusLabel(v: SiteRow["button_radius"]) {
+  if (v === "md") return "12px";
+  if (v === "xl") return "18px";
+  if (v === "2xl") return "28px";
+  return "Pill";
+}
+
+function widthLabel(v: SiteRow["layout_width"]) {
+  if (v === "wide") return "Wide";
+  if (v === "full") return "Full";
+  return "Compact";
+}
+
+function bgStyleLabel(v: string) {
+  if (v === "gradient") return "Gradient";
+  return "Solid";
+}
+
+function buttonStyleLabel(v: string) {
+  if (v === "outline") return "Outline";
+  return "Solid";
+}
+
+function cardStyleLabel(v: SiteRow["card_style"]) {
+  if (v === "plain") return "Plain";
+  return "Card";
+}
+
+function FieldRow(props: { label: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="grid grid-cols-[110px_1fr] items-center gap-3">
+      <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">{props.label}</div>
+      <div className="min-w-0">
+        {props.children}
+        {props.hint ? (
+          <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">{props.hint}</div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 async function getAuthedUserId() {
@@ -383,7 +430,9 @@ function SortableBlockRow({
       <div
         className={clsx(
           "w-full rounded-2xl border px-3 py-3 text-left transition",
-          selected ? "border-[rgb(var(--db-accent) / 0.55)] bg-[rgb(var(--db-accent) / 0.14)] shadow-sm" : "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] hover:bg-[rgb(var(--db-soft))]",
+          selected
+            ? "border-[rgb(var(--db-accent) / 0.55)] bg-[rgb(var(--db-accent) / 0.14)] shadow-sm"
+            : "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] hover:bg-[rgb(var(--db-soft))]",
           !block.is_visible && "opacity-70",
         )}
       >
@@ -408,12 +457,11 @@ function SortableBlockRow({
             className="min-w-0 flex-1 text-left"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs rounded-full border border-[rgb(var(--db-accent) / 0.35)] bg-[rgb(var(--db-accent) / 0.12)] px-2 py-1 text-[rgb(var(--db-text))]">{block.type}</span>
-              {!block.is_visible && (
-  <span className="text-xs text-red-400/80">hidden</span>
-)}
+              <span className="text-xs rounded-full border border-[rgb(var(--db-accent) / 0.35)] bg-[rgb(var(--db-accent) / 0.12)] px-2 py-1 text-[rgb(var(--db-text))]">
+                {block.type}
+              </span>
 
-
+              {!block.is_visible && <span className="text-xs text-red-400/80">hidden</span>}
             </div>
             <div className="text-xs text-[rgb(var(--db-muted))] mt-1">pos {block.position}</div>
           </button>
@@ -461,8 +509,9 @@ export default function DashboardPage() {
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [previewNonce, setPreviewNonce] = useState(0);
-  const [inspectorTab, setInspectorTab] = useState<"block" | "theme">("block");
+
   const [blockTab, setBlockTab] = useState<"content" | "style" | "advanced">("content");
+
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.id === selectedBlockId) ?? null,
     [blocks, selectedBlockId],
@@ -510,10 +559,7 @@ export default function DashboardPage() {
     if (!selectedBlock) return;
     const blockId = selectedBlock.id;
     const cur = ((selectedBlock as any).style ?? {}) as any;
-
-    // ✅ фикс типа: applyStylePreset ждёт StylePresetKey
     const next = applyStylePreset(cur, presetKey as any);
-
     await saveBlockStyle(blockId, next);
   }
 
@@ -528,7 +574,6 @@ export default function DashboardPage() {
   function getStyleView() {
     const raw = ((selectedBlock as any)?.style ?? {}) as any;
     const n = normalizeBlockStyle(raw);
-
     const d: any = { ...n, ...(n as any).desktop };
     const uiWidth = d.width === "content" ? "compact" : (d.width ?? "full");
 
@@ -586,8 +631,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setAnchorDraft(selectedBlock?.anchor_id ?? "");
-    setBlockTab("style");
-
+    setBlockTab("content");
   }, [selectedBlockId, selectedBlock?.anchor_id]);
 
   async function persistOrder(next: BlockRow[]) {
@@ -754,34 +798,21 @@ export default function DashboardPage() {
     }
   };
 
-  const saveSelectedHero = async (next: {
-    content?: any;
-    variant?: string;
-  }) => {
+  const saveSelectedHero = async (next: { content?: any; variant?: string }) => {
     if (!selectedBlock || !site) return;
-  
+
     try {
       setError(null);
-  
-      const patch: {
-        content?: any;
-        variant?: string;
-      } = {};
-  
-      if (next.content !== undefined) {
-        patch.content = next.content;
-      }
-  
-      if (typeof next.variant === "string") {
-        patch.variant = next.variant;
-      }
-  
+
+      const patch: { content?: any; variant?: string } = {};
+      if (next.content !== undefined) patch.content = next.content;
+      if (typeof next.variant === "string") patch.variant = next.variant;
+
       await saveSelectedBlockPatch(patch);
     } catch (e: any) {
       setError(e?.message ?? String(e));
     }
   };
-  
 
   const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
@@ -790,10 +821,11 @@ export default function DashboardPage() {
       className="dashboard-ui min-h-screen bg-[rgb(var(--db-bg))] text-[rgb(var(--db-text))]"
       style={{ ...(DASHBOARD_THEME_VARS as any), ...(DASHBOARD_UI_VARS as any) }}
     >
-
+      {/* ✅ NEW: красивый топ-бар без огромной “капсулы” */}
       <div className="sticky top-0 z-30 border-b border-[rgb(var(--db-border))] bg-[rgb(var(--db-bg))]">
         <div className="mx-auto max-w-[1400px] px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Left: title */}
             <div className="min-w-0">
               <div className="flex items-center gap-3">
                 <div className="text-lg font-bold">Dashboard</div>
@@ -806,180 +838,329 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={refreshAll} disabled={loading}>
-                {loading ? "Loading..." : "Refresh"}
-              </Button>
+            {/* Right: actions + settings */}
+            <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={refreshAll} disabled={loading}>
+                  {loading ? "Loading..." : "Refresh"}
+                </Button>
 
-              <Button
-                variant="ghost"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = "/login";
-                }}
-              >
-                Sign out
-              </Button>
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    window.location.href = "/login";
+                  }}
+                >
+                  Sign out
+                </Button>
 
-              <DbPill className="hidden lg:flex items-center gap-2">
-  <span className="text-[11px] font-semibold text-[rgb(var(--db-muted))] px-2">Theme</span>
+                {/* ✅ One neat button -> opens settings panel */}
+                <DbDetails>
+                  <DbSummaryButton>Site settings</DbSummaryButton>
 
-  <DbSelect
-    value={site?.theme_key ?? "midnight"}
-    disabled={!canAct}
-    onChange={async (e) => {
-      if (!site) return;
-      const theme_key = (e.target as HTMLSelectElement).value;
-      try {
-        setError(null);
-        await updateSiteTheme(site.id, { theme_key } as any);
-        setSite({ ...site, theme_key } as any);
-      } catch (err: any) {
-        setError(err?.message ?? String(err));
-      }
-    }}
-  >
-    {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
-      <option key={k} value={k}>
-        {k}
-      </option>
-    ))}
-  </DbSelect>
+                  <DbPopoverPanel
+                    className="absolute right-0 z-50 mt-2 w-[520px] max-w-[92vw]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold">Site settings</div>
+                        <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
+                          Layout + theme. Colors are optional overrides.
+                        </div>
+                      </div>
 
-  <DbSelect
-    value={(site?.layout_width ?? "compact") as any}
-    disabled={!canAct}
-    onChange={async (e) => {
-      if (!site) return;
-      const layout_width = (e.target as HTMLSelectElement).value as any;
-      try {
-        setError(null);
-        await updateSiteTheme(site.id, { layout_width } as any);
-        setSite({ ...site, layout_width } as any);
-      } catch (err: any) {
-        setError(err?.message ?? String(err));
-      }
-    }}
-  >
-    <option value="compact">compact</option>
-    <option value="wide">wide</option>
-    <option value="full">full</option>
-  </DbSelect>
+                      <Link href={publicUrl} target="_blank" className="shrink-0">
+                        <span className="inline-flex items-center justify-center rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-panel))] transition">
+                          Open page ↗
+                        </span>
+                      </Link>
+                    </div>
 
-  <DbSelect
-    value={(site?.font_scale ?? "md") as any}
-    disabled={!canAct}
-    onChange={async (e) => {
-      if (!site) return;
-      const font_scale = (e.target as HTMLSelectElement).value as any;
-      try {
-        setError(null);
-        await updateSiteTheme(site.id, { font_scale } as any);
-        setSite({ ...site, font_scale } as any);
-      } catch (err: any) {
-        setError(err?.message ?? String(err));
-      }
-    }}
-  >
-    <option value="sm">sm</option>
-    <option value="md">md</option>
-    <option value="lg">lg</option>
-  </DbSelect>
+                    <div className="mt-4 grid gap-4">
+                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">
+                          Layout
+                        </div>
 
-  <DbSelect
-    value={(site?.button_radius ?? "2xl") as any}
-    disabled={!canAct}
-    onChange={async (e) => {
-      if (!site) return;
-      const button_radius = (e.target as HTMLSelectElement).value as any;
-      try {
-        setError(null);
-        await updateSiteTheme(site.id, { button_radius } as any);
-        setSite({ ...site, button_radius } as any);
-      } catch (err: any) {
-        setError(err?.message ?? String(err));
-      }
-    }}
-  >
-    <option value="md">md</option>
-    <option value="xl">xl</option>
-    <option value="2xl">2xl</option>
-    <option value="full">full</option>
-  </DbSelect>
+                        <div className="space-y-3">
+                          <FieldRow label="Theme">
+                            <DbSelect
+                              value={site?.theme_key ?? "midnight"}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const theme_key = (e.target as HTMLSelectElement).value;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { theme_key } as any);
+                                  setSite({ ...site, theme_key } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
+                                <option key={k} value={k}>
+                                  {themeLabelFromKey(k)}
+                                </option>
+                              ))}
+                            </DbSelect>
+                          </FieldRow>
 
-  {/* Custom colors moved from Inspector */}
-  <DbDetails>
-    <DbSummaryButton>Colors</DbSummaryButton>
-    <DbPopoverPanel
-  className="absolute right-0 z-50 mt-2 w-[340px] max-w-[90vw]"
-  onClick={(e) => e.stopPropagation()}
->
+                          <FieldRow label="Width">
+                            <DbSelect
+                              value={(site?.layout_width ?? "compact") as any}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const layout_width = (e.target as HTMLSelectElement).value as any;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { layout_width } as any);
+                                  setSite({ ...site, layout_width } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              <option value="compact">{widthLabel("compact")}</option>
+                              <option value="wide">{widthLabel("wide")}</option>
+                              <option value="full">{widthLabel("full")}</option>
+                            </DbSelect>
+                          </FieldRow>
+                        </div>
+                      </div>
 
-      <div className="text-sm font-semibold">Custom colors</div>
-      <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-        Optional. Leave empty to use theme defaults.
-      </div>
+                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">
+                          Style
+                        </div>
 
-      <div className="mt-3 space-y-3">
-        <ColorField
-          label="Background"
-          value={colors.bg_color}
-          onChange={(v) => {
-            setColors((p) => ({ ...p, bg_color: v }));
-            saveColorField("bg_color", v);
-          }}
-        />
-        <ColorField
-          label="Text"
-          value={colors.text_color}
-          onChange={(v) => {
-            setColors((p) => ({ ...p, text_color: v }));
-            saveColorField("text_color", v);
-          }}
-        />
-        <ColorField
-          label="Muted"
-          value={colors.muted_color}
-          onChange={(v) => {
-            setColors((p) => ({ ...p, muted_color: v }));
-            saveColorField("muted_color", v);
-          }}
-        />
-        <ColorField
-          label="Border"
-          value={colors.border_color}
-          onChange={(v) => {
-            setColors((p) => ({ ...p, border_color: v }));
-            saveColorField("border_color", v);
-          }}
-        />
-        <ColorField
-          label="Button"
-          value={colors.button_color}
-          onChange={(v) => {
-            setColors((p) => ({ ...p, button_color: v }));
-            saveColorField("button_color", v);
-          }}
-        />
-        <ColorField
-          label="Button text"
-          value={colors.button_text_color}
-          onChange={(v) => {
-            setColors((p) => ({ ...p, button_text_color: v }));
-            saveColorField("button_text_color", v);
-          }}
-        />
-      </div>
-    </DbPopoverPanel>
-  </DbDetails>
-</DbPill>
+                        <div className="space-y-3">
+                          <FieldRow label="Background">
+                            <DbSelect
+                              value={(site?.background_style ?? "solid") as any}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const background_style = (e.target as HTMLSelectElement).value as any;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { background_style } as any);
+                                  setSite({ ...site, background_style } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              <option value="solid">{bgStyleLabel("solid")}</option>
+                              <option value="gradient">{bgStyleLabel("gradient")}</option>
+                            </DbSelect>
+                          </FieldRow>
 
+                          <FieldRow label="Buttons">
+                            <DbSelect
+                              value={(site?.button_style ?? "solid") as any}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const button_style = (e.target as HTMLSelectElement).value as any;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { button_style } as any);
+                                  setSite({ ...site, button_style } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              <option value="solid">{buttonStyleLabel("solid")}</option>
+                              <option value="outline">{buttonStyleLabel("outline")}</option>
+                            </DbSelect>
+                          </FieldRow>
 
+                          <FieldRow label="Text">
+                            <DbSelect
+                              value={(site?.font_scale ?? "md") as any}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const font_scale = (e.target as HTMLSelectElement).value as any;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { font_scale } as any);
+                                  setSite({ ...site, font_scale } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              <option value="sm">{fontScaleLabel("sm")}</option>
+                              <option value="md">{fontScaleLabel("md")}</option>
+                              <option value="lg">{fontScaleLabel("lg")}</option>
+                            </DbSelect>
+                          </FieldRow>
 
-             
+                          <FieldRow label="Radius">
+                            <DbSelect
+                              value={(site?.button_radius ?? "2xl") as any}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const button_radius = (e.target as HTMLSelectElement).value as any;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { button_radius } as any);
+                                  setSite({ ...site, button_radius } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              <option value="md">{radiusLabel("md")}</option>
+                              <option value="xl">{radiusLabel("xl")}</option>
+                              <option value="2xl">{radiusLabel("2xl")}</option>
+                              <option value="full">{radiusLabel("full")}</option>
+                            </DbSelect>
+                          </FieldRow>
+
+                          <FieldRow label="Cards">
+                            <DbSelect
+                              value={(site?.card_style ?? "card") as any}
+                              disabled={!canAct}
+                              onChange={async (e) => {
+                                if (!site) return;
+                                const card_style = (e.target as HTMLSelectElement).value as any;
+                                try {
+                                  setError(null);
+                                  await updateSiteTheme(site.id, { card_style } as any);
+                                  setSite({ ...site, card_style } as any);
+                                } catch (err: any) {
+                                  setError(err?.message ?? String(err));
+                                }
+                              }}
+                            >
+                              <option value="plain">{cardStyleLabel("plain")}</option>
+                              <option value="card">{cardStyleLabel("card")}</option>
+                            </DbSelect>
+                          </FieldRow>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">
+                              Colors (optional)
+                            </div>
+                            <div className="text-[11px] text-[rgb(var(--db-muted))] mt-1">
+                              Leave empty to use theme defaults.
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]"
+                            onClick={() => {
+                              setColors({
+                                bg_color: "",
+                                text_color: "",
+                                muted_color: "",
+                                border_color: "",
+                                button_color: "",
+                                button_text_color: "",
+                              });
+                              if (site) {
+                                void (async () => {
+                                  try {
+                                    setError(null);
+                                    await updateSiteTheme(site.id, {
+                                      bg_color: null,
+                                      text_color: null,
+                                      muted_color: null,
+                                      border_color: null,
+                                      button_color: null,
+                                      button_text_color: null,
+                                    } as any);
+                                    setSite({
+                                      ...site,
+                                      bg_color: null,
+                                      text_color: null,
+                                      muted_color: null,
+                                      border_color: null,
+                                      button_color: null,
+                                      button_text_color: null,
+                                    } as any);
+                                  } catch (err: any) {
+                                    setError(err?.message ?? String(err));
+                                  }
+                                })();
+                              }
+                            }}
+                          >
+                            Reset
+                          </button>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <ColorField
+                            label="Background"
+                            value={colors.bg_color}
+                            onChange={(v) => {
+                              setColors((p) => ({ ...p, bg_color: v }));
+                              saveColorField("bg_color", v);
+                            }}
+                          />
+                          <ColorField
+                            label="Text"
+                            value={colors.text_color}
+                            onChange={(v) => {
+                              setColors((p) => ({ ...p, text_color: v }));
+                              saveColorField("text_color", v);
+                            }}
+                          />
+                          <ColorField
+                            label="Muted"
+                            value={colors.muted_color}
+                            onChange={(v) => {
+                              setColors((p) => ({ ...p, muted_color: v }));
+                              saveColorField("muted_color", v);
+                            }}
+                          />
+                          <ColorField
+                            label="Border"
+                            value={colors.border_color}
+                            onChange={(v) => {
+                              setColors((p) => ({ ...p, border_color: v }));
+                              saveColorField("border_color", v);
+                            }}
+                          />
+                          <ColorField
+                            label="Button"
+                            value={colors.button_color}
+                            onChange={(v) => {
+                              setColors((p) => ({ ...p, button_color: v }));
+                              saveColorField("button_color", v);
+                            }}
+                          />
+                          <ColorField
+                            label="Button text"
+                            value={colors.button_text_color}
+                            onChange={(v) => {
+                              setColors((p) => ({ ...p, button_text_color: v }));
+                              saveColorField("button_text_color", v);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </DbPopoverPanel>
+                </DbDetails>
+              </div>
 
               <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
-                <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-soft))] transition">
+                <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-panel))] transition border border-[rgb(var(--db-border))]">
                   Open public page
                 </span>
               </Link>
@@ -994,6 +1175,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* body */}
       <div className="mx-auto max-w-[1400px] px-4 py-6">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_380px]">
           {/* LEFT */}
@@ -1009,67 +1191,64 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-  {(["header", "hero", "links", "image", "text", "divider"] as const).map((t) => {
-    const isBusy = creating === t;
+                {(["header", "hero", "links", "image", "text", "divider"] as const).map((t) => {
+                  const isBusy = creating === t;
 
-    return (
-      <button
-        key={t}
-        type="button"
-        disabled={!site || loading || !!creating || !!inserting}
-        onClick={async () => {
-          if (!site) return;
-          setCreating(t);
-          try {
-            await createBlock(site.id, t);
-            const bs = await loadBlocks(site.id);
-            setBlocks(bs);
-            const last = bs.reduce(
-              (acc, cur) => (cur.position > acc.position ? cur : acc),
-              bs[0],
-            );
-            if (last?.id) setSelectedBlockId(last.id);
-          } catch (e: any) {
-            setError(e?.message ?? String(e));
-          } finally {
-            setCreating(null);
-          }
-        }}
-        className={clsx(
-          "inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
-          "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] shadow-sm",
-          "hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-accent)/0.55)]",
-          "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          isBusy && "border-[rgb(var(--db-accent)/0.65)] bg-[rgb(var(--db-accent)/0.12)]",
-        )}
-        title={`Add ${t} block`}
-      >
-        <span className="text-sm leading-none">＋</span>
-        <span className="capitalize">{isBusy ? "Adding..." : t}</span>
-      </button>
-    );
-  })}
-</div>
-
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      disabled={!site || loading || !!creating || !!inserting}
+                      onClick={async () => {
+                        if (!site) return;
+                        setCreating(t);
+                        try {
+                          await createBlock(site.id, t);
+                          const bs = await loadBlocks(site.id);
+                          setBlocks(bs);
+                          const last = bs.reduce(
+                            (acc, cur) => (cur.position > acc.position ? cur : acc),
+                            bs[0],
+                          );
+                          if (last?.id) setSelectedBlockId(last.id);
+                        } catch (e: any) {
+                          setError(e?.message ?? String(e));
+                        } finally {
+                          setCreating(null);
+                        }
+                      }}
+                      className={clsx(
+                        "inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
+                        "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] shadow-sm",
+                        "hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-accent)/0.55)]",
+                        "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
+                        "disabled:cursor-not-allowed disabled:opacity-50",
+                        isBusy && "border-[rgb(var(--db-accent)/0.65)] bg-[rgb(var(--db-accent)/0.12)]",
+                      )}
+                      title={`Add ${t} block`}
+                    >
+                      <span className="text-sm leading-none">＋</span>
+                      <span className="capitalize">{isBusy ? "Adding..." : t}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="p-4 lg:h-[calc(100%-92px)] lg:overflow-auto">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
-                  <InsertBlockMenu
-  insertIndex={0}
-  isOpen={insertMenuIndex === 0}
-  onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
-  onInsert={(t) => insertBlockAt(0, t)}
-  disabled={!site || loading || !!creating || !!inserting}
-  inserting={inserting}
-  showLabel={true}
-  showOnHover={false}
-/>
-
-
+                    <InsertBlockMenu
+                      insertIndex={0}
+                      isOpen={insertMenuIndex === 0}
+                      onToggle={() => setInsertMenuIndex(insertMenuIndex === 0 ? null : 0)}
+                      onInsert={(t) => insertBlockAt(0, t)}
+                      disabled={!site || loading || !!creating || !!inserting}
+                      inserting={inserting}
+                      showLabel={true}
+                      showOnHover={false}
+                    />
 
                     {blocks.map((b, idx) => {
                       const insertIndex = idx + 1;
@@ -1081,7 +1260,7 @@ export default function DashboardPage() {
                             onSelect={() => setSelectedBlockId(b.id)}
                             onToggleVisible={() => toggleVisibility(b)}
                             onDelete={() => removeBlock(b)}
-                            disabled={!canAct}
+                            disabled={canAct ? false : true}
                           />
 
                           <InsertBlockMenu
@@ -1110,7 +1289,9 @@ export default function DashboardPage() {
             <div className="p-4 border-b border-[rgb(var(--db-border))] flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold">Preview</div>
-                <div className="text-xs text-[rgb(var(--db-muted))] mt-1">What your public page looks like (live).</div>
+                <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
+                  What your public page looks like (live).
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1128,8 +1309,6 @@ export default function DashboardPage() {
                         ? "border-[rgb(var(--db-accent)/0.55)] bg-[rgb(var(--db-accent-weak))] text-[rgb(var(--db-text))]"
                         : "border-transparent bg-transparent text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))] hover:border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]",
                     )}
-                    
-                    
                   >
                     Desktop
                   </button>
@@ -1146,7 +1325,6 @@ export default function DashboardPage() {
                         ? "border-[rgb(var(--db-accent)/0.55)] bg-[rgb(var(--db-accent-weak))] text-[rgb(var(--db-text))]"
                         : "border-transparent bg-transparent text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))] hover:border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]",
                     )}
-                    
                   >
                     Mobile
                   </button>
@@ -1161,7 +1339,7 @@ export default function DashboardPage() {
                 </Button>
 
                 <Link href={publicUrl} target="_blank" className="inline-flex sm:hidden">
-                  <span className="inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-soft))] transition">
+                  <span className="inline-flex items-center justify-center rounded-full px-3 py-2 text-xs font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-panel))] transition border border-[rgb(var(--db-border))]">
                     Open
                   </span>
                 </Link>
@@ -1219,334 +1397,126 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          {/* RIGHT (Inspector inline) */}
+          {/* RIGHT (Inspector) */}
           <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-auto">
             <div className="p-4 border-b border-[rgb(var(--db-border))]">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold">Inspector</div>
                   <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                    {inspectorTab === "theme" ? "Site-wide settings" : "Selected block settings"}
+                    Selected block settings
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setInspectorTab("block")}
-                    className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
-                      inspectorTab === "block"
-                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
-                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
-                    )}
-                  >
-                    Block
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInspectorTab("theme")}
-                    className={clsx(
-                      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
-                      inspectorTab === "theme"
-                        ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
-                        : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
-                    )}
-                  >
-                    Theme
-                  </button>
                 </div>
               </div>
             </div>
 
             <div className="p-4 space-y-4">
-              {inspectorTab === "theme" ? (
-                <Card className="bg-[rgb(var(--db-soft))] shadow-none">
-                  <div className="p-4 space-y-5">
-                    <div>
-                      <div className="text-sm font-semibold">Theme</div>
-                      <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Applies to the whole site.</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Theme</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={site?.theme_key ?? "midnight"}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const theme_key = e.target.value;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { theme_key } as any);
-                              setSite({ ...site, theme_key } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
-                            <option key={k} value={k}>
-                              {k}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                
-
-
-
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Layout width</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={(site?.layout_width ?? "compact") as any}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const layout_width = e.target.value as any;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { layout_width } as any);
-                              setSite({ ...site, layout_width } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          <option value="compact">compact</option>
-                          <option value="wide">wide</option>
-                          <option value="full">full</option>
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background style</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={(site?.background_style ?? "solid") as any}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const background_style = e.target.value as any;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { background_style } as any);
-                              setSite({ ...site, background_style } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          <option value="solid">solid</option>
-                          <option value="gradient">gradient</option>
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Button style</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={(site?.button_style ?? "solid") as any}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const button_style = e.target.value as any;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { button_style } as any);
-                              setSite({ ...site, button_style } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          <option value="solid">solid</option>
-                          <option value="outline">outline</option>
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Font scale</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={(site?.font_scale ?? "md") as any}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const font_scale = e.target.value as any;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { font_scale } as any);
-                              setSite({ ...site, font_scale } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          <option value="sm">sm</option>
-                          <option value="md">md</option>
-                          <option value="lg">lg</option>
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Button radius</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={(site?.button_radius ?? "2xl") as any}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const button_radius = e.target.value as any;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { button_radius } as any);
-                              setSite({ ...site, button_radius } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          <option value="md">md</option>
-                          <option value="xl">xl</option>
-                          <option value="2xl">2xl</option>
-                          <option value="full">full</option>
-                        </select>
-                      </label>
-
-                      <label className="block sm:col-span-2">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Card style</div>
-                        <select
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                          value={(site?.card_style ?? "card") as any}
-                          disabled={!canAct}
-                          onChange={async (e) => {
-                            if (!site) return;
-                            const card_style = e.target.value as any;
-                            try {
-                              setError(null);
-                              await updateSiteTheme(site.id, { card_style } as any);
-                              setSite({ ...site, card_style } as any);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          <option value="plain">plain</option>
-                          <option value="card">card</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <div className="pt-2 border-t border-[rgb(var(--db-border))]" />
-
-                    
-                  </div>
-                </Card>
-              ) : !selectedBlock ? (
+              {!selectedBlock ? (
                 <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 text-[rgb(var(--db-text))]">
                   Select a block on the left to edit.
                 </div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-1">
-  <button
-    type="button"
-    onClick={() => setBlockTab("style")}
-    className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
-      blockTab === "style" ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]" : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
-    )}
-  >
-    Style
-  </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockTab("style")}
+                      className={clsx(
+                        "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+                        blockTab === "style"
+                          ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                          : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
+                      )}
+                    >
+                      Style
+                    </button>
 
-  <button
-    type="button"
-    onClick={() => setBlockTab("content")}
-    className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
-      blockTab === "content" ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]" : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
-    )}
-  >
-    Content
-  </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockTab("content")}
+                      className={clsx(
+                        "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+                        blockTab === "content"
+                          ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                          : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
+                      )}
+                    >
+                      Content
+                    </button>
 
-  <button
-    type="button"
-    onClick={() => setBlockTab("advanced")}
-    className={clsx(
-      "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
-      blockTab === "advanced" ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]" : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
-    )}
-  >
-    Advanced
-  </button>
-</div>
+                    <button
+                      type="button"
+                      onClick={() => setBlockTab("advanced")}
+                      className={clsx(
+                        "rounded-full px-3 py-2 text-xs font-semibold transition border border-transparent",
+                        blockTab === "advanced"
+                          ? "bg-[rgb(var(--db-accent) / 0.14)] text-[rgb(var(--db-text))] border border-[rgb(var(--db-accent) / 0.35)]"
+                          : "text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]",
+                      )}
+                    >
+                      Advanced
+                    </button>
+                  </div>
 
                   {blockTab === "advanced" && (
-
-
-                  <Card className="bg-[rgb(var(--db-soft))] shadow-none">
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold">Selected</div>
-                          <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
-                            {selectedBlock.type} · id{" "}
-                            <span className="font-mono text-[rgb(var(--db-text))]">{selectedBlock.id}</span>
+                    <Card className="bg-[rgb(var(--db-soft))] shadow-none">
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold">Selected</div>
+                            <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
+                              {selectedBlock.type} · id{" "}
+                              <span className="font-mono text-[rgb(var(--db-text))]">
+                                {selectedBlock.id}
+                              </span>
+                            </div>
                           </div>
+
+                          <Button
+                            variant="ghost"
+                            className="px-3 py-2 text-xs"
+                            disabled={!canAct}
+                            onClick={async () => {
+                              if (!site || !selectedBlock) return;
+                              const normalized = normalizeAnchorId(anchorDraft);
+                              try {
+                                setError(null);
+                                await updateBlock(selectedBlock.id, { anchor_id: normalized || null });
+                                await reloadBlocksAfterSave();
+                                setAnchorDraft(normalized);
+                              } catch (err: any) {
+                                setError(err?.message ?? String(err));
+                              }
+                            }}
+                          >
+                            Save anchor
+                          </Button>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          className="px-3 py-2 text-xs"
-                          disabled={!canAct}
-                          onClick={async () => {
-                            if (!site || !selectedBlock) return;
-                            const normalized = normalizeAnchorId(anchorDraft);
-                            try {
-                              setError(null);
-                              await updateBlock(selectedBlock.id, { anchor_id: normalized || null });
-                              await reloadBlocksAfterSave();
-                              setAnchorDraft(normalized);
-                            } catch (err: any) {
-                              setError(err?.message ?? String(err));
-                            }
-                          }}
-                        >
-                          Save anchor
-                        </Button>
+                        <label className="block">
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">
+                            anchor_id (optional)
+                          </div>
+                          <input
+                            value={anchorDraft}
+                            disabled={!canAct}
+                            onChange={(e) => setAnchorDraft(e.target.value)}
+                            placeholder="e.g. about / pricing / faq"
+                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
+                          />
+                          <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
+                            Use in links as{" "}
+                            <span className="font-mono text-[rgb(var(--db-text))]">#anchor</span>{" "}
+                            (e.g. <span className="font-mono text-[rgb(var(--db-text))]">/#about</span>).
+                          </div>
+                        </label>
                       </div>
-
-                      <label className="block">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">anchor_id (optional)</div>
-                        <input
-                          value={anchorDraft}
-                          disabled={!canAct}
-                          onChange={(e) => setAnchorDraft(e.target.value)}
-                          placeholder="e.g. about / pricing / faq"
-                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent) / 0.30)]"
-
-                        />
-                        <div className="text-xs text-[rgb(var(--db-muted))] mt-2">
-                          Use in links as <span className="font-mono text-[rgb(var(--db-text))]">#anchor</span> (e.g.{" "}
-                          <span className="font-mono text-[rgb(var(--db-text))]">/#about</span>).
-                        </div>
-                      </label>
-                    </div>
-                  </Card>
+                    </Card>
                   )}
 
                   {blockTab === "style" && (
-
-                  <Card className="bg-[rgb(var(--db-soft))] shadow-none">
-                    <div className="p-4 space-y-3">
-                      {/* Header-specific style controls */}
+                    <Card className="bg-[rgb(var(--db-soft))] shadow-none">
+                      <div className="p-4 space-y-3">
                         {selectedBlock && (selectedBlock as any).type === "header" ? (
                           <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-3">
                             <div className="text-sm font-semibold">Header style</div>
@@ -1586,155 +1556,154 @@ export default function DashboardPage() {
                           </div>
                         ) : null}
 
-<div>
-                        <div className="text-sm font-semibold">Block style</div>
-                        <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                          Applies to this block (via BlockFrame).
-                        </div>
-                      </div>
-
-                      <div className="mt-2">
-                        <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Presets</div>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            ["card", "Card"],
-                            ["minimal", "Minimal"],
-                            ["wide_section", "Wide section"],
-                            ["centered", "Centered"],
-                            ["hero_highlight", "Hero highlight"],
-                          ].map(([k, label]) => (
-                            <button
-                              key={String(k)}
-                              type="button"
-                              disabled={!canAct}
-                              className="rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-soft))] disabled:opacity-40"
-                              onClick={() => onApplyStylePreset(String(k))}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <label className="block">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Padding</div>
-                          <select
-                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                            value={getStyleView().padding}
-                            disabled={!canAct}
-                            onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
-                          >
-                            <option value="none">None</option>
-                            <option value="sm">Small</option>
-                            <option value="md">Medium</option>
-                            <option value="lg">Large</option>
-                          </select>
-                        </label>
-
-                        <label className="block">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Width</div>
-                          <select
-                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                            value={getStyleView().width}
-                            disabled={!canAct}
-                            onChange={(e) => {
-                              const v = e.target.value === "compact" ? "content" : e.target.value;
-                              onPatchBlockStyle({ width: v });
-                            }}
-                          >
-                            <option value="compact">Compact</option>
-                            <option value="wide">Wide</option>
-                            <option value="full">Full</option>
-                          </select>
-                        </label>
-
-                        <label className="block sm:col-span-2">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background</div>
-                          <select
-                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                            value={getStyleView().background}
-                            disabled={!canAct}
-                            onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
-                          >
-                            <option value="none">None</option>
-                            <option value="card">Card</option>
-                            <option value="highlight">Highlight</option>
-                          </select>
+                        <div>
+                          <div className="text-sm font-semibold">Block style</div>
                           <div className="text-xs text-[rgb(var(--db-muted))] mt-1">
-                            Leave empty to use preset theme colors.
+                            Applies to this block (via BlockFrame).
                           </div>
-                        </label>
+                        </div>
 
-                        <label className="block">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Align</div>
-                          <select
-                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                            value={getStyleView().align}
-                            disabled={!canAct}
-                            onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
-                          >
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                          </select>
-                        </label>
+                        <div className="mt-2">
+                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Presets</div>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              ["card", "Card"],
+                              ["minimal", "Minimal"],
+                              ["wide_section", "Wide section"],
+                              ["centered", "Centered"],
+                              ["hero_highlight", "Hero highlight"],
+                            ].map(([k, label]) => (
+                              <button
+                                key={String(k)}
+                                type="button"
+                                disabled={!canAct}
+                                className="rounded-full border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-xs font-semibold text-[rgb(var(--db-text))] hover:bg-[rgb(var(--db-panel))] disabled:opacity-40"
+                                onClick={() => onApplyStylePreset(String(k))}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                        <label className="block">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Radius</div>
-                          <select
-                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                            value={getStyleView().radius}
-                            disabled={!canAct}
-                            onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
-                          >
-                            <option value="none">None</option>
-                            <option value="sm">Small</option>
-                            <option value="md">Medium</option>
-                            <option value="lg">Large</option>
-                            <option value="xl">XL</option>
-                            <option value="2xl">2XL</option>
-                          </select>
-                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="block">
+                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Padding</div>
+                            <select
+                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+                              value={getStyleView().padding}
+                              disabled={!canAct}
+                              onChange={(e) => onPatchBlockStyle({ padding: e.target.value })}
+                            >
+                              <option value="none">None</option>
+                              <option value="sm">Small</option>
+                              <option value="md">Medium</option>
+                              <option value="lg">Large</option>
+                            </select>
+                          </label>
 
-                        <label className="block sm:col-span-2">
-                          <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Border</div>
-                          <select
-                            className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
-                            value={getStyleView().border}
-                            disabled={!canAct}
-                            onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
-                          >
-                            <option value="none">None</option>
-                            <option value="subtle">Subtle</option>
-                            <option value="strong">Strong</option>
-                          </select>
-                        </label>
+                          <label className="block">
+                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Width</div>
+                            <select
+                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+                              value={getStyleView().width}
+                              disabled={!canAct}
+                              onChange={(e) => {
+                                const v = e.target.value === "compact" ? "content" : e.target.value;
+                                onPatchBlockStyle({ width: v });
+                              }}
+                            >
+                              <option value="compact">Compact</option>
+                              <option value="wide">Wide</option>
+                              <option value="full">Full</option>
+                            </select>
+                          </label>
+
+                          <label className="block sm:col-span-2">
+                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Background</div>
+                            <select
+                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+                              value={getStyleView().background}
+                              disabled={!canAct}
+                              onChange={(e) => onPatchBlockStyle({ background: e.target.value })}
+                            >
+                              <option value="none">None</option>
+                              <option value="card">Card</option>
+                              <option value="highlight">Highlight</option>
+                            </select>
+                          </label>
+
+                          <label className="block">
+                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Align</div>
+                            <select
+                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+                              value={getStyleView().align}
+                              disabled={!canAct}
+                              onChange={(e) => onPatchBlockStyle({ align: e.target.value })}
+                            >
+                              <option value="left">Left</option>
+                              <option value="center">Center</option>
+                              <option value="right">Right</option>
+                            </select>
+                          </label>
+
+                          <label className="block">
+                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Radius</div>
+                            <select
+                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+                              value={getStyleView().radius}
+                              disabled={!canAct}
+                              onChange={(e) => onPatchBlockStyle({ radius: e.target.value })}
+                            >
+                              <option value="none">None</option>
+                              <option value="sm">Small</option>
+                              <option value="md">Medium</option>
+                              <option value="lg">Large</option>
+                              <option value="xl">XL</option>
+                              <option value="2xl">2XL</option>
+                            </select>
+                          </label>
+
+                          <label className="block sm:col-span-2">
+                            <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Border</div>
+                            <select
+                              className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] px-3 py-2 text-sm"
+                              value={getStyleView().border}
+                              disabled={!canAct}
+                              onChange={(e) => onPatchBlockStyle({ border: e.target.value })}
+                            >
+                              <option value="none">None</option>
+                              <option value="subtle">Subtle</option>
+                              <option value="strong">Strong</option>
+                            </select>
+                          </label>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                  )}
-                  {blockTab === "content" && (
-                  selectedBlock.type === "header" ? (
-                    <HeaderEditor block={selectedBlock as any} onSave={(next) => saveSelectedBlockPatch({ content: next })} />
-                  ) : selectedBlock.type === "hero" ? (
-                    <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
-                  ) : selectedBlock.type === "text" ? (
-                    <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                  ) : selectedBlock.type === "links" ? (
-                    <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                  ) : selectedBlock.type === "image" ? (
-                    <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                  ) : selectedBlock.type === "divider" ? (
-                    <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
-                  ) : (
-                    <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 text-[rgb(var(--db-text))]">
-                      No editor wired for:{" "}
-                      <span className="font-mono">{String((selectedBlock as any).type)}</span>
-                    </div>
-                  )
+                    </Card>
                   )}
 
+                  {blockTab === "content" &&
+                    (selectedBlock.type === "header" ? (
+                      <HeaderEditor
+                        block={selectedBlock as any}
+                        onSave={(next) => saveSelectedBlockPatch({ content: next })}
+                      />
+                    ) : selectedBlock.type === "hero" ? (
+                      <HeroEditor block={selectedBlock as any} onSave={saveSelectedHero} />
+                    ) : selectedBlock.type === "text" ? (
+                      <TextEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                    ) : selectedBlock.type === "links" ? (
+                      <LinksEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                    ) : selectedBlock.type === "image" ? (
+                      <ImageEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                    ) : selectedBlock.type === "divider" ? (
+                      <DividerEditor block={selectedBlock as any} onSave={saveSelectedBlockContent} />
+                    ) : (
+                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 text-[rgb(var(--db-text))]">
+                        No editor wired for:{" "}
+                        <span className="font-mono">{String((selectedBlock as any).type)}</span>
+                      </div>
+                    ))}
                 </>
               )}
             </div>
