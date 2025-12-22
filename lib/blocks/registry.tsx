@@ -124,7 +124,6 @@ function isCssLengthOrVar(v: string) {
   const s = v.trim();
   if (!s) return false;
   if (s.startsWith("var(")) return true;
-  // allow common units
   return /(\d)(px|rem|em|%|vh|vw)$/.test(s) || s === "0" || s === "0px";
 }
 
@@ -160,22 +159,22 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       const c = asObj(block.content);
       const s = asObj((block as any).style);
       const variant = String((block as any).variant ?? "default");
-  
+
       const brandText = safeTrim(c.brand_text ?? "My Site");
       const brandUrl = normalizeUrl(c.brand_url ?? "");
       const logoUrl = safeTrim(c.logo_url ?? "");
-  
+
       const links = Array.isArray(c.links) ? c.links : [];
       const items = links
         .map((x: any) => ({ label: safeTrim(x.label), url: normalizeUrl(x.url) }))
         .filter((x: any) => x.label && x.url);
-  
+
       const showCta = Boolean(c.show_cta);
       const ctaLabel = safeTrim(c.cta_label ?? "");
       const ctaUrl = normalizeUrl(c.cta_url ?? "");
-  
+
       const headerStyle = asObj(s.header);
-  
+
       return (
         <HeaderBlockClient
           variant={variant}
@@ -191,7 +190,6 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       );
     },
   },
-  
 
   hero: {
     title: "Hero",
@@ -234,9 +232,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
         const bgHeight = String(c.bg_height ?? "md");
         const radiusRaw = (s as any)?.radius ?? c.bg_radius ?? "2xl";
-const radius = normalizeRadiusValue(radiusRaw);
-
-
+        const radius = normalizeRadiusValue(radiusRaw);
 
         const align = normalizeAlign(c.align ?? "left");
         const verticalAlign = String(c.vertical_align ?? "center") as "top" | "center" | "bottom";
@@ -348,7 +344,6 @@ const radius = normalizeRadiusValue(radiusRaw);
         );
 
         const imgUrl = safeTrim(c.avatar);
-
         const imgCol = imgUrl ? (
           <div className="flex justify-center md:justify-end min-w-0">
             <div
@@ -359,13 +354,7 @@ const radius = normalizeRadiusValue(radiusRaw);
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-  src={normalizeUrl(imgUrl)}
-  alt="Hero image"
-  className={ratioStyle ? "w-full h-full object-cover" : "w-full h-auto object-contain"}
-  style={radiusStyle}
-/>
-
+              <img src={normalizeUrl(imgUrl)} alt="Hero image" className="w-full h-full object-cover" />
             </div>
           </div>
         ) : null;
@@ -396,10 +385,10 @@ const radius = normalizeRadiusValue(radiusRaw);
       const alignClass = align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
       const radiusRaw = (s as any)?.radius ?? (c as any)?.radius;
-const radiusStyle: React.CSSProperties = { borderRadius: normalizeRadiusValue(radiusRaw) };
+      const radiusStyle: React.CSSProperties = { borderRadius: normalizeRadiusValue(radiusRaw) };
 
-return (
-  <div className={`${alignClass} space-y-2 min-w-0`} style={radiusStyle}>
+      return (
+        <div className={`${alignClass} space-y-2 min-w-0`} style={radiusStyle}>
           <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
 
           {subtitle ? (
@@ -414,69 +403,117 @@ return (
       );
     },
   },
-    image: {
-      title: "Image",
-      render: ({ block }) => {
-        const c = asObj(block.content);
-        const s = asObj((block as any).style);
 
-        // ✅ единая система: style.image (block-specific overrides)
-        const imgStyle = asObj((s as any).image);
+  image: {
+    title: "Image",
+    render: ({ block }) => {
+      const c = asObj(block.content);
+      const s = asObj((block as any).style);
 
-        const url = normalizeUrl(c.url);
-        const alt = safeTrim(c.alt) || "Image";
-        const shape = (c.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
+      // ✅ единая система: style.image (block-specific overrides)
+      const imgStyle = asObj((s as any).image);
 
-        if (!url) return null;
+      const url = normalizeUrl(c.url);
+      const alt = safeTrim(c.alt) || "Image";
+      const shape = (c.shape as "circle" | "rounded" | "square" | undefined) ?? "circle";
 
-        // --- Size (optional) ---
-        // imgStyle.size: "xs" | "sm" | "md" | "lg" | "xl"
-        const sizeKey = String((imgStyle as any).size ?? "md");
-        const sizePx =
-          sizeKey === "xs"
-            ? 72
-            : sizeKey === "sm"
-              ? 96
-              : sizeKey === "lg"
-                ? 144
-                : sizeKey === "xl"
-                  ? 176
-                  : 112; // md default
+      if (!url) return null;
 
-        // --- Radius ---
-        // ✅ radius priority:
-        // 1) circle всегда круг
-        // 2) style.image.radius (новый ключ)
-        // 3) legacy: style.radius (старый ключ, на всякий случай)
-        // 4) fallback от shape
-        const styleRadiusRaw = (imgStyle as any)?.radius ?? (s as any)?.radius;
-        const fallbackRadius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+      // --- Align (optional) ---
+      // style.image.align: "left" | "center" | "right"
+      const align = normalizeAlign((imgStyle as any).align ?? "center");
+      const justifyClass = align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center";
 
-        const radiusValue =
-          shape === "circle"
-            ? "9999px"
-            : styleRadiusRaw != null
-              ? normalizeRadiusValue(styleRadiusRaw)
-              : fallbackRadius;
+      // --- Size (optional) ---
+      // style.image.size: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full"
+      const sizeKey = String((imgStyle as any).size ?? "md");
+      const sizePx =
+        sizeKey === "xs"
+          ? 72
+          : sizeKey === "sm"
+            ? 96
+            : sizeKey === "lg"
+              ? 144
+              : sizeKey === "xl"
+                ? 176
+                : sizeKey === "2xl"
+                  ? 220
+                  : sizeKey === "3xl"
+                    ? 280
+                    : 112; // md default
 
-        return (
-          <div className="flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={url}
-              alt={alt}
-              className={sizeKey === "full" ? "w-full max-w-full object-contain" : "object-cover"}
+      // --- Radius ---
+      // ✅ radius priority:
+      // 1) circle всегда круг
+      // 2) style.image.radius (новый ключ)
+      // 3) legacy: style.radius (старый ключ, на всякий случай)
+      // 4) fallback от shape
+      const styleRadiusRaw = (imgStyle as any)?.radius ?? (s as any)?.radius;
+      const fallbackRadius = shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+
+      const radiusValue =
+        shape === "circle"
+          ? "9999px"
+          : styleRadiusRaw != null
+            ? normalizeRadiusValue(styleRadiusRaw)
+            : fallbackRadius;
+
+      // --- Aspect ratio (optional) ---
+      // style.image.ratio: "1:1" | "4:5" | "3:4" | "4:3" | "3:2" | "16:9" | "21:9"
+      const ratioKey = String((imgStyle as any).ratio ?? "");
+      const ratioCss =
+        ratioKey === "1:1"
+          ? "1 / 1"
+          : ratioKey === "4:5"
+            ? "4 / 5"
+            : ratioKey === "3:4"
+              ? "3 / 4"
+              : ratioKey === "4:3"
+                ? "4 / 3"
+                : ratioKey === "3:2"
+                  ? "3 / 2"
+                  : ratioKey === "16:9"
+                    ? "16 / 9"
+                    : ratioKey === "21:9"
+                      ? "21 / 9"
+                      : "";
+
+      const hasRatio = sizeKey !== "full" && !!ratioCss;
+
+      return (
+        <div className={`flex ${justifyClass}`}>
+          {hasRatio ? (
+            <div
+              className="max-w-full"
+              style={{
+                width: sizePx,
+                aspectRatio: ratioCss,
+                overflow: "hidden",
+                borderRadius: radiusValue,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={alt} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt={alt}
+                className={sizeKey === "full" ? "w-full max-w-full object-contain" : "object-cover"}
                 style={{
                   width: sizeKey === "full" ? "100%" : sizePx,
                   height: sizeKey === "full" ? "auto" : sizePx,
                   borderRadius: radiusValue,
                 }}
-            />
-          </div>
-        );
-      },
+              />
+            </>
+          )}
+        </div>
+      );
     },
-
+  },
 
   text: {
     title: "Text",
