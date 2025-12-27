@@ -59,10 +59,17 @@ function fontScaleToCss(fontScale: SiteRow["font_scale"]) {
 
 export default async function PublicPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>;
+  searchParams?: Promise<{ page?: string; preview?: string }>;
 }) {
+
   const { username } = await params;
+  const sp = (await searchParams) ?? {};
+const pageSlugRaw = (sp.page ?? "").trim();
+const pageSlug = pageSlugRaw.length ? pageSlugRaw : null; // null = Home
+
 
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
@@ -77,17 +84,30 @@ export default async function PublicPage({
   if (!site) return notFound();
 
   const s = site as SiteRow;
+  const { data: page, error: pageErr } = await supabase
+  .from("site_pages")
+  .select("*")
+  .eq("site_id", s.id)
+  .is("slug", pageSlug)
+  .maybeSingle();
+
+if (pageErr) throw pageErr;
+if (!page) return notFound();
+
 
   // 2) blocks
   const { data: blocks, error: blocksErr } = await supabase
-    .from("site_blocks")
-    .select("*")
-    .eq("site_id", s.id)
-    .order("position", { ascending: true });
+  .from("site_blocks")
+  .select("*")
+  .eq("site_id", s.id)
+  .eq("page_id", (page as any).id)
+  .order("position", { ascending: true });
+
 
   if (blocksErr) throw blocksErr;
 
   const visibleBlocks = (blocks ?? []).filter((b: BlockRow) => b.is_visible);
+
 
   const layoutWidth = (s.layout_width ?? "compact") as "compact" | "wide" | "full";
   const containerClass = layoutToContainerClasses(layoutWidth);

@@ -407,14 +407,16 @@ async function createBlock(
                   align: "center",
                 } satisfies LinksContent);
 
-  const insertRow: any = {
-    site_id: siteId,
-    page_id: pageId,
-    type,
-    content: defaultContent,
-    position: nextPos,
-    is_visible: true,
-  };
+                const insertRow: any = {
+                  site_id: siteId,
+                  page_id: type === "header" ? null : pageId,
+                  type,
+                  content: defaultContent,
+                  position: nextPos,
+                  is_visible: true,
+                };
+                
+                
 
   if (type === "header") insertRow.variant = "default";
 
@@ -570,9 +572,16 @@ export default function DashboardPage() {
 const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
 
 const blocksForPage = useMemo(() => {
-  if (!selectedPageId) return [];
-  return blocks.filter((b) => b.page_id === selectedPageId);
+  const globalHeader = blocks.filter((b: any) => b.type === "header" && (b.page_id ?? null) === null);
+
+  if (!selectedPageId) return globalHeader;
+
+  const pageBlocks = blocks.filter((b: any) => b.page_id === selectedPageId && b.type !== "header");
+
+  return [...globalHeader, ...pageBlocks];
 }, [blocks, selectedPageId]);
+
+
 
 const selectedBlock = useMemo(
   () => blocksForPage.find((b) => b.id === selectedBlockId) ?? null,
@@ -679,6 +688,17 @@ const selectedBlock = useMemo(
 
       let bs = await loadBlocks(s.id);
 
+      // One-time migration in UI: if no global header yet, promote the first existing header to global
+const hasGlobalHeader = bs.some((b: any) => b.type === "header" && (b.page_id ?? null) === null);
+if (!hasGlobalHeader) {
+  const firstAnyHeader = bs.find((b: any) => b.type === "header");
+  if (firstAnyHeader) {
+    await updateBlock(firstAnyHeader.id, { page_id: null } as any);
+    bs = await loadBlocks(s.id);
+  }
+}
+
+
       if (!bs.some((b) => b.type === "hero")) {
         if (!pageId) throw new Error("No page selected");
 await createBlock(s.id, pageId, "hero");
@@ -705,6 +725,10 @@ await createBlock(s.id, pageId, "hero");
     refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    setSelectedBlockId(null);
+  }, [selectedPageId]);
+  
 
   async function createPage() {
     if (!site) return;
@@ -1517,48 +1541,90 @@ await createBlock(site.id, selectedPageId, t);
                   )}
                 >
                   {previewDevice === "mobile" ? (
-                    <iframe
-                      title="Mobile preview"
-                      src={`${publicUrl}?preview=${previewNonce}`}
-                      className="h-[760px] w-[390px] max-w-full rounded-2xl"
-                    />
-                  ) : (
-                    <SiteShell
-                      data-preview="true"
-                      themeKey={site?.theme_key ?? "midnight"}
-                      backgroundStyle={(site?.background_style ?? "solid") as any}
-                      buttonStyle={(site?.button_style ?? "solid") as any}
-                      fontScale={(site as any)?.font_scale ?? "md"}
-                      buttonRadius={(site as any)?.button_radius ?? "2xl"}
-                      cardStyle={(site as any)?.card_style ?? "card"}
-                      layoutWidth={(site as any)?.layout_width ?? "compact"}
-                      themeOverrides={{
-                        bg_color: site?.bg_color ?? null,
-                        text_color: site?.text_color ?? null,
-                        muted_color: site?.muted_color ?? null,
-                        border_color: site?.border_color ?? null,
-                        button_color: site?.button_color ?? null,
-                        button_text_color: site?.button_text_color ?? null,
-                      }}
-                    >
-                      <div className="space-y-4">
-                        <BlocksRenderer
-                          blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
-                          mode="preview"
-                          site={{
-                            layout_width: (site as any)?.layout_width ?? "compact",
-                            button_style: (site?.button_style ?? "solid") as any,
-                          }}
-                        />
-                      </div>
-                    </SiteShell>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="p-6 text-sm text-[rgb(var(--db-muted))]">Preview is collapsed.</div>
-            )}
-          </Card>
+  <div className="h-[760px] w-[390px] max-w-full overflow-hidden rounded-2xl border border-[rgb(var(--db-border))]">
+    <div className="h-full w-full overflow-auto">
+      <SiteShell
+        data-preview="true"
+        themeKey={site?.theme_key ?? "midnight"}
+        backgroundStyle={(site?.background_style ?? "solid") as any}
+        buttonStyle={(site?.button_style ?? "solid") as any}
+        fontScale={(site as any)?.font_scale ?? "md"}
+        buttonRadius={(site as any)?.button_radius ?? "2xl"}
+        cardStyle={(site as any)?.card_style ?? "card"}
+        layoutWidth={(site as any)?.layout_width ?? "compact"}
+        themeOverrides={{
+          bg_color: site?.bg_color ?? null,
+          text_color: site?.text_color ?? null,
+          muted_color: site?.muted_color ?? null,
+          border_color: site?.border_color ?? null,
+          button_color: site?.button_color ?? null,
+          button_text_color: site?.button_text_color ?? null,
+        }}
+      >
+        <div className="space-y-4">
+        <BlocksRenderer
+  blocks={
+    ([
+      // глобальный header (один на весь сайт)
+      ...(blocks.find((b) => b.type === "header" && b.is_visible)
+        ? [blocks.find((b) => b.type === "header" && b.is_visible)!]
+        : []),
+
+      // блоки текущей страницы (без header)
+      ...blocksForPage.filter(
+        (b) => b.is_visible && b.type !== "header",
+      ),
+    ] as any)
+  }
+  mode="preview"
+  site={{
+    layout_width: (site as any)?.layout_width ?? "compact",
+    button_style: (site?.button_style ?? "solid") as any,
+  }}
+/>
+
+        </div>
+      </SiteShell>
+    </div>
+  </div>
+) : (
+  <SiteShell
+    data-preview="true"
+    themeKey={site?.theme_key ?? "midnight"}
+    backgroundStyle={(site?.background_style ?? "solid") as any}
+    buttonStyle={(site?.button_style ?? "solid") as any}
+    fontScale={(site as any)?.font_scale ?? "md"}
+    buttonRadius={(site as any)?.button_radius ?? "2xl"}
+    cardStyle={(site as any)?.card_style ?? "card"}
+    layoutWidth={(site as any)?.layout_width ?? "compact"}
+    themeOverrides={{
+      bg_color: site?.bg_color ?? null,
+      text_color: site?.text_color ?? null,
+      muted_color: site?.muted_color ?? null,
+      border_color: site?.border_color ?? null,
+      button_color: site?.button_color ?? null,
+      button_text_color: site?.button_text_color ?? null,
+    }}
+  >
+    <div className="space-y-4">
+      <BlocksRenderer
+        blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
+        mode="preview"
+        site={{
+          layout_width: (site as any)?.layout_width ?? "compact",
+          button_style: (site?.button_style ?? "solid") as any,
+        }}
+      />
+    </div>
+  </SiteShell>
+)}
+</div>
+</div>
+) : (
+<div className="p-6 text-sm text-[rgb(var(--db-muted))]">Preview is collapsed.</div>
+)}
+</Card>
+
 
           {/* RIGHT (Inspector) */}
           <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-auto">
