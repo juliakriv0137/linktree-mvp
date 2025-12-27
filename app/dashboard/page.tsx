@@ -77,7 +77,7 @@ type SiteRow = {
 type BlockRow = {
   id: string;
   site_id: string;
-  page_id: string;
+  page_id: string | null;
   type: string;
   variant?: string | null;
   style?: Record<string, unknown> | null;
@@ -136,6 +136,11 @@ type PageRow = {
   title: string;
   sort_order: number;
   is_published: boolean;
+
+  nav_anchor: string | null;
+  nav_order: number;
+  show_in_nav: boolean;
+
   created_at: string;
   updated_at: string;
 };
@@ -570,6 +575,113 @@ export default function DashboardPage() {
   const canAct = !!site && !loading && !creating && !inserting;
   const [pages, setPages] = useState<PageRow[]>([]);
 const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+
+const selectedPage = useMemo(
+  () => pages.find((p) => p.id === selectedPageId) ?? null,
+  [pages, selectedPageId],
+);
+
+const [pageTitleDraft, setPageTitleDraft] = useState("");
+const [pageAnchorDraft, setPageAnchorDraft] = useState("");
+const [pageShowInNavDraft, setPageShowInNavDraft] = useState(true);
+
+useEffect(() => {
+  setPageTitleDraft(selectedPage?.title ?? "");
+  setPageAnchorDraft(selectedPage?.nav_anchor ?? "");
+  setPageShowInNavDraft(Boolean(selectedPage?.show_in_nav ?? true));
+}, [selectedPageId, selectedPage?.title, selectedPage?.nav_anchor, selectedPage?.show_in_nav]);
+
+function normalizeNavAnchor(raw: string) {
+  // якорь для меню: допускаем только a-z0-9- (как slug/anchor)
+  return normalizeAnchorId(raw);
+}
+
+async function saveSelectedPage() {
+  if (!site || !selectedPageId) return;
+
+  const nextTitle = safeTrim(pageTitleDraft) || (selectedPage?.slug === null ? "Home" : "Page");
+  const nextAnchorRaw = safeTrim(pageAnchorDraft);
+  const nextAnchor = nextAnchorRaw ? normalizeNavAnchor(nextAnchorRaw) : null;
+
+  try {
+    setError(null);
+
+    const patch: any = {
+      title: nextTitle,
+      nav_anchor: nextAnchor,
+      show_in_nav: Boolean(pageShowInNavDraft),
+    };
+
+    const { data, error } = await supabase
+      .from("site_pages")
+      .update(patch)
+      .eq("id", selectedPageId)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+
+    const updated = data as PageRow;
+
+    setPages((prev) =>
+      prev
+        .map((p) => (p.id === updated.id ? updated : p))
+        .sort((a, b) => (a.sort_order - b.sort_order) || a.created_at.localeCompare(b.created_at)),
+    );
+  } catch (e: any) {
+    setError(e?.message ?? String(e));
+  }
+}
+
+async function deleteSelectedPage() {
+  if (!site || !selectedPage) return;
+
+  // ✅ не удаляем Home
+  if (selectedPage.slug === null) {
+    setError("Home page cannot be deleted.");
+    return;
+  }
+
+  // ✅ не удаляем последнюю страницу
+  const nonHome = pages.filter((p) => p.slug !== null);
+  if (nonHome.length <= 1) {
+    setError("You cannot delete the last page.");
+    return;
+  }
+
+  const ok = window.confirm(`Delete page "${selectedPage.title}"? Blocks on this page will be deleted too.`);
+  if (!ok) return;
+
+  try {
+    setError(null);
+
+    // 1) удалить блоки этой страницы (кроме header — он global)
+    const { error: delBlocksErr } = await supabase
+      .from("site_blocks")
+      .delete()
+      .eq("site_id", site.id)
+      .eq("page_id", selectedPage.id);
+
+    if (delBlocksErr) throw delBlocksErr;
+
+    // 2) удалить страницу
+    const { error: delPageErr } = await supabase.from("site_pages").delete().eq("id", selectedPage.id);
+    if (delPageErr) throw delPageErr;
+
+    // 3) обновить state
+    setPages((prev) => prev.filter((p) => p.id !== selectedPage.id));
+    setBlocks((prev) => prev.filter((b) => b.page_id !== selectedPage.id));
+
+    // 4) выбрать Home (или первую)
+    const home = pages.find((p) => p.slug === null) ?? pages[0] ?? null;
+    setSelectedPageId(home?.id ?? null);
+    setSelectedBlockId(null);
+  } catch (e: any) {
+    setError(e?.message ?? String(e));
+  }
+}
+
+
 
 const blocksForPage = useMemo(() => {
   const globalHeader = blocks.filter((b: any) => b.type === "header" && (b.page_id ?? null) === null);
@@ -1342,46 +1454,109 @@ await createBlock(site.id, selectedPageId, type);
       </div>
 
       {/* body */}
-      <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_380px]">
+      <div className="mx-auto max-w-[1400px] px-4 py-6 min-h-0">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_380px] min-h-0">
           {/* LEFT */}
-          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-[rgb(var(--db-border))]">
+          {/* ✅ FIX: делаем скролл на уровне Card (как справа), чтобы вел себя одинаково */}
+          <Card className="lg:sticky lg:top-[76px] lg:h-[calc(100vh-96px)] lg:overflow-auto flex flex-col min-h-0 overscroll-contain">
+            <div className="p-4 border-b border-[rgb(var(--db-border))] shrink-0">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold">Blocks</div>
                   <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Select a block to edit. Drag to reorder.</div>
-                  <div className="mt-3">
-  <select
-    className="w-full rounded-md border border-[rgb(var(--db-border))] bg-white px-2 py-1 text-sm"
-    value={selectedPageId ?? ""}
-    onChange={(e) => setSelectedPageId(e.target.value)}
-  >
-    {pages.map((p) => (
-      <option key={p.id} value={p.id}>
-        {p.slug === null ? "Home" : `/${p.slug}`} — {p.title}
-      </option>
-    ))}
-  </select>
-</div>
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <div className="text-xs text-[rgb(var(--db-muted))] mb-2">Page</div>
+                      <select
+                        className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+                        value={selectedPageId ?? ""}
+                        onChange={(e) => setSelectedPageId((e.target as HTMLSelectElement).value)}
+                        disabled={!site || loading}
+                      >
+                        {pages.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.slug === null ? "Home" : `/${p.slug}`} — {p.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-<div className="mt-2 flex justify-end">
-  <button
-    type="button"
-    className="text-xs text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]"
-    onClick={async () => {
-      try {
-        await createPage();
-      } catch (e: any) {
-        setError(e?.message ?? String(e));
-      }
-    }}
-  >
-    + Page
-  </button>
-</div>
+                    <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Page settings</div>
 
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]"
+                          disabled={!canAct}
+                          onClick={async () => {
+                            try {
+                              await createPage();
+                            } catch (e: any) {
+                              setError(e?.message ?? String(e));
+                            }
+                          }}
+                        >
+                          + New page
+                        </button>
+                      </div>
 
+                      <div>
+                        <div className="text-[11px] text-[rgb(var(--db-muted))] mb-2">Title</div>
+                        <input
+                          value={pageTitleDraft}
+                          disabled={!canAct}
+                          onChange={(e) => setPageTitleDraft((e.target as HTMLInputElement).value)}
+                          placeholder="Page title"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.30)]"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="text-[11px] text-[rgb(var(--db-muted))] mb-2">Menu anchor (nav_anchor)</div>
+                        <input
+                          value={pageAnchorDraft}
+                          disabled={!canAct}
+                          onChange={(e) => setPageAnchorDraft((e.target as HTMLInputElement).value)}
+                          placeholder="home / about / pricing"
+                          className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.30)]"
+                        />
+                        <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">
+                          Используем в меню. Должен быть уникальным в рамках сайта. Пусто = не показывать как якорь.
+                        </div>
+                      </div>
+
+                      <label className="flex items-center justify-between gap-3 rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2">
+                        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Show in nav</div>
+                        <input
+                          type="checkbox"
+                          disabled={!canAct}
+                          checked={Boolean(pageShowInNavDraft)}
+                          onChange={(e) => setPageShowInNavDraft((e.target as HTMLInputElement).checked)}
+                        />
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          className="px-3 py-2 text-xs"
+                          disabled={!canAct || !selectedPageId}
+                          onClick={saveSelectedPage}
+                        >
+                          Save page
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          className="px-3 py-2 text-xs"
+                          disabled={!canAct || !selectedPage || selectedPage.slug === null}
+                          onClick={deleteSelectedPage}
+                        >
+                          Delete page
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1399,7 +1574,7 @@ await createBlock(site.id, selectedPageId, type);
                         setCreating(t);
                         try {
                           if (!selectedPageId) throw new Error("No page selected");
-await createBlock(site.id, selectedPageId, t);
+                          await createBlock(site.id, selectedPageId, t);
 
                           const bs = await loadBlocks(site.id);
                           setBlocks(bs);
@@ -1429,9 +1604,10 @@ await createBlock(site.id, selectedPageId, t);
               </div>
             </div>
 
-            <div className="p-4 lg:h-[calc(100%-92px)] lg:overflow-auto">
+            {/* ✅ FIX: убрали overflow с внутреннего контейнера — теперь скроллит сам Card (как справа) */}
+            <div className="p-4">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-              <SortableContext items={blocksForPage.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={blocksForPage.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
                     <InsertBlockMenu
                       insertIndex={0}
@@ -1444,7 +1620,7 @@ await createBlock(site.id, selectedPageId, t);
                       showOnHover={false}
                     />
 
-{blocksForPage.map((b, idx) => {
+                    {blocksForPage.map((b, idx) => {
                       const insertIndex = idx + 1;
                       return (
                         <div key={b.id} className="space-y-3">
