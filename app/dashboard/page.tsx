@@ -88,6 +88,25 @@ type BlockRow = {
   created_at: string;
 };
 
+type ProductRow = {
+  id: string;
+  site_id: string;
+  owner_id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  image_url: string | null;
+  external_url: string | null;
+  currency: string;
+  price_cents: number | null;
+  compare_at_cents: number | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+
 type HeroContent = {
   title?: string;
   subtitle?: string;
@@ -546,6 +565,29 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [site, setSite] = useState<SiteRow | null>(null);
   const [blocks, setBlocks] = useState<BlockRow[]>([]);
+  const [products, setProducts] = useState<ProductRow[]>([]);
+const [productsErr, setProductsErr] = useState<string | null>(null);
+const [productsLoading, setProductsLoading] = useState(false);
+const [editingProductId, setEditingProductId] = React.useState<string | null>(null);
+const [productDraft, setProductDraft] = React.useState<{
+  title: string;
+  price_cents: number | null;
+  sort_order: number;
+  is_active: boolean;
+  subtitle: string;
+  external_url: string;
+  image_url: string;
+}>({
+  title: "",
+  price_cents: null,
+  sort_order: 100,
+  is_active: true,
+  subtitle: "",
+  external_url: "",
+  image_url: "",
+});
+
+
   const [error, setError] = useState<string | null>(null);
 
   const [creating, setCreating] = useState<null | BlockType>(null);
@@ -636,6 +678,123 @@ async function saveSelectedPage() {
     setError(e?.message ?? String(e));
   }
 }
+
+async function loadProducts(siteId: string) {
+  setProductsLoading(true);
+  setProductsErr(null);
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("site_id", siteId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    setProducts((data ?? []) as any);
+  } catch (e: any) {
+    setProductsErr(e?.message ?? "Products load error");
+    setProducts([]);
+  } finally {
+    setProductsLoading(false);
+  }
+}
+
+async function saveProduct(productId: string) {
+  if (!site) return;
+
+  setProductsLoading(true);
+  setProductsErr(null);
+
+  try {
+    const patch: any = {
+      title: productDraft.title.trim() || "Untitled product",
+      subtitle: productDraft.subtitle.trim() || null,
+      price_cents: productDraft.price_cents,
+      sort_order: Number.isFinite(productDraft.sort_order) ? productDraft.sort_order : 100,
+      is_active: Boolean(productDraft.is_active),
+      external_url: productDraft.external_url.trim() || null,
+      image_url: productDraft.image_url.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from("products")
+      .update(patch)
+      .eq("id", productId)
+      .eq("site_id", site.id);
+
+    if (error) throw error;
+
+    // reload list from DB so UI is always correct
+    await loadProducts(site.id);
+
+    setEditingProductId(null);
+  } catch (e: any) {
+    setProductsErr(e?.message ?? "Save error");
+  } finally {
+    setProductsLoading(false);
+  }
+}
+
+async function deleteProduct(productId: string) {
+  if (!site) return;
+
+  const ok = confirm("Delete this product? This action cannot be undone.");
+  if (!ok) return;
+
+  setProductsLoading(true);
+  setProductsErr(null);
+
+  try {
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productId)
+      .eq("site_id", site.id);
+
+    if (error) throw error;
+
+    await loadProducts(site.id);
+    setEditingProductId(null);
+  } catch (e: any) {
+    setProductsErr(e?.message ?? "Delete error");
+  } finally {
+    setProductsLoading(false);
+  }
+}
+
+
+async function createProduct() {
+  if (!site?.id) return;
+
+  try {
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+    
+    if (userErr) throw userErr;
+    if (!user) throw new Error("Not authenticated");
+    
+    const { error } = await supabase.from("products").insert({
+      site_id: site.id,
+      owner_id: user.id,
+      title: "New product",
+      currency: "USD",
+      is_active: true,
+      sort_order: 100,
+    });
+    
+
+    if (error) throw error;
+
+    await loadProducts(site.id);
+  } catch (e: any) {
+    setProductsErr(e?.message ?? "Create product error");
+  }
+}
+
 
 async function deleteSelectedPage() {
   if (!site || !selectedPage) return;
@@ -814,6 +973,8 @@ const selectedBlock = useMemo(
       });
 
       let bs = await loadBlocks(s.id);
+await loadProducts(s.id);
+
 
       // One-time migration in UI: if no global header yet, promote the first existing header to global
 const hasGlobalHeader = bs.some((b: any) => b.type === "header" && (b.page_id ?? null) === null);
@@ -1162,7 +1323,9 @@ setSelectedBlockId(insertedCandidate.id);
               <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
                 Site: <span className="text-[rgb(var(--db-text))]">{site?.slug ?? "..."}</span>
               </div>
-            </div>{/* Dashboard tabs: Blocks / Products */}
+            </div>
+            
+            {/* Dashboard tabs: Blocks / Products */}
 <div className="flex items-center gap-2">
   <button
     type="button"
@@ -1841,14 +2004,224 @@ setSelectedBlockId(insertedCandidate.id);
         }}
       >
         <div className="space-y-4">
-        <BlocksRenderer
-  blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
-  mode="preview"
-  site={{
-    layout_width: (site as any)?.layout_width ?? "compact",
-    button_style: (site?.button_style ?? "solid") as any,
+  {dashboardTab === "blocks" ? (
+    <BlocksRenderer
+      blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
+      mode="preview"
+      site={{
+        layout_width: (site as any)?.layout_width ?? "compact",
+        button_style: (site?.button_style ?? "solid") as any,
+      }}
+    />
+  ) : (
+    <div className="p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="text-base font-semibold text-[rgb(var(--db-text))]">Products</div>
+        <div className="mt-1 text-sm text-[rgb(var(--db-muted))]">
+          {productsLoading ? "Loading..." : `${products.length} products`}
+        </div>
+      </div>
+
+      <Button onClick={createProduct}>Create product</Button>
+
+    </div>
+
+    {productsErr ? (
+      <div className="mt-3 text-sm text-red-600">{productsErr}</div>
+    ) : null}
+
+    <div className="mt-4 space-y-2">
+      {products.map((p) => (
+        <div
+          key={p.id}
+          className="flex items-center justify-between rounded-xl border border-[rgb(var(--db-border))] bg-white p-3"
+        >
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-[rgb(var(--db-text))] truncate">
+              {p.title}
+            </div>
+            <div className="mt-0.5 text-xs text-[rgb(var(--db-muted))]">
+              {p.price_cents != null ? `${p.currency} ${(p.price_cents / 100).toFixed(2)}` : "No price"}
+              {" · "}
+              sort {p.sort_order}
+              {" · "}
+              {p.is_active ? "Active" : "Inactive"}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+          <Button
+  onClick={() => {
+    setEditingProductId(p.id);
+    setProductDraft({
+      title: String(p.title ?? ""),
+      price_cents: p.price_cents ?? null,
+      sort_order: Number(p.sort_order ?? 100),
+      is_active: Boolean(p.is_active ?? true),
+      subtitle: String(p.subtitle ?? ""),
+      external_url: String(p.external_url ?? ""),
+      image_url: String(p.image_url ?? ""),
+    });
   }}
-/>
+  
+  className="bg-white text-[rgb(var(--db-text))] border border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]"
+>
+  Edit
+</Button>
+
+          </div>
+        </div>
+      ))}
+
+      {!productsLoading && products.length === 0 && !productsErr ? (
+        <div className="text-sm text-[rgb(var(--db-muted))]">No products yet.</div>
+      ) : null}
+    </div>
+
+    {editingProductId ? (
+  <div className="mt-4 rounded-2xl border border-[rgb(var(--db-border))] bg-white p-4">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <div className="text-sm font-semibold text-[rgb(var(--db-text))]">Edit product</div>
+        <div className="mt-1 text-xs text-[rgb(var(--db-muted))]">{editingProductId}</div>
+      </div>
+
+      <Button
+        onClick={() => setEditingProductId(null)}
+        className="bg-white text-[rgb(var(--db-text))] border border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]"
+      >
+        Close
+      </Button>
+    </div>
+
+    <div className="mt-4 grid gap-3">
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Title</div>
+        <input
+          value={productDraft.title}
+          onChange={(e) => setProductDraft((d) => ({ ...d, title: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="Product title"
+        />
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Subtitle</div>
+        <input
+          value={productDraft.subtitle}
+          onChange={(e) => setProductDraft((d) => ({ ...d, subtitle: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="Short subtitle (optional)"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Price (USD)</div>
+          <input
+            value={productDraft.price_cents === null ? "" : (productDraft.price_cents / 100).toFixed(2)}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              if (!raw) {
+                setProductDraft((d) => ({ ...d, price_cents: null }));
+                return;
+              }
+              const n = Number(raw.replace(",", "."));
+              if (Number.isFinite(n)) {
+                setProductDraft((d) => ({ ...d, price_cents: Math.round(n * 100) }));
+              }
+            }}
+            className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+            placeholder="19.99"
+            inputMode="decimal"
+          />
+          <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">Leave empty for “No price”.</div>
+        </div>
+
+        <div>
+          <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Sort order</div>
+          <input
+            value={String(productDraft.sort_order)}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isFinite(n)) setProductDraft((d) => ({ ...d, sort_order: n }));
+            }}
+            className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+            placeholder="100"
+            inputMode="numeric"
+          />
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm text-[rgb(var(--db-text))]">
+        <input
+          type="checkbox"
+          checked={productDraft.is_active}
+          onChange={(e) => setProductDraft((d) => ({ ...d, is_active: e.target.checked }))}
+        />
+        Active
+      </label>
+
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">External URL</div>
+        <input
+          value={productDraft.external_url}
+          onChange={(e) => setProductDraft((d) => ({ ...d, external_url: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Image URL</div>
+        <input
+          value={productDraft.image_url}
+          onChange={(e) => setProductDraft((d) => ({ ...d, image_url: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+  {/* LEFT: Delete */}
+  <Button
+    onClick={() => {
+      if (!editingProductId) return;
+      if (!confirm("Delete this product? This action cannot be undone.")) return;
+      deleteProduct(editingProductId);
+      setEditingProductId(null);
+    }}
+    className="bg-white text-red-600 border border-red-300 hover:bg-red-50"
+  >
+    Delete
+  </Button>
+
+  {/* RIGHT: Cancel / Save */}
+  <div className="flex items-center gap-2">
+    <Button
+      onClick={() => setEditingProductId(null)}
+      className="bg-white text-[rgb(var(--db-text))] border border-[rgb(var(--db-border))]"
+    >
+      Cancel
+    </Button>
+
+    <Button onClick={() => editingProductId && saveProduct(editingProductId)}>
+      Save
+    </Button>
+  </div>
+</div>
+
+    </div>
+  </div>
+) : null}
+
+
+
+  </div>
+
+  )}
+
 
 
         </div>
@@ -1875,15 +2248,224 @@ setSelectedBlockId(insertedCandidate.id);
     }}
   >
     <div className="space-y-4">
-      <BlocksRenderer
-        blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
-        mode="preview"
-        site={{
-          layout_width: (site as any)?.layout_width ?? "compact",
-          button_style: (site?.button_style ?? "solid") as any,
-        }}
-      />
+  {dashboardTab === "blocks" ? (
+    <BlocksRenderer
+      blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
+      mode="preview"
+      site={{
+        layout_width: (site as any)?.layout_width ?? "compact",
+        button_style: (site?.button_style ?? "solid") as any,
+      }}
+    />
+  ) : (
+    <div className="p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <div className="text-base font-semibold text-[rgb(var(--db-text))]">Products</div>
+        <div className="mt-1 text-sm text-[rgb(var(--db-muted))]">
+          {productsLoading ? "Loading..." : `${products.length} products`}
+        </div>
+      </div>
+
+      <Button onClick={createProduct}>Create product</Button>
+
     </div>
+
+    {productsErr ? (
+      <div className="mt-3 text-sm text-red-600">{productsErr}</div>
+    ) : null}
+
+    <div className="mt-4 space-y-2">
+      {products.map((p) => (
+        <div
+          key={p.id}
+          className="flex items-center justify-between rounded-xl border border-[rgb(var(--db-border))] bg-white p-3"
+        >
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-[rgb(var(--db-text))] truncate">
+              {p.title}
+            </div>
+            <div className="mt-0.5 text-xs text-[rgb(var(--db-muted))]">
+              {p.price_cents != null ? `${p.currency} ${(p.price_cents / 100).toFixed(2)}` : "No price"}
+              {" · "}
+              sort {p.sort_order}
+              {" · "}
+              {p.is_active ? "Active" : "Inactive"}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+          <Button
+  onClick={() => {
+    setEditingProductId(p.id);
+    setProductDraft({
+      title: String(p.title ?? ""),
+      price_cents: p.price_cents ?? null,
+      sort_order: Number(p.sort_order ?? 100),
+      is_active: Boolean(p.is_active ?? true),
+      subtitle: String(p.subtitle ?? ""),
+      external_url: String(p.external_url ?? ""),
+      image_url: String(p.image_url ?? ""),
+    });
+  }}
+  
+  className="bg-white text-[rgb(var(--db-text))] border border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]"
+>
+  Edit
+</Button>
+
+          </div>
+        </div>
+      ))}
+
+      {!productsLoading && products.length === 0 && !productsErr ? (
+        <div className="text-sm text-[rgb(var(--db-muted))]">No products yet.</div>
+      ) : null}
+    </div>
+
+    {editingProductId ? (
+  <div className="mt-4 rounded-2xl border border-[rgb(var(--db-border))] bg-white p-4">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <div className="text-sm font-semibold text-[rgb(var(--db-text))]">Edit product</div>
+        <div className="mt-1 text-xs text-[rgb(var(--db-muted))]">{editingProductId}</div>
+      </div>
+
+      <Button
+        onClick={() => setEditingProductId(null)}
+        className="bg-white text-[rgb(var(--db-text))] border border-[rgb(var(--db-border))] hover:bg-[rgb(var(--db-soft))]"
+      >
+        Close
+      </Button>
+    </div>
+
+    <div className="mt-4 grid gap-3">
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Title</div>
+        <input
+          value={productDraft.title}
+          onChange={(e) => setProductDraft((d) => ({ ...d, title: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="Product title"
+        />
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Subtitle</div>
+        <input
+          value={productDraft.subtitle}
+          onChange={(e) => setProductDraft((d) => ({ ...d, subtitle: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="Short subtitle (optional)"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Price (USD)</div>
+          <input
+            value={productDraft.price_cents === null ? "" : (productDraft.price_cents / 100).toFixed(2)}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              if (!raw) {
+                setProductDraft((d) => ({ ...d, price_cents: null }));
+                return;
+              }
+              const n = Number(raw.replace(",", "."));
+              if (Number.isFinite(n)) {
+                setProductDraft((d) => ({ ...d, price_cents: Math.round(n * 100) }));
+              }
+            }}
+            className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+            placeholder="19.99"
+            inputMode="decimal"
+          />
+          <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">Leave empty for “No price”.</div>
+        </div>
+
+        <div>
+          <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Sort order</div>
+          <input
+            value={String(productDraft.sort_order)}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isFinite(n)) setProductDraft((d) => ({ ...d, sort_order: n }));
+            }}
+            className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+            placeholder="100"
+            inputMode="numeric"
+          />
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm text-[rgb(var(--db-text))]">
+        <input
+          type="checkbox"
+          checked={productDraft.is_active}
+          onChange={(e) => setProductDraft((d) => ({ ...d, is_active: e.target.checked }))}
+        />
+        Active
+      </label>
+
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">External URL</div>
+        <input
+          value={productDraft.external_url}
+          onChange={(e) => setProductDraft((d) => ({ ...d, external_url: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-text))]">Image URL</div>
+        <input
+          value={productDraft.image_url}
+          onChange={(e) => setProductDraft((d) => ({ ...d, image_url: e.target.value }))}
+          className="mt-1 w-full rounded-xl border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[rgb(var(--db-ring))]"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+  {/* LEFT: Delete */}
+  <Button
+    onClick={() => {
+      if (!editingProductId) return;
+      if (!confirm("Delete this product? This action cannot be undone.")) return;
+      deleteProduct(editingProductId);
+      setEditingProductId(null);
+    }}
+    className="bg-white text-red-600 border border-red-300 hover:bg-red-50"
+  >
+    Delete
+  </Button>
+
+  {/* RIGHT: Cancel / Save */}
+  <div className="flex items-center gap-2">
+    <Button
+      onClick={() => setEditingProductId(null)}
+      className="bg-white text-[rgb(var(--db-text))] border border-[rgb(var(--db-border))]"
+    >
+      Cancel
+    </Button>
+
+    <Button onClick={() => editingProductId && saveProduct(editingProductId)}>
+      Save
+    </Button>
+  </div>
+</div>
+
+    </div>
+  </div>
+) : null}
+
+
+  </div>
+
+  )}
+</div>
+
   </SiteShell>
 )}
 </div>
