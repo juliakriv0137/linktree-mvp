@@ -1123,35 +1123,67 @@ await createBlock(site.id, selectedPageId, type);
               </div>
             </div>
 
-            {/* Right: actions + settings */}
-            <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={refreshAll} disabled={loading}>
-                  {loading ? "Loading..." : "Refresh"}
-                </Button>
+           {/* Right: actions + settings */}
+<div className="flex flex-wrap items-center gap-3 justify-between lg:justify-end">
+  {/* Page selector + add page */}
+  <div className="flex items-center gap-2">
+    <span className="hidden sm:inline text-xs text-[rgb(var(--db-muted))]">Page</span>
 
-                <Button
-                  variant="ghost"
-                  onClick={async () => {
-                    await supabase.auth.signOut();
-                    window.location.href = "/login";
-                  }}
-                >
-                  Sign out
-                </Button>
+    <select
+      className="w-[220px] rounded-full border border-[rgb(var(--db-border))] bg-white px-3 py-2 text-sm text-[rgb(var(--db-text))]"
+      value={selectedPageId ?? ""}
+      onChange={(e) => setSelectedPageId((e.target as HTMLSelectElement).value)}
+      disabled={!site || loading}
+    >
+      {pages.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.slug === null ? "Home" : `/${p.slug}`} — {p.title}
+        </option>
+      ))}
+    </select>
+
+    <Button
+      variant="ghost"
+      disabled={!canAct}
+      onClick={async () => {
+        try {
+          await createPage();
+        } catch (e: any) {
+          setError(e?.message ?? String(e));
+        }
+      }}
+    >
+      + Page
+    </Button>
+  </div>
+
+  {/* Actions */}
+  <div className="flex items-center gap-2">
+    <Button variant="ghost" onClick={refreshAll} disabled={loading}>
+      {loading ? "Loading..." : "Refresh"}
+    </Button>
+
+    <Button
+      variant="ghost"
+      onClick={async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/login";
+      }}
+    >
+      Sign out
+    </Button>
 
                 {/* ✅ One neat button -> opens settings panel */}
                 <DbDetails>
-                  <DbSummaryButton>Site settings</DbSummaryButton>
+      <DbSummaryButton>Site settings</DbSummaryButton>
 
-                  <DbPopoverPanel
-                    className={clsx(
-                      "fixed right-4 top-[72px] z-[6000] w-[520px] max-w-[92vw]",
-                      // ✅ ensure it's not "transparent"
-                      "rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] shadow-[0_24px_60px_rgba(15,23,42,0.18)]",
-                    )}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+      <DbPopoverPanel
+        className={clsx(
+          "fixed right-4 top-[72px] z-[6000] w-[520px] max-w-[92vw]",
+          "rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] shadow-[0_24px_60px_rgba(15,23,42,0.18)]",
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold">Site settings</div>
@@ -1438,9 +1470,9 @@ await createBlock(site.id, selectedPageId, type);
               </div>
 
               <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
-                <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-panel))] transition border border-[rgb(var(--db-border))]">
-                  Open public page
-                </span>
+      <span className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold bg-[rgb(var(--db-soft))] hover:bg-[rgb(var(--db-panel))] transition border border-[rgb(var(--db-border))]">
+        Open public page
+      </span>
               </Link>
             </div>
           </div>
