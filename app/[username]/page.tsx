@@ -30,6 +30,7 @@ type SiteRow = {
 type BlockRow = {
   id: string;
   site_id: string;
+  page_id: string | null;
   type: "header" | "hero" | "links" | "image" | "text" | "divider";
   variant?: string | null;
   style?: Record<string, unknown> | null;
@@ -38,9 +39,7 @@ type BlockRow = {
   is_visible: boolean;
 };
 
-function layoutToContainerClasses(
-  layout: "compact" | "wide" | "full" | null | undefined,
-) {
+function layoutToContainerClasses(layout: "compact" | "wide" | "full" | null | undefined) {
   if (layout === "full") {
     // Full should feel like a real full-width website: no max-width clamp.
     return "w-full px-6 sm:px-10 lg:px-14 py-12";
@@ -64,66 +63,71 @@ export default async function PublicPage({
   params: Promise<{ username: string }>;
   searchParams?: Promise<{ page?: string; preview?: string }>;
 }) {
-
   const { username } = await params;
   const sp = (await searchParams) ?? {};
-const pageSlugRaw = (sp.page ?? "").trim();
-const pageSlug = pageSlugRaw.length ? pageSlugRaw : null; // null = Home
-
+  const pageSlugRaw = (sp.page ?? "").trim();
+  const pageSlug = pageSlugRaw.length ? pageSlugRaw : null; // null = Home
 
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
   // 1) site by slug
-  const { data: site, error: siteErr } = await supabase
-    .from("sites")
-    .select("*")
-    .eq("slug", username)
-    .maybeSingle();
+  const { data: site, error: siteErr } = await supabase.from("sites").select("*").eq("slug", username).maybeSingle();
 
   if (siteErr) throw siteErr;
   if (!site) return notFound();
 
   const s = site as SiteRow;
+
+  // 2) page (Home = slug is null)
   const { data: page, error: pageErr } = await supabase
-  .from("site_pages")
-  .select("*")
-  .eq("site_id", s.id)
-  .is("slug", pageSlug)
-  .maybeSingle();
+    .from("site_pages")
+    .select("*")
+    .eq("site_id", s.id)
+    .is("slug", pageSlug)
+    .maybeSingle();
 
-if (pageErr) throw pageErr;
-if (!page) return notFound();
+  if (pageErr) throw pageErr;
+  if (!page) return notFound();
 
-
-  // 2) blocks
-  const { data: blocks, error: blocksErr } = await supabase
-  .from("site_blocks")
-  .select("*")
-  .eq("site_id", s.id)
-  .eq("page_id", (page as any).id)
-  .order("position", { ascending: true });
-
+  // 3) blocks (ВАЖНО: грузим ВСЕ блоки сайта, чтобы взять global header (page_id = null))
+  const { data: allBlocks, error: blocksErr } = await supabase
+    .from("site_blocks")
+    .select("*")
+    .eq("site_id", s.id)
+    .order("position", { ascending: true });
 
   if (blocksErr) throw blocksErr;
 
-  const visibleBlocks = (blocks ?? []).filter((b: BlockRow) => b.is_visible);
+  const all = (allBlocks ?? []) as BlockRow[];
 
+  // global header (один на весь сайт): type='header' AND page_id IS NULL
+  const globalHeader = all.find((b) => b.type === "header" && (b.page_id ?? null) === null) ?? null;
+
+  // blocks конкретной страницы (header исключаем, чтобы не было дубля)
+  const pageBlocks = all.filter((b) => b.type !== "header" && b.page_id === (page as any).id);
+
+  // visibility
+  const visibleHeader = globalHeader && globalHeader.is_visible ? globalHeader : null;
+  const visiblePageBlocks = pageBlocks.filter((b) => b.is_visible);
+
+  // full-bleed header rule: site_blocks.style.full_bleed = true (только для header)
+  const headerStyle = visibleHeader && visibleHeader.style && typeof visibleHeader.style === "object" ? (visibleHeader.style as any) : {};
+  const isFullBleedHeader = !!visibleHeader && headerStyle?.full_bleed === true;
+
+  // если header НЕ full-bleed — рендерим его в составе основной колонки/контейнера
+  const blocksInsideContainer = [
+    ...(visibleHeader && !isFullBleedHeader ? [visibleHeader] : []),
+    ...visiblePageBlocks,
+  ];
+
+  const headerBlock = isFullBleedHeader && visibleHeader ? [visibleHeader] : [];
 
   const layoutWidth = (s.layout_width ?? "compact") as "compact" | "wide" | "full";
   const containerClass = layoutToContainerClasses(layoutWidth);
   const fontSize = fontScaleToCss(s.font_scale ?? "md");
 
-  const firstBlock = (visibleBlocks as any[])[0] as any | undefined;
-
-  // System rule: full-bleed is an explicit block style (no one-off hacks).
-  // Enable by setting site_blocks.style.full_bleed = true for the Header block.
-  const headerStyle = (firstBlock?.style && typeof firstBlock.style === "object") ? (firstBlock.style as any) : {};
-  const isFullBleedHeader = firstBlock?.type === "header" && headerStyle?.full_bleed === true;
-
-  const headerBlock = isFullBleedHeader ? [firstBlock] : [];
-  const restBlocks = isFullBleedHeader ? (visibleBlocks as any[]).slice(1) : (visibleBlocks as any[]);
-
   const hasChrome = layoutWidth !== "full";
+
   return (
     <SiteShell
       themeKey={s.theme_key ?? "midnight"}
@@ -170,7 +174,7 @@ if (!page) return notFound();
             >
               <div className="space-y-6">
                 <BlocksRenderer
-                  blocks={(restBlocks as any) ?? []}
+                  blocks={(blocksInsideContainer as any) ?? []}
                   mode="public"
                   site={{
                     layout_width: layoutWidth,
@@ -178,9 +182,7 @@ if (!page) return notFound();
                   }}
                 />
 
-                <div className="pt-2 text-center text-xs text-white/35">
-                  Powered by Mini-Site Builder
-                </div>
+                <div className="pt-2 text-center text-xs text-white/35">Powered by Mini-Site Builder</div>
               </div>
             </div>
           </div>
@@ -188,7 +190,7 @@ if (!page) return notFound();
           <div className="w-full">
             <div className="space-y-6">
               <BlocksRenderer
-                blocks={(restBlocks as any) ?? []}
+                blocks={(blocksInsideContainer as any) ?? []}
                 mode="public"
                 site={{
                   layout_width: layoutWidth,
@@ -196,13 +198,10 @@ if (!page) return notFound();
                 }}
               />
 
-              <div className="pt-2 text-center text-xs text-white/35">
-                Powered by Mini-Site Builder
-              </div>
+              <div className="pt-2 text-center text-xs text-white/35">Powered by Mini-Site Builder</div>
             </div>
           </div>
         )}
-
       </div>
     </SiteShell>
   );

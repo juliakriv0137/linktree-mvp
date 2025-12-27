@@ -145,7 +145,9 @@ type PageRow = {
   updated_at: string;
 };
 
-type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id">>;
+type BlockPatch = Partial<
+  Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id" | "page_id">
+>;
 
 function clsx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -584,6 +586,8 @@ const selectedPage = useMemo(
 const [pageTitleDraft, setPageTitleDraft] = useState("");
 const [pageAnchorDraft, setPageAnchorDraft] = useState("");
 const [pageShowInNavDraft, setPageShowInNavDraft] = useState(true);
+const [dashboardTab, setDashboardTab] = React.useState<"blocks" | "products">("blocks");
+
 
 useEffect(() => {
   setPageTitleDraft(selectedPage?.title ?? "");
@@ -684,14 +688,24 @@ async function deleteSelectedPage() {
 
 
 const blocksForPage = useMemo(() => {
-  const globalHeader = blocks.filter((b: any) => b.type === "header" && (b.page_id ?? null) === null);
+  const byPos = (a: any, b: any) =>
+    (Number(a.position ?? 0) - Number(b.position ?? 0)) || String(a.created_at ?? "").localeCompare(String(b.created_at ?? ""));
+
+  const globalHeader = blocks
+    .filter((b: any) => b.type === "header" && (b.page_id ?? null) === null)
+    .slice()
+    .sort(byPos);
 
   if (!selectedPageId) return globalHeader;
 
-  const pageBlocks = blocks.filter((b: any) => b.page_id === selectedPageId && b.type !== "header");
+  const pageBlocks = blocks
+    .filter((b: any) => b.page_id === selectedPageId && b.type !== "header")
+    .slice()
+    .sort(byPos);
 
   return [...globalHeader, ...pageBlocks];
 }, [blocks, selectedPageId]);
+
 
 
 
@@ -707,6 +721,7 @@ const selectedBlock = useMemo(
     if ("content" in patch) updates.content = (patch as any).content;
     if ("variant" in patch) updates.variant = (patch as any).variant;
     if ("style" in patch) updates.style = (patch as any).style;
+    if ("page_id" in patch) updates.page_id = (patch as any).page_id;
     if ("anchor_id" in patch) updates.anchor_id = (patch as any).anchor_id;
     if ("position" in patch) updates.position = (patch as any).position;
     if ("is_visible" in patch) updates.is_visible = (patch as any).is_visible;
@@ -900,15 +915,22 @@ await createBlock(s.id, pageId, "hero");
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = blocks.findIndex((b) => b.id === active.id);
-    const newIndex = blocks.findIndex((b) => b.id === over.id);
+    const oldIndex = blocksForPage.findIndex((b) => b.id === active.id);
+    const newIndex = blocksForPage.findIndex((b) => b.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const next = arrayMove(blocks, oldIndex, newIndex).map((b) => ({ ...b }));
-    const normalized = next.map((b, idx) => ({ ...b, position: idx + 1 }));
+    const moved = arrayMove(blocksForPage, oldIndex, newIndex).map((b, idx) => ({
+      ...b,
+      position: idx + 1,
+    }));
+
+    // собрать новый blocks: заменить только блоки этой страницы
+    const movedIds = new Set(moved.map((b) => b.id));
+    const nextAll = blocks.map((b) => (movedIds.has(b.id) ? (moved.find((x) => x.id === b.id) as any) : b));
 
     try {
-      await persistOrder(normalized);
+      setBlocks(nextAll);
+      await Promise.all(moved.map((b) => updateBlock(b.id, { position: b.position })));
     } catch (e: any) {
       setError(e?.message ?? String(e));
       if (!site) return;
@@ -916,6 +938,7 @@ await createBlock(s.id, pageId, "hero");
       setBlocks(bs);
     }
   }
+
 
   async function insertBlockAt(index: number, type: BlockType) {
     if (!site) return;
@@ -927,26 +950,44 @@ await createBlock(s.id, pageId, "hero");
 await createBlock(site.id, selectedPageId, type);
 
 
-      const bs = await loadBlocks(site.id);
-      setBlocks(bs);
+const bs = await loadBlocks(site.id);
+setBlocks(bs);
 
-      const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
-      const oldIndex = bs.findIndex((b) => b.id === last.id);
-      if (oldIndex === -1) return;
+// блоки текущей страницы (включая global header)
+const globalHeader = bs.filter((b: any) => b.type === "header" && (b.page_id ?? null) === null);
+const pageBlocks = bs.filter((b: any) => b.page_id === selectedPageId && b.type !== "header");
+const pageList = [...globalHeader, ...pageBlocks];
 
-      const targetIndex = Math.max(0, Math.min(index, bs.length - 1));
-      if (oldIndex === targetIndex) return;
+// только что добавленный блок ищем среди pageBlocks:
+const insertedCandidate = [...pageBlocks]
+  .sort((a, b) => (b.position - a.position) || b.created_at.localeCompare(a.created_at))[0];
 
-      const next = arrayMove(bs, oldIndex, targetIndex).map((b, idx) => ({
-        ...b,
-        position: idx + 1,
-      }));
+if (!insertedCandidate) return;
 
-      await persistOrder(next);
-      setInsertMenuIndex(null);
+const oldIndex = pageList.findIndex((b) => b.id === insertedCandidate.id);
+if (oldIndex === -1) return;
 
-      const inserted = next[targetIndex];
-      if (inserted?.id) setSelectedBlockId(inserted.id);
+const targetIndex = Math.max(0, Math.min(index, pageList.length - 1));
+if (oldIndex === targetIndex) {
+  setInsertMenuIndex(null);
+  setSelectedBlockId(insertedCandidate.id);
+  return;
+}
+
+const moved = arrayMove(pageList, oldIndex, targetIndex).map((b, idx) => ({
+  ...b,
+  position: idx + 1,
+}));
+
+const movedIds = new Set(moved.map((b) => b.id));
+const nextAll = bs.map((b) => (movedIds.has(b.id) ? (moved.find((x) => x.id === b.id) as any) : b));
+setBlocks(nextAll);
+
+await Promise.all(moved.map((b) => updateBlock(b.id, { position: b.position })));
+
+setInsertMenuIndex(null);
+setSelectedBlockId(insertedCandidate.id);
+
     } catch (e: any) {
       setError(e?.message ?? String(e));
       const bs2 = await loadBlocks(site.id);
@@ -1121,7 +1162,34 @@ await createBlock(site.id, selectedPageId, type);
               <div className="text-xs text-[rgb(var(--db-muted))] mt-1 truncate">
                 Site: <span className="text-[rgb(var(--db-text))]">{site?.slug ?? "..."}</span>
               </div>
-            </div>
+            </div>{/* Dashboard tabs: Blocks / Products */}
+<div className="flex items-center gap-2">
+  <button
+    type="button"
+    onClick={() => setDashboardTab("blocks")}
+    className={[
+      "inline-flex items-center rounded-full border px-3 py-2 text-xs font-semibold",
+      dashboardTab === "blocks"
+        ? "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))]"
+        : "border-[rgb(var(--db-border))] bg-white text-[rgb(var(--db-muted))] hover:bg-[rgb(var(--db-soft))] hover:text-[rgb(var(--db-text))]",
+    ].join(" ")}
+  >
+    Blocks
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setDashboardTab("products")}
+    className={[
+      "inline-flex items-center rounded-full border px-3 py-2 text-xs font-semibold",
+      dashboardTab === "products"
+        ? "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))]"
+        : "border-[rgb(var(--db-border))] bg-white text-[rgb(var(--db-muted))] hover:bg-[rgb(var(--db-soft))] hover:text-[rgb(var(--db-text))]",
+    ].join(" ")}
+  >
+    Products
+  </button>
+</div>
 
            {/* Right: actions + settings */}
 <div className="flex flex-wrap items-center gap-3 justify-between lg:justify-end">
@@ -1319,25 +1387,28 @@ await createBlock(site.id, selectedPageId, type);
                           </FieldRow>
 
                           <FieldRow label="Radius">
-  <select
-    className="w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))]"
-    value={readHeaderEnum("radius", "2xl")}
+  <DbSelect
+    value={(site?.button_radius ?? "2xl") as any}
     disabled={!canAct}
-    onChange={(e) => {
-      const v = (e.target as HTMLSelectElement).value;
-      const cur = (((selectedBlock as any)?.style ?? {}) as any).header ?? {};
-      onPatchBlockStyle({ header: { ...cur, radius: v } });
+    onChange={async (e) => {
+      if (!site) return;
+      const button_radius = (e.target as HTMLSelectElement).value as any;
+      try {
+        setError(null);
+        await updateSiteTheme(site.id, { button_radius } as any);
+        setSite({ ...site, button_radius } as any);
+      } catch (err: any) {
+        setError(err?.message ?? String(err));
+      }
     }}
   >
-    <option value="none">None</option>
-    <option value="sm">Small</option>
-    <option value="md">Medium</option>
-    <option value="lg">Large</option>
-    <option value="xl">XL</option>
-    <option value="2xl">2XL</option>
-    <option value="full">Full</option>
-  </select>
+    <option value="md">{radiusLabel("md")}</option>
+    <option value="xl">{radiusLabel("xl")}</option>
+    <option value="2xl">{radiusLabel("2xl")}</option>
+    <option value="full">{radiusLabel("full")}</option>
+  </DbSelect>
 </FieldRow>
+
 
 
                           <FieldRow label="Cards">
@@ -1771,25 +1842,14 @@ await createBlock(site.id, selectedPageId, type);
       >
         <div className="space-y-4">
         <BlocksRenderer
-  blocks={
-    ([
-      // глобальный header (один на весь сайт)
-      ...(blocks.find((b) => b.type === "header" && b.is_visible)
-        ? [blocks.find((b) => b.type === "header" && b.is_visible)!]
-        : []),
-
-      // блоки текущей страницы (без header)
-      ...blocksForPage.filter(
-        (b) => b.is_visible && b.type !== "header",
-      ),
-    ] as any)
-  }
+  blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
   mode="preview"
   site={{
     layout_width: (site as any)?.layout_width ?? "compact",
     button_style: (site?.button_style ?? "solid") as any,
   }}
 />
+
 
         </div>
       </SiteShell>
