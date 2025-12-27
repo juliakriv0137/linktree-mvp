@@ -77,6 +77,7 @@ type SiteRow = {
 type BlockRow = {
   id: string;
   site_id: string;
+  page_id: string;
   type: string;
   variant?: string | null;
   style?: Record<string, unknown> | null;
@@ -127,6 +128,16 @@ type TextContent = {
   text?: string;
   size?: "sm" | "md" | "lg";
   align?: "left" | "center" | "right";
+};
+type PageRow = {
+  id: string;
+  site_id: string;
+  slug: string | null;
+  title: string;
+  sort_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type BlockPatch = Partial<Pick<BlockRow, "content" | "is_visible" | "position" | "variant" | "style" | "anchor_id">>;
@@ -343,7 +354,13 @@ async function loadBlocks(siteId: string): Promise<BlockRow[]> {
   return (data ?? []) as BlockRow[];
 }
 
-async function createBlock(siteId: string, type: "header" | "hero" | "links" | "image" | "text" | "divider") {
+async function createBlock(
+  siteId: string,
+  pageId: string,
+  type: "header" | "hero" | "links" | "image" | "text" | "divider",
+) {
+
+
   const { data: maxPosRow, error: maxPosErr } = await supabase
     .from("site_blocks")
     .select("position")
@@ -351,6 +368,7 @@ async function createBlock(siteId: string, type: "header" | "hero" | "links" | "
     .order("position", { ascending: false })
     .limit(1)
     .maybeSingle();
+    
 
   if (maxPosErr) throw maxPosErr;
   const nextPos = (maxPosRow?.position ?? 0) + 1;
@@ -391,6 +409,7 @@ async function createBlock(siteId: string, type: "header" | "hero" | "links" | "
 
   const insertRow: any = {
     site_id: siteId,
+    page_id: pageId,
     type,
     content: defaultContent,
     position: nextPos,
@@ -540,14 +559,25 @@ export default function DashboardPage() {
   const [previewNonce, setPreviewNonce] = useState(0);
 
   const [blockTab, setBlockTab] = useState<"content" | "style" | "advanced">("content");
-
-  const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedBlockId) ?? null, [blocks, selectedBlockId]);
+  
 
   const publicUrl = site ? `/${site.slug}` : "/";
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const canAct = !!site && !loading && !creating && !inserting;
+  const [pages, setPages] = useState<PageRow[]>([]);
+const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+
+const blocksForPage = useMemo(() => {
+  if (!selectedPageId) return [];
+  return blocks.filter((b) => b.page_id === selectedPageId);
+}, [blocks, selectedPageId]);
+
+const selectedBlock = useMemo(
+  () => blocksForPage.find((b) => b.id === selectedBlockId) ?? null,
+  [blocksForPage, selectedBlockId],
+);
 
   async function updateBlock(blockId: string, patch: BlockPatch) {
     if (!site) throw new Error("No site loaded");
@@ -620,6 +650,24 @@ export default function DashboardPage() {
       const s = await ensureSiteForUser();
       setSite(s);
 
+      const { data: pagesData, error: pagesErr } = await supabase
+      .from("site_pages")
+      .select("*")
+      .eq("site_id", s.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    
+      let pageId: string | null = null;
+
+      if (!pagesErr && pagesData) {
+        setPages(pagesData as any);
+        const home = (pagesData as any[]).find((p) => p.slug === null) ?? (pagesData as any[])[0];
+        pageId = home?.id ?? null;
+        setSelectedPageId((prev) => prev ?? pageId);
+      }
+      
+    
+
       setColors({
         bg_color: s.bg_color ?? "",
         text_color: s.text_color ?? "",
@@ -632,7 +680,10 @@ export default function DashboardPage() {
       let bs = await loadBlocks(s.id);
 
       if (!bs.some((b) => b.type === "hero")) {
-        await createBlock(s.id, "hero");
+        if (!pageId) throw new Error("No page selected");
+await createBlock(s.id, pageId, "hero");
+
+        
         bs = await loadBlocks(s.id);
       }
 
@@ -654,6 +705,49 @@ export default function DashboardPage() {
     refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function createPage() {
+    if (!site) return;
+  
+    // следующий порядковый номер
+    const nextNum = pages.length + 1;
+  
+    // базовый slug
+    const baseSlug = `page-${nextNum}`;
+  
+    // гарантируем уникальность в текущем списке pages
+    let slug = baseSlug;
+    let i = nextNum;
+    const hasSlug = (s: string) => pages.some((p) => (p.slug ?? "").toLowerCase() === s.toLowerCase());
+    while (hasSlug(slug)) {
+      i += 1;
+      slug = `page-${i}`;
+    }
+  
+    const sort_order = Math.max(0, ...pages.map((p) => p.sort_order ?? 0)) + 1;
+  
+    const { data, error } = await supabase
+      .from("site_pages")
+      .insert({
+        site_id: site.id,
+        slug,
+        title: `Page ${i}`,
+        sort_order,
+        is_published: true,
+      })
+      .select("*")
+      .single();
+  
+    if (error) throw error;
+    const created = data as PageRow;
+  
+    setPages((prev) => [...prev, created].sort((a, b) => (a.sort_order - b.sort_order) || a.created_at.localeCompare(b.created_at)));
+    setSelectedPageId(created.id);
+  
+    // сброс выбора блока, т.к. на новой странице блоков ещё нет
+    setSelectedBlockId(null);
+  }
+  
 
   useEffect(() => {
     setAnchorDraft(selectedBlock?.anchor_id ?? "");
@@ -693,7 +787,9 @@ export default function DashboardPage() {
     setInserting({ index, type });
 
     try {
-      await createBlock(site.id, type);
+      if (!selectedPageId) throw new Error("No page selected");
+await createBlock(site.id, selectedPageId, type);
+
 
       const bs = await loadBlocks(site.id);
       setBlocks(bs);
@@ -1231,6 +1327,37 @@ export default function DashboardPage() {
                 <div>
                   <div className="text-sm font-semibold">Blocks</div>
                   <div className="text-xs text-[rgb(var(--db-muted))] mt-1">Select a block to edit. Drag to reorder.</div>
+                  <div className="mt-3">
+  <select
+    className="w-full rounded-md border border-[rgb(var(--db-border))] bg-white px-2 py-1 text-sm"
+    value={selectedPageId ?? ""}
+    onChange={(e) => setSelectedPageId(e.target.value)}
+  >
+    {pages.map((p) => (
+      <option key={p.id} value={p.id}>
+        {p.slug === null ? "Home" : `/${p.slug}`} — {p.title}
+      </option>
+    ))}
+  </select>
+</div>
+
+<div className="mt-2 flex justify-end">
+  <button
+    type="button"
+    className="text-xs text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]"
+    onClick={async () => {
+      try {
+        await createPage();
+      } catch (e: any) {
+        setError(e?.message ?? String(e));
+      }
+    }}
+  >
+    + Page
+  </button>
+</div>
+
+
                 </div>
               </div>
 
@@ -1247,7 +1374,9 @@ export default function DashboardPage() {
                         if (!site) return;
                         setCreating(t);
                         try {
-                          await createBlock(site.id, t);
+                          if (!selectedPageId) throw new Error("No page selected");
+await createBlock(site.id, selectedPageId, t);
+
                           const bs = await loadBlocks(site.id);
                           setBlocks(bs);
                           const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
@@ -1278,7 +1407,7 @@ export default function DashboardPage() {
 
             <div className="p-4 lg:h-[calc(100%-92px)] lg:overflow-auto">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={blocksForPage.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
                     <InsertBlockMenu
                       insertIndex={0}
@@ -1291,7 +1420,7 @@ export default function DashboardPage() {
                       showOnHover={false}
                     />
 
-                    {blocks.map((b, idx) => {
+{blocksForPage.map((b, idx) => {
                       const insertIndex = idx + 1;
                       return (
                         <div key={b.id} className="space-y-3">
@@ -1414,7 +1543,7 @@ export default function DashboardPage() {
                     >
                       <div className="space-y-4">
                         <BlocksRenderer
-                          blocks={(blocks.filter((b) => b.is_visible) as any) ?? []}
+                          blocks={(blocksForPage.filter((b) => b.is_visible) as any) ?? []}
                           mode="preview"
                           site={{
                             layout_width: (site as any)?.layout_width ?? "compact",
