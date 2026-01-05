@@ -31,12 +31,17 @@ type BlockRow = {
   id: string;
   site_id: string;
   page_id: string | null;
-  type: "header" | "hero" | "links" | "image" | "text" | "divider";
+
+  type: "header" | "hero" | "links" | "image" | "text" | "divider" | "products";
+
   variant?: string | null;
   style?: Record<string, unknown> | null;
   content: any;
+
   position: number;
   is_visible: boolean;
+
+  anchor_id?: string | null;
 };
 
 function layoutToContainerClasses(layout: "compact" | "wide" | "full" | null | undefined) {
@@ -111,7 +116,8 @@ export default async function PublicPage({
   const visiblePageBlocks = pageBlocks.filter((b) => b.is_visible);
 
   // full-bleed header rule: site_blocks.style.full_bleed = true (только для header)
-  const headerStyle = visibleHeader && visibleHeader.style && typeof visibleHeader.style === "object" ? (visibleHeader.style as any) : {};
+  const headerStyle =
+    visibleHeader && visibleHeader.style && typeof visibleHeader.style === "object" ? (visibleHeader.style as any) : {};
   const isFullBleedHeader = !!visibleHeader && headerStyle?.full_bleed === true;
 
   // если header НЕ full-bleed — рендерим его в составе основной колонки/контейнера
@@ -120,7 +126,24 @@ export default async function PublicPage({
     ...visiblePageBlocks,
   ];
 
+  // если header full-bleed — рендерим отдельно сверху
   const headerBlock = isFullBleedHeader && visibleHeader ? [visibleHeader] : [];
+
+  // Map DB blocks (position/is_visible) -> renderer blocks (sort_order/is_hidden)
+  const mapToRendererBlock = (b: BlockRow) => ({
+    id: b.id,
+    site_id: b.site_id,
+    type: b.type,
+    variant: b.variant ?? null,
+    style: (b.style ?? null) as any,
+    content: (b.content ?? {}) as any,
+    anchor_id: b.anchor_id ?? null,
+    sort_order: b.position ?? 0,
+    is_hidden: !b.is_visible,
+  });
+
+  const headerBlockForRenderer = headerBlock.map(mapToRendererBlock);
+  const blocksInsideContainerForRenderer = blocksInsideContainer.map(mapToRendererBlock);
 
   const layoutWidth = (s.layout_width ?? "compact") as "compact" | "wide" | "full";
   const containerClass = layoutToContainerClasses(layoutWidth);
@@ -151,7 +174,7 @@ export default async function PublicPage({
         {isFullBleedHeader ? (
           <div className="w-full">
             <BlocksRenderer
-              blocks={(headerBlock as any) ?? []}
+              blocks={headerBlockForRenderer}
               mode="public"
               site={{
                 layout_width: layoutWidth,
@@ -174,7 +197,7 @@ export default async function PublicPage({
             >
               <div className="space-y-6">
                 <BlocksRenderer
-                  blocks={(blocksInsideContainer as any) ?? []}
+                  blocks={blocksInsideContainerForRenderer}
                   mode="public"
                   site={{
                     layout_width: layoutWidth,
@@ -190,7 +213,7 @@ export default async function PublicPage({
           <div className="w-full">
             <div className="space-y-6">
               <BlocksRenderer
-                blocks={(blocksInsideContainer as any) ?? []}
+                blocks={blocksInsideContainerForRenderer}
                 mode="public"
                 site={{
                   layout_width: layoutWidth,

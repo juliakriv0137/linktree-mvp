@@ -2,6 +2,8 @@ import * as React from "react";
 import type { SiteBlockRow } from "@/components/blocks/BlocksRenderer";
 import { LinkButton } from "@/components/site/LinkButton";
 import { HeaderBlockClient } from "@/components/site/HeaderBlockClient";
+import ProductsBlock from "@/components/blocks/ProductsBlock";
+
 
 type RenderProps = {
   block: SiteBlockRow;
@@ -583,6 +585,22 @@ export const BlockRegistry: Record<string, BlockEntry> = {
       );
     },
   },
+
+
+  products: {
+  title: "Products",
+  render: ({ block }) => {
+    return (
+      <ProductsBlock
+        siteId={block.site_id}
+        title={(block as any)?.content?.title ?? "Products"}
+        subtitle={(block as any)?.content?.subtitle ?? null}
+        className="w-full"
+      />
+    );
+  },
+},
+
 };
 
 export default BlockRegistry;

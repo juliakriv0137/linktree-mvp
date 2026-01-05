@@ -5,6 +5,7 @@ import { BlockRegistry } from "@/lib/blocks/registry";
 export type SiteBlockRow = {
   id: string;
   site_id: string;
+  page_id?: string | null;
   type: string;
   variant?: string | null;
   style?: Record<string, unknown> | null;
