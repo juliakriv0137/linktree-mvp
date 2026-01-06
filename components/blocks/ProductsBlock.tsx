@@ -4,24 +4,26 @@ import * as React from "react";
 import { createClient } from "@supabase/supabase-js";
 
 type ProductRow = {
-  id: string;
-  site_id: string;
+    id: string;
+    site_id: string;
 
-  title: string | null;
-  description: string | null;
-  image_url: string | null;
+    title: string | null;
+    subtitle: string | null;
+    description: string | null;
+    image_url: string | null;
 
-  price_cents: number | null;
-  currency: string | null;
+    external_url: string | null;
 
-  product_url: string | null;
-  slug: string | null;
+    currency: string | null;
+    price_cents: number | null;
+    compare_at_cents: number | null;
 
-  sort_order: number | null;
-  is_published: boolean | null;
+    is_active: boolean | null;
+    sort_order: number | null;
 
-  created_at: string | null;
-};
+    created_at: string | null;
+    updated_at: string | null;
+  };
 
 function formatPrice(priceCents: number | null, currency: string | null) {
   if (priceCents == null) return "";
@@ -99,14 +101,12 @@ export default function ProductsBlock(props: ProductsBlockProps) {
 
         const { data, error } = await supabase
           .from("products")
-          .select(
-            "id,site_id,title,description,image_url,price_cents,currency,product_url,slug,sort_order,is_published,created_at"
-          )
+          .select("id,site_id,title,subtitle,description,image_url,external_url,currency,price_cents,compare_at_cents,is_active,sort_order,created_at,updated_at")
           .eq("site_id", siteId)
-          .eq("is_published", true)
+          .eq("is_active", true)
           .order("sort_order", { ascending: true, nullsFirst: true })
-          .order("created_at", { ascending: false, nullsFirst: true })
-          .limit(limit);
+            .order("updated_at", { ascending: false, nullsFirst: true })
+            .limit(limit);
 
         if (!alive) return;
 
@@ -162,16 +162,16 @@ export default function ProductsBlock(props: ProductsBlockProps) {
             </div>
           ) : products.length === 0 ? (
             <div className="text-center text-sm text-[rgb(var(--muted))]">
-              No published products yet.
+              No active products yet.
             </div>
           ) : (
             <div className={`grid ${gridColsClass} gap-4`}>
               {products.map((p) => {
                 const titleText = safeText(p.title) || "Untitled";
-                const descText = clampText(p.description || "", 140);
+                const descText = clampText(p.description || p.subtitle || "", 140);
                 const priceText = formatPrice(p.price_cents, p.currency);
                 const img = safeText(p.image_url);
-                const href = normalizeUrl(p.product_url);
+                const href = normalizeUrl(p.external_url);
 
                 return (
                   <div
@@ -198,14 +198,23 @@ export default function ProductsBlock(props: ProductsBlockProps) {
                     )}
 
                     <div className="p-4">
-                      <div className="text-base font-semibold text-[rgb(var(--text))]">{titleText}</div>
+                    <div className="text-base font-semibold text-[rgb(var(--text))] break-words" style={{ overflowWrap: "anywhere" }}>
+  {titleText}
+</div>
+
 
                       {priceText ? (
                         <div className="mt-1 text-sm font-medium text-[rgb(var(--text))]">{priceText}</div>
                       ) : null}
 
                       {descText ? (
-                        <div className="mt-2 text-sm leading-relaxed text-[rgb(var(--muted))]">{descText}</div>
+                        <div
+                        className="mt-2 text-sm leading-relaxed text-[rgb(var(--muted))] break-words"
+                        style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                      >
+                        {descText}
+                      </div>
+                      
                       ) : null}
 
                       {href ? (
@@ -231,7 +240,7 @@ export default function ProductsBlock(props: ProductsBlockProps) {
         {/* маленькая подсказка для отладки (можно убрать потом) */}
         {!loading && !error ? (
           <div className="mt-4 text-center text-xs text-[rgb(var(--muted))]">
-            Showing {products.length} published product(s).
+            Showing {products.length} active product(s).
           </div>
         ) : null}
       </div>
