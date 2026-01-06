@@ -114,7 +114,8 @@ export function HeaderEditor({
   const labelCls = "text-sm text-[rgb(var(--db-text))] mb-2";
   const hintCls = "text-xs text-[rgb(var(--db-muted))]";
   const fieldBase =
-    "w-full rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-4 py-3 text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]";
+  "w-full rounded-xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] px-3 py-2 text-sm text-[rgb(var(--db-text))] placeholder:text-[rgb(var(--db-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.25)]";
+
 
   const canSave = useMemo(() => safeTrim(brandText).length > 0, [brandText]);
 
@@ -147,9 +148,15 @@ export function HeaderEditor({
       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="text-sm font-semibold text-[rgb(var(--db-text))]">Links</div>
-          <Button variant="ghost" onClick={() => setLinks((prev) => [...prev, { label: "", url: "" }])} disabled={saving}>
-            Add link
-          </Button>
+          <Button
+  variant="pill"
+  onClick={() => setLinks((prev) => [...prev, { label: "", url: "" }])}
+  disabled={saving}
+>
+  Add link
+</Button>
+
+
         </div>
 
         {links.map((l, idx) => (
@@ -181,9 +188,18 @@ export function HeaderEditor({
             </label>
 
             <div className="flex justify-end">
-              <Button variant="danger" onClick={() => setLinks((prev) => prev.filter((_, i) => i !== idx))} disabled={saving}>
-                Remove
-              </Button>
+            <Button
+  variant="pillDanger"
+  size="sm"
+  onClick={() => setLinks((prev) => prev.filter((_, i) => i !== idx))}
+  disabled={saving}
+>
+  Remove
+</Button>
+
+
+
+
             </div>
           </div>
         ))}

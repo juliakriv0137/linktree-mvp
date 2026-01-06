@@ -354,9 +354,14 @@ export default function BlocksEditor() {
               value={newType}
               onChange={(e) => setNewType(e.target.value as any)}
             >
-              <option value="hero">hero</option>
-              <option value="links">links</option>
-              <option value="text">text</option>
+              <option value="header">header</option>
+<option value="hero">hero</option>
+<option value="links">links</option>
+<option value="image">image</option>
+<option value="text">text</option>
+<option value="divider">divider</option>
+<option value="products">products</option>
+
             </select>
 
             <button

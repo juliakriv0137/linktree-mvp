@@ -27,7 +27,6 @@ function formatPrice(priceCents: number | null, currency: string | null) {
   if (priceCents == null) return "";
   const amount = priceCents / 100;
 
-  // Intl.NumberFormat может кинуть ошибку на "левую" валюту — страхуемся.
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
@@ -41,8 +40,7 @@ function formatPrice(priceCents: number | null, currency: string | null) {
 }
 
 function safeText(v: any) {
-  const s = String(v ?? "").trim();
-  return s;
+  return String(v ?? "").trim();
 }
 
 function clampText(s: string, max = 140) {
@@ -52,20 +50,12 @@ function clampText(s: string, max = 140) {
   return t.slice(0, max - 1).trimEnd() + "…";
 }
 
-function isValidHttpUrl(raw: string) {
-  try {
-    const u = new URL(raw);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function normalizeUrl(raw: any) {
   const v = safeText(raw);
   if (!v) return "";
-  if (v.startsWith("/")) return v; // локальная ссылка тоже ок
+  if (v.startsWith("/")) return v;
   if (v.startsWith("#")) return v;
+  if (/^(mailto:|tel:|sms:)/i.test(v)) return v;
   if (!/^https?:\/\//i.test(v)) return "https://" + v;
   return v;
 }
@@ -74,7 +64,6 @@ function makeSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) {
-    // Не ломаем рендер, просто дадим понятную ошибку в UI.
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
   }
   return createClient(url, anon);
@@ -84,14 +73,15 @@ export type ProductsBlockProps = {
   siteId: string;
   title?: string | null;
   subtitle?: string | null;
-
-  // на будущее — можно расширить: columns, showPrice, etc.
   className?: string;
+
+  // базовые опции на будущее
+  limit?: number;
+  columns?: 1 | 2 | 3;
 };
 
 export default function ProductsBlock(props: ProductsBlockProps) {
-  const { siteId, title, subtitle, className } = props;
-  console.log("[ProductsBlock] render", { siteId, title, subtitle });
+  const { siteId, title, subtitle, className, limit = 60, columns = 2 } = props;
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -116,20 +106,20 @@ export default function ProductsBlock(props: ProductsBlockProps) {
           .eq("is_published", true)
           .order("sort_order", { ascending: true, nullsFirst: true })
           .order("created_at", { ascending: false, nullsFirst: true })
-          .limit(60);
+          .limit(limit);
 
         if (!alive) return;
 
         if (error) {
-          setError(error.message || "Failed to load products");
+          setError(error.message || "Couldn’t load products");
           setProducts([]);
           return;
         }
 
-        setProducts((data || []) as ProductRow[]);
+        setProducts((data ?? []) as ProductRow[]);
       } catch (e: any) {
         if (!alive) return;
-        setError(e?.message || "Failed to load products");
+        setError(e?.message || "Couldn’t load products");
         setProducts([]);
       } finally {
         if (!alive) return;
@@ -140,175 +130,111 @@ export default function ProductsBlock(props: ProductsBlockProps) {
     return () => {
       alive = false;
     };
-  }, [siteId]);
+  }, [siteId, limit]);
 
-  const headingTitle = safeText(title) || "Products";
-  const headingSubtitle = safeText(subtitle);
+  const gridColsClass =
+    columns === 1
+      ? "grid-cols-1"
+      : columns === 3
+        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        : "grid-cols-1 sm:grid-cols-2";
+
+  const blockTitle = safeText(title) || "Products";
+  const blockSubtitle = clampText(subtitle || "", 200);
 
   return (
-    <section className={className}>
-      <div
-        style={{
-          width: "100%",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius)",
-          background: "var(--card, transparent)",
-          padding: "20px",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
-          <div
-            style={{
-              fontSize: "var(--text-h2-size, 22px)",
-              fontWeight: 700,
-              color: "var(--text)",
-              lineHeight: 1.15,
-              overflowWrap: "anywhere",
-            }}
-          >
-            {headingTitle}
-          </div>
-
-          {headingSubtitle ? (
-            <div
-              style={{
-                fontSize: "var(--text-body-size, 14px)",
-                color: "var(--muted)",
-                lineHeight: 1.45,
-                overflowWrap: "anywhere",
-              }}
-            >
-              {headingSubtitle}
-            </div>
+    <div className={className ? className : "w-full"}>
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="text-center">
+          <div className="text-3xl font-bold text-[rgb(var(--text))]">{blockTitle}</div>
+          {blockSubtitle ? (
+            <div className="mt-2 text-base text-[rgb(var(--muted))]">{blockSubtitle}</div>
           ) : null}
         </div>
 
-        {loading ? (
-          <div style={{ color: "var(--muted)", fontSize: 14 }}>Loading products…</div>
-        ) : error ? (
-          <div style={{ color: "var(--muted)", fontSize: 14 }}>
-            <div style={{ fontWeight: 600, color: "var(--text)" }}>Couldn’t load products</div>
-            <div style={{ marginTop: 6 }}>{error}</div>
-          </div>
-        ) : products.length === 0 ? (
-          <div style={{ color: "var(--muted)", fontSize: 14 }}>No products yet.</div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 14,
-            }}
-          >
-            {products.map((p) => {
-              const rawUrl = normalizeUrl(p.product_url);
-              const urlOk = rawUrl && (rawUrl.startsWith("/") || isValidHttpUrl(rawUrl));
+        <div className="mt-8">
+          {loading ? (
+            <div className="text-center text-sm text-[rgb(var(--muted))]">Loading products…</div>
+          ) : error ? (
+            <div className="text-center">
+              <div className="text-base font-semibold text-[rgb(var(--text))]">Couldn’t load products</div>
+              <div className="mt-1 text-sm text-[rgb(var(--muted))]">{error}</div>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center text-sm text-[rgb(var(--muted))]">
+              No published products yet.
+            </div>
+          ) : (
+            <div className={`grid ${gridColsClass} gap-4`}>
+              {products.map((p) => {
+                const titleText = safeText(p.title) || "Untitled";
+                const descText = clampText(p.description || "", 140);
+                const priceText = formatPrice(p.price_cents, p.currency);
+                const img = safeText(p.image_url);
+                const href = normalizeUrl(p.product_url);
 
-              const price = formatPrice(p.price_cents, p.currency);
-              const desc = clampText(p.description || "", 140);
-
-              return (
-                <article
-                  key={p.id}
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    background: "var(--card, transparent)",
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: 0,
-                  }}
-                >
-                  {p.image_url ? (
-                    <div
-                      style={{
-                        width: "100%",
-                        aspectRatio: "4 / 3",
-                        background: "var(--muted-bg, rgba(0,0,0,0.03))",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <img
-                        src={p.image_url}
-                        alt={safeText(p.title) || "Product image"}
-                        loading="lazy"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    </div>
-                  ) : null}
-
-                  <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: "var(--text)",
-                          lineHeight: 1.2,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {safeText(p.title) || "Untitled product"}
+                return (
+                  <div
+                    key={p.id}
+                    className="overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-white/70"
+                    style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.03)" }}
+                  >
+                    {img ? (
+                      <div className="relative w-full" style={{ aspectRatio: "4 / 3" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={normalizeUrl(img)}
+                          alt={titleText}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
                       </div>
+                    ) : (
+                      <div
+                        className="flex items-center justify-center bg-black/5 text-xs text-[rgb(var(--muted))]"
+                        style={{ aspectRatio: "4 / 3" }}
+                      >
+                        No image
+                      </div>
+                    )}
 
-                      {price ? (
-                        <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.2 }}>
-                          {price}
+                    <div className="p-4">
+                      <div className="text-base font-semibold text-[rgb(var(--text))]">{titleText}</div>
+
+                      {priceText ? (
+                        <div className="mt-1 text-sm font-medium text-[rgb(var(--text))]">{priceText}</div>
+                      ) : null}
+
+                      {descText ? (
+                        <div className="mt-2 text-sm leading-relaxed text-[rgb(var(--muted))]">{descText}</div>
+                      ) : null}
+
+                      {href ? (
+                        <div className="mt-4">
+                          <a
+                            href={href}
+                            className="inline-flex w-full items-center justify-center rounded-xl border border-[rgb(var(--border))] bg-white px-4 py-2 text-sm font-semibold text-[rgb(var(--text))] hover:bg-black/5"
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          >
+                            View product
+                          </a>
                         </div>
                       ) : null}
                     </div>
-
-                    {desc ? (
-                      <div
-                        style={{
-                          fontSize: 14,
-                          color: "var(--muted)",
-                          lineHeight: 1.45,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {desc}
-                      </div>
-                    ) : null}
-
-                    {urlOk ? (
-                      <a
-                        href={rawUrl}
-                        target={rawUrl.startsWith("/") || rawUrl.startsWith("#") ? undefined : "_blank"}
-                        rel={rawUrl.startsWith("/") || rawUrl.startsWith("#") ? undefined : "noreferrer"}
-                        style={{
-                          marginTop: 6,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          padding: "10px 12px",
-                          borderRadius: "calc(var(--radius) - 4px)",
-                          border: "1px solid var(--border)",
-                          background: "var(--primary)",
-                          color: "var(--button-text, #fff)",
-                          fontSize: "var(--text-button-size, 14px)",
-                          fontWeight: "var(--text-button-weight, 600)",
-                          textDecoration: "none",
-                          cursor: "pointer",
-                          userSelect: "none",
-                        }}
-                      >
-                        View product
-                      </a>
-                    ) : null}
                   </div>
-                </article>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* маленькая подсказка для отладки (можно убрать потом) */}
+        {!loading && !error ? (
+          <div className="mt-4 text-center text-xs text-[rgb(var(--muted))]">
+            Showing {products.length} published product(s).
           </div>
-        )}
+        ) : null}
       </div>
-    </section>
+    </div>
   );
 }
