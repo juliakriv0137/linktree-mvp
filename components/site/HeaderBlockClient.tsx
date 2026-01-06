@@ -54,6 +54,30 @@ function normalizeRadiusValue(radiusRaw: any): string {
   }
 }
 
+/**
+ * Определяем “светлый” ли фон, чтобы бургер не был белым на белом.
+ * Используем относительную яркость (WCAG-ish).
+ */
+function isLightColor(hex: string) {
+  if (!hex) return false;
+  const c = hex.replace("#", "");
+  if (c.length === 3) {
+    const r = c[0] + c[0];
+    const g = c[1] + c[1];
+    const b = c[2] + c[2];
+    return isLightColor(`#${r}${g}${b}`);
+  }
+  if (c.length !== 6) return false;
+
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+
+  // perceived brightness
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 200;
+}
+
 export type HeaderLinkItem = {
   label: string;
   url: string;
@@ -157,6 +181,9 @@ export function HeaderBlockClient(props: {
   };
 
   const hdrRadius = normalizeRadiusValue((style as any).radius);
+
+  // Для контраста бургера
+  const isLightHeader = !!hdrBg && isLightColor(hdrBg);
 
   const Brand = () => {
     const inner = (
@@ -313,26 +340,28 @@ export function HeaderBlockClient(props: {
           </div>
 
           {items.length ? (
-            <div className="hidden sm:block flex-1">
+            <div className="hidden md:block flex-1">
               <Links justify="center" />
             </div>
           ) : null}
 
           {hasCta ? (
-            <div className="hidden sm:flex justify-end">
+            <div className="hidden md:flex justify-end">
               <Cta />
             </div>
           ) : null}
 
           {items.length || hasCta ? (
-            <div className="sm:hidden">
+            <div className="md:hidden">
               <details ref={detailsRef} className="group" suppressHydrationWarning>
                 <summary
                   className={[
-                    "flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full",
-                    "border border-white/10 bg-white/5 text-white/85",
-                    "hover:bg-white/10 hover:text-white",
-                    "transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
+                    "flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border",
+                    isLightHeader
+                      ? "bg-black/5 text-black border-black/10 hover:bg-black/10"
+                      : "bg-white/10 text-white border-white/15 hover:bg-white/15",
+                    "transition focus:outline-none focus-visible:ring-2",
+                    isLightHeader ? "focus-visible:ring-black/15" : "focus-visible:ring-white/20",
                   ].join(" ")}
                   aria-label="Toggle menu"
                 >
@@ -363,7 +392,12 @@ export function HeaderBlockClient(props: {
                 </summary>
 
                 {/* In dashboard preview do not raise z, otherwise overlaps Site settings */}
-                <div className="hidden group-open:block absolute left-4 right-4 top-[3.25rem] z-0">
+                <div
+                  className={[
+                    "hidden group-open:block absolute left-4 right-4 top-[3.25rem]",
+                    inDashboardPreview ? "z-0" : "z-50",
+                  ].join(" ")}
+                >
                   <div
                     className={[
                       "border border-white/10 overflow-hidden",
