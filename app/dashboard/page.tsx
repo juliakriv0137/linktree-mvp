@@ -34,7 +34,11 @@ import {
   ImageEditor,
   TextEditor,
   DividerEditor,
+  ProductsEditor,
 } from "@/components/dashboard/editors";
+
+
+
 
 const HEADER_PILL =
   "inline-flex items-center justify-center h-9 px-4 rounded-full " +
@@ -2672,13 +2676,14 @@ export default function DashboardPage() {
                         ) : selectedBlock.type === "divider" ? (
                           <DividerEditor block={selectedBlock as any} onSave={(content: any) => saveSelectedBlockContent(content)} />
                         ) : selectedBlock.type === "products" ? (
-                          <div className="text-sm text-[rgb(var(--db-muted))]">
-                            Products block is configured via the <span className="font-semibold text-[rgb(var(--db-text))]">Products</span> tab (top).
-                            <div className="mt-2 text-[11px]">
-                              Сейчас блок “products” — контейнер. Рендер и расширенные настройки подключим, когда добавим Products block в registry/renderer.
-                            </div>
-                          </div>
-                        ) : (
+                          <ProductsEditor
+                            value={(selectedBlock.content ?? {}) as any}
+                            onSave={async (next) => {
+                              await saveSelectedBlockContent(next);
+                            }}
+                          />
+                        )
+                         : (
                           <div className="text-sm text-[rgb(var(--db-muted))]">No editor for this block type yet.</div>
                         )}
                       </Section>

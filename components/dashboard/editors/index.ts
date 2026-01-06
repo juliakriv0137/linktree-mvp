@@ -6,3 +6,4 @@ export { DividerEditor } from "./DividerEditor";
 
 
 export { HeaderEditor } from "./HeaderEditor";
+export { default as ProductsEditor } from "./ProductsEditor";

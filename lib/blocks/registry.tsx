@@ -588,18 +588,18 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
 
   products: {
-  title: "Products",
-  render: ({ block }) => {
-    return (
-      <ProductsBlock
-        siteId={block.site_id}
-        title={(block as any)?.content?.title ?? "Products"}
-        subtitle={(block as any)?.content?.subtitle ?? null}
-        className="w-full"
-      />
-    );
+    title: "Products",
+    render: ({ block }) => {
+      return (
+        <ProductsBlock
+          siteId={block.site_id}
+          content={(block as any)?.content ?? {}}
+          className="w-full"
+        />
+      );
+    },
   },
-},
+  
 
 };
 
