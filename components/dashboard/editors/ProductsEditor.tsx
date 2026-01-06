@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Button } from "@/components/dashboard/ui/Button";
 
-type ProductsContent = {
+export type ProductsContent = {
   title?: string | null;
   subtitle?: string | null;
 
@@ -23,6 +23,13 @@ type ProductsContent = {
   image_fit?: "cover" | "contain";
 
   header_align?: "left" | "center" | "right";
+
+  // ✅ NEW
+  grid_max_width?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  card_size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+  gap?: 2 | 3 | 4 | 5 | 6 | 8;
+  card_padding?: "sm" | "md" | "lg";
+  image_radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 };
 
 function safeTrim(v: any) {
@@ -46,7 +53,6 @@ export default function ProductsEditor(props: {
   onSave: (next: ProductsContent) => Promise<void> | void;
 }) {
   const saving = Boolean(props.saving);
-
   const initial = props.value ?? {};
 
   const [title, setTitle] = React.useState<string>(safeTrim(initial.title) || "Products");
@@ -73,6 +79,19 @@ export default function ProductsEditor(props: {
     (initial.header_align as any) === "left" || (initial.header_align as any) === "right" ? (initial.header_align as any) : "center",
   );
 
+  // ✅ NEW sizing
+  const [gridMaxWidth, setGridMaxWidth] = React.useState<NonNullable<ProductsContent["grid_max_width"]>>(
+    (initial.grid_max_width as any) || "lg",
+  );
+  const [cardSize, setCardSize] = React.useState<NonNullable<ProductsContent["card_size"]>>((initial.card_size as any) || "md");
+  const [gap, setGap] = React.useState<NonNullable<ProductsContent["gap"]>>((initial.gap as any) || 4);
+  const [cardPadding, setCardPadding] = React.useState<NonNullable<ProductsContent["card_padding"]>>(
+    (initial.card_padding as any) || "md",
+  );
+  const [imageRadius, setImageRadius] = React.useState<NonNullable<ProductsContent["image_radius"]>>(
+    (initial.image_radius as any) || "2xl",
+  );
+
   async function handleSave() {
     const next: ProductsContent = {
       title: safeTrim(title) || "Products",
@@ -94,6 +113,13 @@ export default function ProductsEditor(props: {
       image_fit: imageFit,
 
       header_align: headerAlign,
+
+      // ✅ NEW
+      grid_max_width: gridMaxWidth,
+      card_size: cardSize,
+      gap,
+      card_padding: cardPadding,
+      image_radius: imageRadius,
     };
 
     await props.onSave(next);
@@ -177,6 +203,71 @@ export default function ProductsEditor(props: {
         </div>
       </div>
 
+      {/* ✅ NEW: sizing section */}
+      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 space-y-3">
+        <div className="text-sm font-semibold text-[rgb(var(--db-text))]">Sizing</div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="block">
+            <div className={labelCls}>Block max width</div>
+            <select className={fieldBase} value={gridMaxWidth} onChange={(e) => setGridMaxWidth(e.target.value as any)} disabled={saving}>
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+              <option value="xl">XL</option>
+              <option value="2xl">2XL</option>
+              <option value="full">Full</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <div className={labelCls}>Card size</div>
+            <select className={fieldBase} value={cardSize} onChange={(e) => setCardSize(e.target.value as any)} disabled={saving}>
+              <option value="xs">XS</option>
+              <option value="sm">S</option>
+              <option value="md">M</option>
+              <option value="lg">L</option>
+              <option value="xl">XL</option>
+              <option value="2xl">2XL</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <div className={labelCls}>Gap</div>
+            <select className={fieldBase} value={String(gap)} onChange={(e) => setGap(Number(e.target.value) as any)} disabled={saving}>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <div className={labelCls}>Card padding</div>
+            <select className={fieldBase} value={cardPadding} onChange={(e) => setCardPadding(e.target.value as any)} disabled={saving}>
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+            </select>
+          </label>
+
+          <label className="block sm:col-span-2">
+            <div className={labelCls}>Image radius</div>
+            <select className={fieldBase} value={imageRadius} onChange={(e) => setImageRadius(e.target.value as any)} disabled={saving}>
+              <option value="none">None</option>
+              <option value="sm">SM</option>
+              <option value="md">MD</option>
+              <option value="lg">LG</option>
+              <option value="xl">XL</option>
+              <option value="2xl">2XL</option>
+              <option value="full">Full</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-soft))] p-4 space-y-3">
         <div className="text-sm font-semibold text-[rgb(var(--db-text))]">Visibility</div>
 
@@ -187,7 +278,12 @@ export default function ProductsEditor(props: {
           </label>
 
           <label className="flex items-center gap-2 text-sm text-[rgb(var(--db-text))]">
-            <input type="checkbox" checked={showDescription} onChange={(e) => setShowDescription(e.target.checked)} disabled={saving} />
+            <input
+              type="checkbox"
+              checked={showDescription}
+              onChange={(e) => setShowDescription(e.target.checked)}
+              disabled={saving}
+            />
             Show description
           </label>
 
@@ -220,7 +316,12 @@ export default function ProductsEditor(props: {
 
           <label className="block sm:col-span-2">
             <div className={labelCls}>Button label</div>
-            <input className={fieldBase} value={buttonLabel} onChange={(e) => setButtonLabel(e.target.value)} disabled={saving || !showButton} />
+            <input
+              className={fieldBase}
+              value={buttonLabel}
+              onChange={(e) => setButtonLabel(e.target.value)}
+              disabled={saving || !showButton}
+            />
           </label>
         </div>
       </div>

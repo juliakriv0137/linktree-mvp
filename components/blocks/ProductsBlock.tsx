@@ -45,6 +45,13 @@ export type ProductsContent = {
   image_fit?: "cover" | "contain";
 
   header_align?: "left" | "center" | "right";
+
+  // ✅ NEW: sizing
+  grid_max_width?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  card_size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+  gap?: 2 | 3 | 4 | 5 | 6 | 8;
+  card_padding?: "sm" | "md" | "lg";
+  image_radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 };
 
 function safeText(v: any) {
@@ -112,6 +119,55 @@ function headerAlignClass(a: ProductsContent["header_align"]) {
   return "text-center";
 }
 
+function gridMaxWidthClass(v: ProductsContent["grid_max_width"]) {
+  const s = String(v ?? "lg").toLowerCase();
+  if (s === "full") return "w-full";
+  if (s === "sm") return "mx-auto w-full max-w-2xl";
+  if (s === "md") return "mx-auto w-full max-w-3xl";
+  if (s === "xl") return "mx-auto w-full max-w-6xl";
+  if (s === "2xl") return "mx-auto w-full max-w-7xl";
+  // lg default
+  return "mx-auto w-full max-w-5xl";
+}
+
+function cardMaxWidthClass(v: ProductsContent["card_size"]) {
+  const s = String(v ?? "md").toLowerCase();
+  if (s === "xs") return "max-w-xs";
+  if (s === "sm") return "max-w-sm";
+  if (s === "lg") return "max-w-lg";
+  if (s === "xl") return "max-w-xl";
+  if (s === "2xl") return "max-w-2xl";
+  return "max-w-md"; // md default
+}
+
+function gapClass(v: ProductsContent["gap"]) {
+  const n = Number(v);
+  if (n === 2) return "gap-2";
+  if (n === 3) return "gap-3";
+  if (n === 5) return "gap-5";
+  if (n === 6) return "gap-6";
+  if (n === 8) return "gap-8";
+  return "gap-4";
+}
+
+function cardPaddingClass(v: ProductsContent["card_padding"]) {
+  const s = String(v ?? "md").toLowerCase();
+  if (s === "sm") return "p-3";
+  if (s === "lg") return "p-6";
+  return "p-4";
+}
+
+function radiusValue(v: ProductsContent["image_radius"]): string {
+  const s = String(v ?? "2xl").toLowerCase();
+  if (s === "none") return "0px";
+  if (s === "sm") return "12px";
+  if (s === "md") return "16px";
+  if (s === "lg") return "20px";
+  if (s === "xl") return "24px";
+  if (s === "full") return "9999px";
+  return "32px"; // 2xl default
+}
+
 function LineClamp({
   text,
   lines,
@@ -167,6 +223,13 @@ export default function ProductsBlock(props: ProductsBlockProps) {
   const imageRatio = (cfg.image_ratio as any) || "4/3";
   const imageFit: "cover" | "contain" = cfg.image_fit === "contain" ? "contain" : "cover";
   const headerAlign = (cfg.header_align as any) || "center";
+
+  // ✅ NEW defaults
+  const gridMaxW = (cfg.grid_max_width as any) || "lg";
+  const cardSize = (cfg.card_size as any) || "md";
+  const gap = (cfg.gap as any) || 4;
+  const cardPad = (cfg.card_padding as any) || "md";
+  const imgRadius = (cfg.image_radius as any) || "2xl";
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -226,9 +289,13 @@ export default function ProductsBlock(props: ProductsBlockProps) {
           ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
           : "grid-cols-1 sm:grid-cols-2";
 
+  const cardMaxWClass = cardMaxWidthClass(cardSize);
+  const gridGapClass = gapClass(gap);
+  const containerMaxWClass = gridMaxWidthClass(gridMaxW);
+
   return (
     <div className={className ? className : "w-full"}>
-      <div className="mx-auto w-full max-w-5xl">
+      <div className={containerMaxWClass}>
         <div className={headerAlignClass(headerAlign)}>
           <div className="text-3xl font-bold text-[rgb(var(--text))] break-words">
             {blockTitle}
@@ -255,7 +322,7 @@ export default function ProductsBlock(props: ProductsBlockProps) {
               No active products yet.
             </div>
           ) : (
-            <div className={`grid ${gridColsClass} gap-4`}>
+            <div className={`grid ${gridColsClass} ${gridGapClass} justify-items-center`}>
               {products.map((p) => {
                 const titleText = safeText(p.title) || "Untitled";
                 const subtitleText = safeText(p.subtitle);
@@ -267,17 +334,24 @@ export default function ProductsBlock(props: ProductsBlockProps) {
                 return (
                   <div
                     key={p.id}
-                    className="overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-white/70"
+                    className={`w-full ${cardMaxWClass} overflow-hidden rounded-2xl border border-[rgb(var(--border))] bg-white/70`}
                     style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.03)" }}
                   >
                     {img ? (
-                      <div className="relative w-full" style={ratioStyle(imageRatio)}>
+                      <div
+                        className="relative w-full overflow-hidden"
+                        style={{
+                          ...ratioStyle(imageRatio),
+                          borderTopLeftRadius: "16px",
+                          borderTopRightRadius: "16px",
+                        }}
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={normalizeUrl(img)}
                           alt={titleText}
                           className="absolute inset-0 h-full w-full"
-                          style={{ objectFit: imageFit }}
+                          style={{ objectFit: imageFit, borderRadius: radiusValue(imgRadius) }}
                         />
                       </div>
                     ) : (
@@ -289,7 +363,7 @@ export default function ProductsBlock(props: ProductsBlockProps) {
                       </div>
                     )}
 
-                    <div className="p-4">
+                    <div className={cardPaddingClass(cardPad)}>
                       <div className="text-base font-semibold text-[rgb(var(--text))] break-words">
                         {titleText}
                       </div>
