@@ -30,6 +30,10 @@ import { DbDetails } from "@/components/dashboard/ui/DbDetails";
 import { ThemeInspector } from "@/components/dashboard/inspector/ThemeInspector";
 
 
+
+
+
+
 import {
   HeaderEditor,
   HeroEditor,
@@ -1704,239 +1708,141 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="mt-4 grid gap-4">
-                    <ThemeInspector
-  site={site}
-  canAct={canAct}
-  themeKeys={Object.keys(THEMES)}
-  colors={colors}
-  setColors={setColors}
-  updateSiteTheme={updateSiteTheme}
-  setSite={setSite}
-  saveColorField={saveColorField}
-/>            
+  <ThemeInspector
+    site={site}
+    canAct={canAct}
+    themeKeys={Object.keys(THEMES)}
+    colors={colors}
+    setColors={setColors}
+    updateSiteTheme={updateSiteTheme}
+    setSite={setSite}
+    saveColorField={saveColorField}
+  />
+</div>
 
-                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
-                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Style</div>
+  {/* дальше у тебя уже идут карточки Style и Colors (optional) — оставь их как есть */}
 
-                        <div className="space-y-3">
-                          <FieldRow label="Background">
-                            <DbSelect
-                              value={(site?.background_style ?? "solid") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const background_style = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { background_style } as any);
-                                  setSite({ ...site, background_style } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="solid">{bgStyleLabel("solid")}</option>
-                              <option value="gradient">{bgStyleLabel("gradient")}</option>
-                            </DbSelect>
-                          </FieldRow>
 
-                          <FieldRow label="Buttons">
-                            <DbSelect
-                              value={(site?.button_style ?? "solid") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const button_style = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { button_style } as any);
-                                  setSite({ ...site, button_style } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="solid">{buttonStyleLabel("solid")}</option>
-                              <option value="outline">{buttonStyleLabel("outline")}</option>
-                            </DbSelect>
-                          </FieldRow>
+  <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+    <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Style</div>
 
-                          <FieldRow label="Text">
-                            <DbSelect
-                              value={(site?.font_scale ?? "md") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const font_scale = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { font_scale } as any);
-                                  setSite({ ...site, font_scale } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="sm">{fontScaleLabel("sm")}</option>
-                              <option value="md">{fontScaleLabel("md")}</option>
-                              <option value="lg">{fontScaleLabel("lg")}</option>
-                            </DbSelect>
-                          </FieldRow>
+    <div className="space-y-3">
+      <FieldRow label="Background">
+        <DbSelect
+          value={(site?.background_style ?? "solid") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const background_style = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { background_style } as any);
+              setSite({ ...site, background_style } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="solid">{bgStyleLabel("solid")}</option>
+          <option value="gradient">{bgStyleLabel("gradient")}</option>
+        </DbSelect>
+      </FieldRow>
 
-                          <FieldRow label="Radius">
-                            <DbSelect
-                              value={(site?.button_radius ?? "2xl") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const button_radius = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { button_radius } as any);
-                                  setSite({ ...site, button_radius } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="md">{radiusLabel("md")}</option>
-                              <option value="xl">{radiusLabel("xl")}</option>
-                              <option value="2xl">{radiusLabel("2xl")}</option>
-                              <option value="full">{radiusLabel("full")}</option>
-                            </DbSelect>
-                          </FieldRow>
+      <FieldRow label="Buttons">
+        <DbSelect
+          value={(site?.button_style ?? "solid") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const button_style = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { button_style } as any);
+              setSite({ ...site, button_style } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="solid">{buttonStyleLabel("solid")}</option>
+          <option value="outline">{buttonStyleLabel("outline")}</option>
+        </DbSelect>
+      </FieldRow>
 
-                          <FieldRow label="Cards">
-                            <DbSelect
-                              value={(site?.card_style ?? "card") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const card_style = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { card_style } as any);
-                                  setSite({ ...site, card_style } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="plain">{cardStyleLabel("plain")}</option>
-                              <option value="card">{cardStyleLabel("card")}</option>
-                            </DbSelect>
-                          </FieldRow>
-                        </div>
-                      </div>
+      <FieldRow label="Text">
+        <DbSelect
+          value={(site?.font_scale ?? "md") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const font_scale = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { font_scale } as any);
+              setSite({ ...site, font_scale } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="sm">{fontScaleLabel("sm")}</option>
+          <option value="md">{fontScaleLabel("md")}</option>
+          <option value="lg">{fontScaleLabel("lg")}</option>
+        </DbSelect>
+      </FieldRow>
 
-                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">Colors (optional)</div>
-                            <div className="text-[11px] text-[rgb(var(--db-muted))] mt-1">Leave empty to use theme defaults.</div>
-                          </div>
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]"
-                            onClick={() => {
-                              setColors({
-                                bg_color: "",
-                                text_color: "",
-                                muted_color: "",
-                                border_color: "",
-                                button_color: "",
-                                button_text_color: "",
-                              });
-                              if (site) {
-                                void (async () => {
-                                  try {
-                                    setError(null);
-                                    await updateSiteTheme(site.id, {
-                                      bg_color: null,
-                                      text_color: null,
-                                      muted_color: null,
-                                      border_color: null,
-                                      button_color: null,
-                                      button_text_color: null,
-                                    } as any);
-                                    setSite({
-                                      ...site,
-                                      bg_color: null,
-                                      text_color: null,
-                                      muted_color: null,
-                                      border_color: null,
-                                      button_color: null,
-                                      button_text_color: null,
-                                    } as any);
-                                  } catch (err: any) {
-                                    setError(err?.message ?? String(err));
-                                  }
-                                })();
-                              }
-                            }}
-                          >
-                            Reset
-                          </button>
-                        </div>
+      <FieldRow label="Radius">
+        <DbSelect
+          value={(site?.button_radius ?? "2xl") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const button_radius = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { button_radius } as any);
+              setSite({ ...site, button_radius } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="md">{radiusLabel("md")}</option>
+          <option value="xl">{radiusLabel("xl")}</option>
+          <option value="2xl">{radiusLabel("2xl")}</option>
+          <option value="full">{radiusLabel("full")}</option>
+        </DbSelect>
+      </FieldRow>
 
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <ColorField
-                            label="Background"
-                            value={colors.bg_color}
-                            onChange={(v) => {
-                              setColors((p) => ({ ...p, bg_color: v }));
-                              saveColorField("bg_color", v);
-                            }}
-                          />
-                          <ColorField
-                            label="Text"
-                            value={colors.text_color}
-                            onChange={(v) => {
-                              setColors((p) => ({ ...p, text_color: v }));
-                              saveColorField("text_color", v);
-                            }}
-                          />
-                          <ColorField
-                            label="Muted"
-                            value={colors.muted_color}
-                            onChange={(v) => {
-                              setColors((p) => ({ ...p, muted_color: v }));
-                              saveColorField("muted_color", v);
-                            }}
-                          />
-                          <ColorField
-                            label="Border"
-                            value={colors.border_color}
-                            onChange={(v) => {
-                              setColors((p) => ({ ...p, border_color: v }));
-                              saveColorField("border_color", v);
-                            }}
-                          />
-                          <ColorField
-                            label="Button"
-                            value={colors.button_color}
-                            onChange={(v) => {
-                              setColors((p) => ({ ...p, button_color: v }));
-                              saveColorField("button_color", v);
-                            }}
-                          />
-                          <ColorField
-                            label="Button text"
-                            value={colors.button_text_color}
-                            onChange={(v) => {
-                              setColors((p) => ({ ...p, button_text_color: v }));
-                              saveColorField("button_text_color", v);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </DbPopoverPanel>
+      <FieldRow label="Cards">
+        <DbSelect
+          value={(site?.card_style ?? "card") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const card_style = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { card_style } as any);
+              setSite({ ...site, card_style } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="plain">{cardStyleLabel("plain")}</option>
+          <option value="card">{cardStyleLabel("card")}</option>
+        </DbSelect>
+      </FieldRow>
+    </div>
+  </div>
+
+  </DbPopoverPanel>
                 </DbDetails>
 
                 <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
-  <Button variant="pill">Open public page ↗</Button>
-</Link>
+                  <Button variant="pill">Open public page ↗</Button>
+                </Link>
 
               </div>
             </div>
@@ -1949,6 +1855,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
 
       {/* BODY */}
       <div className="mx-auto max-w-[1400px] px-4 py-6 min-h-0">
@@ -2115,6 +2022,8 @@ export default function DashboardPage() {
               </DndContext>
             </div>
           </Card>
+
+
 
           {/* CENTER: Preview */}
           <Card>
