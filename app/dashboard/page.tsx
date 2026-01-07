@@ -21,6 +21,7 @@ import { THEMES } from "@/lib/themes";
 import { SiteShell } from "@/components/site/SiteShell";
 import { supabase } from "@/lib/supabaseClient";
 
+
 import { DASHBOARD_THEME_VARS } from "@/lib/dashboard/theme";
 import { DbSelect } from "@/components/dashboard/ui/DbSelect";
 import { DbSummaryButton } from "@/components/dashboard/ui/DbSummaryButton";
@@ -37,6 +38,10 @@ import {
   ProductsEditor,
 } from "@/components/dashboard/editors";
 
+const SITE_THEME_OPTIONS = Object.entries(THEMES as any).map(([value, t]: any) => ({
+  value,
+  label: t?.label ?? value,
+}));
 
 
 
@@ -77,7 +82,8 @@ type SiteRow = {
   theme_key: string;
   background_style: string;
   button_style: string;
-  layout_width: "compact" | "wide" | "full";
+  layout_width: "compact" | "wide" | "xwide" | "xxwide" | "full";
+
 
   font_scale: "sm" | "md" | "lg";
   button_radius: "md" | "xl" | "2xl" | "full";
@@ -236,11 +242,25 @@ function radiusLabel(v: SiteRow["button_radius"]) {
   if (v === "2xl") return "28px";
   return "Pill";
 }
-function widthLabel(v: SiteRow["layout_width"]) {
-  if (v === "wide") return "Wide";
-  if (v === "full") return "Full";
-  return "Compact";
+function widthLabel(v: any) {
+  const s = String(v ?? "").toLowerCase();
+  switch (s) {
+    case "compact":
+      return "Compact";
+    case "wide":
+      return "Wide";
+    case "xwide":
+      return "X-Wide";
+    case "xxwide":
+      return "XX-Wide";
+    case "full":
+      return "Full";
+    default:
+      return "Compact";
+  }
 }
+
+
 function bgStyleLabel(v: string) {
   if (v === "gradient") return "Gradient";
   return "Solid";
@@ -1711,27 +1731,28 @@ export default function DashboardPage() {
 
                         <div className="space-y-3">
                           <FieldRow label="Theme">
-                            <DbSelect
-                              value={site?.theme_key ?? "midnight"}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const theme_key = (e.target as HTMLSelectElement).value;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { theme_key } as any);
-                                  setSite({ ...site, theme_key } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              {(themeKeys.length ? themeKeys : ["midnight"]).map((k) => (
-                                <option key={k} value={k}>
-                                  {themeLabelFromKey(k)}
-                                </option>
-                              ))}
-                            </DbSelect>
+                          <DbSelect
+  value={site?.theme_key ?? "midnight"}
+  disabled={!canAct}
+  onChange={async (e) => {
+    if (!site) return;
+    const theme_key = (e.target as HTMLSelectElement).value;
+    try {
+      setError(null);
+      await updateSiteTheme(site.id, { theme_key } as any);
+      setSite({ ...site, theme_key } as any);
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+    }
+  }}
+>
+  {SITE_THEME_OPTIONS.map((opt) => (
+    <option key={opt.value} value={opt.value}>
+      {opt.label}
+    </option>
+  ))}
+</DbSelect>
+
                           </FieldRow>
 
                           <FieldRow label="Width">
@@ -1751,8 +1772,11 @@ export default function DashboardPage() {
                               }}
                             >
                               <option value="compact">{widthLabel("compact")}</option>
-                              <option value="wide">{widthLabel("wide")}</option>
-                              <option value="full">{widthLabel("full")}</option>
+<option value="wide">{widthLabel("wide")}</option>
+<option value="xwide">{widthLabel("xwide")}</option>
+<option value="xxwide">{widthLabel("xxwide")}</option>
+<option value="full">{widthLabel("full")}</option>
+
                             </DbSelect>
                           </FieldRow>
                         </div>
@@ -2589,8 +2613,11 @@ export default function DashboardPage() {
                                 }}
                               >
                                 <option value="compact">Compact</option>
-                                <option value="wide">Wide</option>
-                                <option value="full">Full</option>
+<option value="wide">Wide</option>
+<option value="xwide">Extra wide</option>
+<option value="max">Max</option>
+<option value="full">Full</option>
+
                               </select>
                             </label>
 

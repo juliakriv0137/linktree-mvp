@@ -21,7 +21,8 @@ export type ButtonStyle = "solid" | "soft" | "outline";
 export type FontScale = "sm" | "md" | "lg";
 export type ButtonRadius = "sm" | "md" | "lg" | "xl" | "full";
 export type CardStyle = "none" | "soft" | "solid" | "outline";
-export type LayoutWidth = "compact" | "wide" | "full";
+export type LayoutWidth = "compact" | "wide" | "xwide" | "xxwide" | "full";
+
 
 export type BlockType = "header" | "hero" | "links" | "text" | "image" | "divider";
 

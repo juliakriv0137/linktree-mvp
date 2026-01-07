@@ -4,6 +4,8 @@ import { env } from "@/lib/env";
 import { SiteShell } from "@/components/site/SiteShell";
 import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
 
+type LayoutWidth = "compact" | "wide" | "xwide" | "xxwide" | "full";
+
 type SiteRow = {
   id: string;
   slug: string;
@@ -17,7 +19,8 @@ type SiteRow = {
   button_radius?: "md" | "xl" | "2xl" | "full";
   card_style?: "plain" | "card";
 
-  layout_width?: "compact" | "wide" | "full";
+  // ✅ align with DB constraint (no "max")
+  layout_width?: LayoutWidth | null;
 
   bg_color?: string | null;
   text_color?: string | null;
@@ -44,15 +47,14 @@ type BlockRow = {
   anchor_id?: string | null;
 };
 
-function layoutToContainerClasses(layout: "compact" | "wide" | "full" | null | undefined) {
-  if (layout === "full") {
-    // Full should feel like a real full-width website: no max-width clamp.
-    return "w-full px-6 sm:px-10 lg:px-14 py-12";
-  }
-  if (layout === "wide") {
-    return "mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-14 py-12";
-  }
-  return "mx-auto w-full max-w-lg px-4 py-10";
+function layoutToContainerPadding(layout: LayoutWidth | null | undefined) {
+  const l = (layout ?? "compact") as LayoutWidth;
+
+  // Важно: max-width / clamp уже делает SiteShell.
+  // Здесь — только паддинги/вертикальные отступы “chrome”-контейнера.
+  if (l === "full") return "w-full px-6 sm:px-10 lg:px-14 py-12";
+  if (l === "wide" || l === "xwide" || l === "xxwide") return "w-full px-6 sm:px-10 lg:px-14 py-12";
+  return "w-full px-4 py-10";
 }
 
 function fontScaleToCss(fontScale: SiteRow["font_scale"]) {
@@ -76,7 +78,11 @@ export default async function PublicPage({
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
   // 1) site by slug
-  const { data: site, error: siteErr } = await supabase.from("sites").select("*").eq("slug", username).maybeSingle();
+  const { data: site, error: siteErr } = await supabase
+    .from("sites")
+    .select("*")
+    .eq("slug", username)
+    .maybeSingle();
 
   if (siteErr) throw siteErr;
   if (!site) return notFound();
@@ -145,10 +151,11 @@ export default async function PublicPage({
   const headerBlockForRenderer = headerBlock.map(mapToRendererBlock);
   const blocksInsideContainerForRenderer = blocksInsideContainer.map(mapToRendererBlock);
 
-  const layoutWidth = (s.layout_width ?? "compact") as "compact" | "wide" | "full";
-  const containerClass = layoutToContainerClasses(layoutWidth);
+  const layoutWidth = (s.layout_width ?? "compact") as LayoutWidth;
+  const containerPadding = layoutToContainerPadding(layoutWidth);
   const fontSize = fontScaleToCss(s.font_scale ?? "md");
 
+  // Раньше логика: если full — без “chrome”
   const hasChrome = layoutWidth !== "full";
 
   return (
@@ -177,7 +184,8 @@ export default async function PublicPage({
               blocks={headerBlockForRenderer}
               mode="public"
               site={{
-                layout_width: layoutWidth,
+                // ✅ cast, потому что тип site.layout_width в рендерере может быть уже
+                layout_width: layoutWidth as any,
                 button_style: (s.button_style ?? "solid") as any,
               }}
             />
@@ -185,7 +193,7 @@ export default async function PublicPage({
         ) : null}
 
         {hasChrome ? (
-          <div className={containerClass}>
+          <div className={containerPadding}>
             <div
               style={{
                 background: "var(--card-bg)",
@@ -200,7 +208,7 @@ export default async function PublicPage({
                   blocks={blocksInsideContainerForRenderer}
                   mode="public"
                   site={{
-                    layout_width: layoutWidth,
+                    layout_width: layoutWidth as any,
                     button_style: (s.button_style ?? "solid") as any,
                   }}
                 />
@@ -216,7 +224,7 @@ export default async function PublicPage({
                 blocks={blocksInsideContainerForRenderer}
                 mode="public"
                 site={{
-                  layout_width: layoutWidth,
+                  layout_width: layoutWidth as any,
                   button_style: (s.button_style ?? "solid") as any,
                 }}
               />

@@ -16,7 +16,8 @@ export type SiteBlockRow = {
 };
 
 export type BlocksRendererSiteCtx = {
-  layout_width?: "compact" | "wide" | "full" | string | null;
+  layout_width?: "compact" | "wide" | "xwide" | "max" | "full";
+
   button_style?: "solid" | "outline" | "soft" | string | null;
 };
 

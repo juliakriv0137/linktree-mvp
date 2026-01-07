@@ -9,7 +9,8 @@ type RenderProps = {
   block: SiteBlockRow;
   mode: "public" | "preview";
   site?: {
-    layout_width?: "compact" | "wide" | "full" | string | null;
+    layout_width?: "compact" | "wide" | "xwide" | "max" | "full";
+
     button_style?: "solid" | "outline" | "soft" | string | null;
   };
 };
@@ -49,7 +50,8 @@ function coerceButtonStyle(v: any): ButtonStyle {
   return v === "solid" || v === "outline" || v === "soft" ? v : "solid";
 }
 
-function linksBlockWidthClass(layoutWidth: "compact" | "wide" | "full") {
+function linksBlockWidthClass(layoutWidth: "compact" | "wide" | "xwide" | "xxwide" | "full") {
+
   return layoutWidth === "full"
     ? "mx-auto w-full max-w-5xl"
     : layoutWidth === "wide"
@@ -57,7 +59,8 @@ function linksBlockWidthClass(layoutWidth: "compact" | "wide" | "full") {
       : "mx-auto w-full max-w-md";
 }
 
-function buttonRowWidthClass(layoutWidth: "compact" | "wide" | "full") {
+function buttonRowWidthClass(layoutWidth: "compact" | "wide" | "xwide" | "xxwide" | "full") {
+
   return layoutWidth === "compact" ? "w-[280px] max-w-full" : "w-[320px] max-w-full";
 }
 
@@ -547,7 +550,8 @@ export const BlockRegistry: Record<string, BlockEntry> = {
     render: ({ block, site }) => {
       const c = asObj(block.content);
 
-      const layoutWidth = ((site?.layout_width ?? "compact") as any) as "compact" | "wide" | "full";
+      const layoutWidth = ((site?.layout_width ?? "compact") as any) as "compact" | "wide" | "xwide" | "xxwide" | "full";
+
       const blockWidth = linksBlockWidthClass(layoutWidth);
       const rowWidth = buttonRowWidthClass(layoutWidth);
 
