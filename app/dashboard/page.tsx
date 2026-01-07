@@ -27,6 +27,8 @@ import { DbSelect } from "@/components/dashboard/ui/DbSelect";
 import { DbSummaryButton } from "@/components/dashboard/ui/DbSummaryButton";
 import { DbPopoverPanel } from "@/components/dashboard/ui/DbPopoverPanel";
 import { DbDetails } from "@/components/dashboard/ui/DbDetails";
+import { ThemeInspector } from "@/components/dashboard/inspector/ThemeInspector";
+
 
 import {
   HeaderEditor,
@@ -38,10 +40,7 @@ import {
   ProductsEditor,
 } from "@/components/dashboard/editors";
 
-const SITE_THEME_OPTIONS = Object.entries(THEMES as any).map(([value, t]: any) => ({
-  value,
-  label: t?.label ?? value,
-}));
+
 
 
 
@@ -227,10 +226,7 @@ function normalizeHexOrNull(v: string): string | null {
   }
   return `#${hex}`;
 }
-function themeLabelFromKey(key: string) {
-  const t: any = (THEMES as any)?.[key];
-  return String(t?.label ?? t?.name ?? key);
-}
+
 function fontScaleLabel(v: SiteRow["font_scale"]) {
   if (v === "sm") return "Small";
   if (v === "lg") return "Large";
@@ -241,23 +237,6 @@ function radiusLabel(v: SiteRow["button_radius"]) {
   if (v === "xl") return "18px";
   if (v === "2xl") return "28px";
   return "Pill";
-}
-function widthLabel(v: any) {
-  const s = String(v ?? "").toLowerCase();
-  switch (s) {
-    case "compact":
-      return "Compact";
-    case "wide":
-      return "Wide";
-    case "xwide":
-      return "X-Wide";
-    case "xxwide":
-      return "XX-Wide";
-    case "full":
-      return "Full";
-    default:
-      return "Compact";
-  }
 }
 
 
@@ -732,7 +711,6 @@ export default function DashboardPage() {
   }, [selectedPageId, selectedPage?.title, selectedPage?.nav_anchor, selectedPage?.show_in_nav]);
 
   const publicUrl = site ? `/${site.slug}` : "/";
-  const themeKeys = Object.keys(THEMES ?? {}) as string[];
 
   const canAct = !!site && !loading && !creating && !inserting;
 
@@ -1726,61 +1704,16 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="mt-4 grid gap-4">
-                      <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
-                        <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Layout</div>
-
-                        <div className="space-y-3">
-                          <FieldRow label="Theme">
-                          <DbSelect
-  value={site?.theme_key ?? "midnight"}
-  disabled={!canAct}
-  onChange={async (e) => {
-    if (!site) return;
-    const theme_key = (e.target as HTMLSelectElement).value;
-    try {
-      setError(null);
-      await updateSiteTheme(site.id, { theme_key } as any);
-      setSite({ ...site, theme_key } as any);
-    } catch (err: any) {
-      setError(err?.message ?? String(err));
-    }
-  }}
->
-  {SITE_THEME_OPTIONS.map((opt) => (
-    <option key={opt.value} value={opt.value}>
-      {opt.label}
-    </option>
-  ))}
-</DbSelect>
-
-                          </FieldRow>
-
-                          <FieldRow label="Width">
-                            <DbSelect
-                              value={(site?.layout_width ?? "compact") as any}
-                              disabled={!canAct}
-                              onChange={async (e) => {
-                                if (!site) return;
-                                const layout_width = (e.target as HTMLSelectElement).value as any;
-                                try {
-                                  setError(null);
-                                  await updateSiteTheme(site.id, { layout_width } as any);
-                                  setSite({ ...site, layout_width } as any);
-                                } catch (err: any) {
-                                  setError(err?.message ?? String(err));
-                                }
-                              }}
-                            >
-                              <option value="compact">{widthLabel("compact")}</option>
-<option value="wide">{widthLabel("wide")}</option>
-<option value="xwide">{widthLabel("xwide")}</option>
-<option value="xxwide">{widthLabel("xxwide")}</option>
-<option value="full">{widthLabel("full")}</option>
-
-                            </DbSelect>
-                          </FieldRow>
-                        </div>
-                      </div>
+                    <ThemeInspector
+  site={site}
+  canAct={canAct}
+  themeKeys={Object.keys(THEMES)}
+  colors={colors}
+  setColors={setColors}
+  updateSiteTheme={updateSiteTheme}
+  setSite={setSite}
+  saveColorField={saveColorField}
+/>            
 
                       <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
                         <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Style</div>
