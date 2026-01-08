@@ -1,13 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  LAYOUT_DEFAULTS,
-  SPACING_PX,
-  RADIUS_PX,
-  type LayoutVariant,
-} from "@/lib/design/tokens";
-
+import { LAYOUT_DEFAULTS, SPACING_PX, RADIUS_PX, type LayoutVariant } from "@/lib/design/tokens";
 import { BackgroundStyle, ThemeOverrides, cssVarsFromSiteTheme } from "@/lib/themes";
 
 function clampNumber(n: number, min: number, max: number) {
@@ -33,6 +27,8 @@ export type LayoutPreset =
   | "narrow"
   | (string & {});
 
+export type ButtonRadiusToken = "none" | "md" | "lg" | "xl" | "2xl" | "full";
+
 type Props = {
   children: React.ReactNode;
   themeKey?: string | null;
@@ -43,7 +39,18 @@ type Props = {
 
   // Size/shape tokens
   fontScale?: "sm" | "md" | "lg" | number | null;
-  buttonRadius?: "md" | "xl" | "2xl" | "full" | number | null;
+
+  /**
+   * Button radius token (preferred) OR numeric px.
+   * Tokens mapping:
+   * - none = 0px
+   * - md   = 12px
+   * - lg   = 16px
+   * - xl   = 20px
+   * - 2xl  = 24px
+   * - full = pill
+   */
+  buttonRadius?: ButtonRadiusToken | number | null;
 
   // Card wrapper style
   cardStyle?: "plain" | "card";
@@ -116,6 +123,41 @@ function autoTextOnRgb(rgbTriplet: any): string {
   return lum > 0.62 ? "0 0 0" : "255 255 255";
 }
 
+function resolveButtonRadiusPx(value: Props["buttonRadius"]): number {
+  if (typeof value === "number") return clampNumber(value, 0, 48);
+
+  const v = (value ?? "2xl") as ButtonRadiusToken;
+
+  if (v === "none") return 0;
+  if (v === "md") return 12;
+  if (v === "lg") return 16;
+  if (v === "xl") return 20;
+  if (v === "2xl") return 24;
+  if (v === "full") return 9999;
+
+  // safety fallback
+  return 24;
+}
+
+function resolveRadiusTokenForSystem(value: Props["buttonRadius"]): keyof typeof RADIUS_PX {
+  // If user gives numeric px, keep system radius at md (token-based system is for layout/cards/frames).
+  if (typeof value === "number") return "md";
+
+  const v = (value ?? "2xl") as ButtonRadiusToken;
+
+  // Prefer matching token names if they exist in RADIUS_PX
+  if (v === "none" && "none" in RADIUS_PX) return "none" as any;
+  if (v === "md" && "md" in RADIUS_PX) return "md";
+  if (v === "lg" && "lg" in RADIUS_PX) return "lg" as any;
+  if (v === "xl" && "xl" in RADIUS_PX) return "xl" as any;
+
+  // For 2xl/full, map to the closest available system token.
+  if ("xl" in RADIUS_PX) return "xl" as any;
+
+  // Hard fallback
+  return "md";
+}
+
 export function SiteShell({
   children,
   themeKey,
@@ -158,10 +200,9 @@ export function SiteShell({
 
   const blockGapPx = `${SPACING_PX[layout.blockGap]}px`;
   const vars = cssVarsFromSiteTheme(themeKey, themeOverrides);
+
   const primaryTriplet = (vars as any)["--primary"];
   const solidTextTriplet = autoTextOnRgb(primaryTriplet);
-
-  const defaultBtnTextTriplet = autoTextOnRgb((vars as any)["--primary"]);
 
   // font scale: supports "sm|md|lg" OR numeric
   const scaleFromKey = fontScale === "sm" ? 0.9 : fontScale === "lg" ? 1.15 : 1;
@@ -172,33 +213,13 @@ export function SiteShell({
   const buttonTextSizeRem = `${0.95 * scale}rem`;
   const buttonTextWeight = 600;
 
-  // button radius: supports presets OR numeric(px)
-  const radiusPx =
-    typeof buttonRadius === "number"
-      ? clampNumber(buttonRadius, 0, 48)
-      : buttonRadius === "md"
-        ? 12
-        : buttonRadius === "xl"
-          ? 16
-          : buttonRadius === "full"
-            ? 9999
-            : 24;
+  // Button radius (pixels) — affects LinkButton
+  const buttonRadiusPx = resolveButtonRadiusPx(buttonRadius);
+  const buttonRadiusCss = `${buttonRadiusPx}px`;
 
-  const buttonRadiusCss = `${radiusPx}px`;
-
-  // Radius system (token-based). Map to our radius tokens for now.
-  const radiusToken =
-    typeof buttonRadius === "number"
-      ? "md"
-      : buttonRadius === "md"
-        ? "md"
-        : buttonRadius === "xl"
-          ? "lg"
-          : buttonRadius === "full"
-            ? "xl"
-            : "xl";
-
-  const radiusCss = `${RADIUS_PX[radiusToken]}px`;
+  // Radius system (token-based) — used by cards/frames/etc.
+  const radiusToken = resolveRadiusTokenForSystem(buttonRadius);
+  const radiusCss = `${(RADIUS_PX as any)[radiusToken]}px`;
 
   // Card vars
   const cardVars =
@@ -217,8 +238,7 @@ export function SiteShell({
         };
 
   // Button style vars (used by components/site/LinkButton)
-    // Button style vars (used by components/site/LinkButton)
-    const buttonVars =
+  const buttonVars =
     buttonStyle === "outline"
       ? {
           "--btn-bg": "transparent",
@@ -237,7 +257,7 @@ export function SiteShell({
             "--btn-hover-text": "rgb(var(--primary))",
             "--btn-hover-border": "rgb(var(--primary) / 0.14)",
           }
-          : {
+        : {
             // solid (default) - do NOT rely on --button-text (it may be non-triplet)
             "--btn-bg": "rgb(var(--primary))",
             "--btn-text": `rgb(${solidTextTriplet})`,
@@ -246,7 +266,6 @@ export function SiteShell({
             "--btn-hover-text": `rgb(${solidTextTriplet})`,
             "--btn-hover-border": "transparent",
           };
-
 
   const bgClass =
     backgroundStyle === "gradient"
@@ -264,16 +283,23 @@ export function SiteShell({
           ...(cardVars as React.CSSProperties),
           ...(buttonVars as React.CSSProperties),
           fontSize: rootFontSizePx,
+
+          // Typography roles
           ["--text-button-size" as any]: buttonTextSizeRem,
           ["--text-button-weight" as any]: buttonTextWeight,
+
+          // Button geometry
           ["--btn-padding" as any]: `${Math.round(12 * scale)}px ${Math.round(16 * scale)}px`,
           ["--btn-min-h" as any]: `${Math.round(44 * scale)}px`,
           ["--button-radius" as any]: buttonRadiusCss,
+
+          // Layout
           ["--block-gap" as any]: blockGapPx,
+
+          // Global radius token for cards/frames
           ["--radius" as any]: radiusCss,
         } as React.CSSProperties
       }
-      
       className={`min-h-screen ${bgClass}`}
     >
       {/* data-layout-width stays as the raw preset key from DB (useful for blocks). */}
