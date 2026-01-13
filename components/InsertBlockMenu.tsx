@@ -2,6 +2,7 @@
 
 import React from "react";
 
+
 export type BlockType = "header" | "hero" | "links" | "image" | "text" | "divider" | "products";
 
 
@@ -25,12 +26,34 @@ export default function InsertBlockMenu({
   showOnHover?: boolean;
 }) {
   const types: BlockType[] = ["header", "hero", "links", "image", "text", "divider", "products"];
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const el = rootRef.current;
+      if (!el) return;
+
+      const target = e.target as Node | null;
+      if (target && el.contains(target)) return;
+
+      onToggle(); // close
+    };
+
+    // pointerdown — чтобы срабатывало и на мышь, и на тач, и до onClick
+    document.addEventListener("pointerdown", onPointerDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [isOpen, onToggle]);
 
 
   return (
     <div className="flex justify-center">
-      <div className={"relative " + (showOnHover ? "group" : "")}>
-        <button
+<div ref={rootRef} className={"relative " + (showOnHover ? "group" : "")}>
+<button
           type="button"
           className={[
             // Dashboard light theme tokens (from app/dashboard/page.tsx vars)
