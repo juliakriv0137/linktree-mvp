@@ -179,7 +179,9 @@ export function ThemeInspector({
               }}
             >
               <option value="solid">Solid</option>
-              <option value="gradient">Gradient</option>
+<option value="gradient">Gradient</option>
+<option value="spotlight">Spotlight</option>
+
             </select>
           </label>
 

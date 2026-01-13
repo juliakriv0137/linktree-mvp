@@ -1,71 +1,155 @@
+"use client";
+
 import * as React from "react";
 import { BlockFrame } from "@/components/blocks/BlockFrame";
 import { BlockRegistry } from "@/lib/blocks/registry";
 
+export type LayoutWidth = "compact" | "wide" | "full" | "xwide" | "max";
+export type Mode = "public" | "preview";
+
+/**
+ * Важно: этот тип импортят редакторы/registry.
+ * Держим его экспортом, чтобы не ловить "no exported member".
+ */
 export type SiteBlockRow = {
   id: string;
-  site_id: string;
-  page_id?: string | null;
   type: string;
-  variant?: string | null;
-  style?: Record<string, unknown> | null;
-  content: Record<string, unknown> | null;
+
+  sort?: number | null;
+  order?: number | null;
+
+  page_id?: string | null;
+
+  hidden?: boolean | null;
+
   anchor_id?: string | null;
-  sort_order: number;
-  is_hidden?: boolean | null;
+
+  variant?: string | null;
+
+  content?: any;
+  style?: any;
+
+  [key: string]: any;
 };
 
 export type BlocksRendererSiteCtx = {
-  layout_width?: "compact" | "wide" | "xwide" | "max" | "full";
-
-  button_style?: "solid" | "outline" | "soft" | string | null;
+  layout_width?: LayoutWidth;
+  button_style?: string | null;
 };
 
-export type BlocksRendererProps = {
+export type RenderProps = {
+  block: SiteBlockRow;
+  mode: Mode;
+  site?: {
+    layout_width?: LayoutWidth;
+    button_style?: string | null;
+  };
+};
+
+type BlocksRendererProps = {
   blocks: SiteBlockRow[];
-  mode: "public" | "preview";
-  site?: BlocksRendererSiteCtx;
+  mode?: Mode;
+
+  /**
+   * Сюда часто прилетает "сырой" site из БД (layout_width: string | null)
+   * Мы его нормализуем в BlocksRendererSiteCtx.
+   */
+  site?: {
+    layout_width?: string | null;
+    button_style?: string | null;
+  };
 };
-function normalizeAnchorId(raw?: string | null) {
-  if (!raw) return undefined;
-  let s = String(raw).trim();
-  if (!s) return undefined;
-  if (s.startsWith("#")) s = s.slice(1).trim();
-  if (!s) return undefined;
-  // Keep it HTML-id friendly: letters/numbers/_/- ; convert spaces to "-"
-  s = s.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "");
-  return (s || undefined)?.toLowerCase();
+
+function normalizeLayoutWidth(v: string | null | undefined): LayoutWidth | undefined {
+  if (!v) return undefined;
+  if (v === "compact" || v === "wide" || v === "full" || v === "xwide" || v === "max") return v;
+  return undefined;
 }
 
-export function BlocksRenderer({ blocks, mode, site }: BlocksRendererProps) {
+/**
+ * Локальная нормализация anchor_id без зависимостей от lib/blocks/anchor.
+ * Делаем безопасный id для якорей.
+ */
+function normalizeAnchorId(v: string | null | undefined): string | undefined {
+  if (!v) return undefined;
+
+  const s = String(v).trim();
+  if (!s) return undefined;
+
+  // lower + spaces to dash
+  let out = s.toLowerCase().replace(/\s+/g, "-");
+
+  // оставляем только латиницу/цифры/дефис/подчёркивание
+  out = out.replace(/[^a-z0-9\-_]/g, "");
+
+  // убираем повторяющиеся дефисы
+  out = out.replace(/-+/g, "-").replace(/_+/g, "_");
+
+  // убираем дефисы по краям
+  out = out.replace(/^-+/, "").replace(/-+$/, "");
+
+  if (!out) return undefined;
+  return out;
+}
+
+export function BlocksRenderer({ blocks, mode = "public", site }: BlocksRendererProps) {
   const sorted = React.useMemo(() => {
-    return [...blocks]
-      .filter((b) => !b.is_hidden)
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const arr = Array.isArray(blocks) ? [...blocks] : [];
+
+    arr.sort((a, b) => {
+      const ao =
+        typeof a?.sort === "number"
+          ? a.sort
+          : typeof a?.order === "number"
+            ? a.order
+            : 0;
+
+      const bo =
+        typeof b?.sort === "number"
+          ? b.sort
+          : typeof b?.order === "number"
+            ? b.order
+            : 0;
+
+      return ao - bo;
+    });
+
+    return arr;
   }, [blocks]);
+
+  const siteCtx = React.useMemo<BlocksRendererSiteCtx | undefined>(() => {
+    if (!site) return undefined;
+    return {
+      layout_width: normalizeLayoutWidth(site.layout_width),
+      button_style: site.button_style ?? null,
+    };
+  }, [site]);
 
   return (
     <>
       {sorted.map((block) => {
-        const entry = BlockRegistry[block.type];
+        const entry = (BlockRegistry as any)[block.type];
+
         if (!entry) {
           return (
-            <div key={block.id} className="border p-3 text-sm opacity-70" style={{ borderRadius: "var(--radius,15px)" }}>
-              Unknown block type: <span className="font-mono">{block.type}</span>
+            <div
+              key={block.id}
+              className="border p-3 text-sm opacity-70"
+              style={{ borderRadius: "var(--radius)" }}
+            >
+              Unknown block type: <span className="font-mono">{String(block.type)}</span>
             </div>
           );
         }
 
-        const Comp = entry.render;
-
+        const Comp = entry.render as React.ComponentType<RenderProps>;
         const anchorId = normalizeAnchorId(block.anchor_id);
 
         return (
           <BlockFrame key={block.id} block={block} anchorId={anchorId}>
-            <Comp block={block} mode={mode} site={site} />
+            <Comp block={block} mode={mode} site={siteCtx} />
           </BlockFrame>
         );
-
       })}
     </>
   );

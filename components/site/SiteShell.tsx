@@ -274,7 +274,26 @@ export function SiteShell({
         ? "bg-[radial-gradient(rgb(var(--text)/0.10)_1px,transparent_1px)] [background-size:16px_16px] bg-[rgb(var(--bg))]"
         : "bg-[rgb(var(--bg))]";
 
-  return (
+  
+        const bgStyle = (backgroundStyle ?? "solid") as string;
+
+        const backgroundColor = "rgb(var(--bg, 255 255 255))";
+        
+        const backgroundImage =
+          bgStyle === "gradient"
+            ? "linear-gradient(135deg, rgb(var(--bg, 255 255 255)) 0%, rgb(var(--muted, 245 245 245)) 100%)"
+            : bgStyle === "spotlight"
+              ? "radial-gradient(900px 600px at 20% 10%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%), radial-gradient(900px 600px at 80% 30%, rgba(255,255,255,0.25), rgba(255,255,255,0) 55%)"
+              : "none";
+        
+        const shellStyle: React.CSSProperties = {
+          backgroundColor,
+          backgroundImage,
+          backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed",
+        };
+        
+        return (
     <div
       {...safeRest}
       style={

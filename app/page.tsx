@@ -3,37 +3,97 @@ import { Card } from "@/components/Card";
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <Card className="p-8">
-        <h1 className="text-2xl font-bold">Link Page MVP</h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Create a public profile page with links, like Linktree.
-        </p>
+    <main
+      className="min-h-screen px-4 py-10"
+      style={{
+        background:
+          "radial-gradient(900px 500px at 50% -10%, rgba(73, 205, 190, 0.14), rgba(255,255,255,0) 60%), var(--bg, #f6f7f9)",
+        color: "var(--text, #111827)",
+      }}
+    >
+      <div className="mx-auto max-w-3xl">
+        <Card
+          className="p-10"
+          style={{
+            borderRadius: "var(--radius, 20px)",
+            background: "var(--card, #ffffff)",
+            border: "1px solid var(--border, rgba(17, 24, 39, 0.10))",
+            boxShadow:
+              "0 24px 70px rgba(17, 24, 39, 0.10), 0 2px 8px rgba(17, 24, 39, 0.06)",
+          }}
+        >
+          <div className="text-center">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              NINEMAGS Page <span className="ml-2 align-middle text-xs font-semibold px-2 py-1 rounded-full"
+                style={{
+                  background: "rgba(73, 205, 190, 0.12)",
+                  color: "rgba(20, 120, 110, 1)",
+                  border: "1px solid rgba(73, 205, 190, 0.25)",
+                }}
+              >
+                Beta
+              </span>
+            </h1>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/login"
-            className="bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200" style={{ borderRadius: "var(--radius,15px)" }}
-          >
-            Login
-          </Link>
-          <Link
-            href="/dashboard"
-            className="bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800" style={{ borderRadius: "var(--radius,15px)" }}
-          >
-            Dashboard
-          </Link>
-        </div>
+            <p
+              className="mx-auto mt-3 max-w-xl text-base"
+              style={{ color: "var(--muted, rgba(17, 24, 39, 0.62))" }}
+            >
+              Create a clean link-in-bio page with blocks (links, text, images, products).
+            </p>
 
-        <div className="mt-8 text-sm text-zinc-600 dark:text-zinc-400">
-          <p className="font-semibold text-zinc-900 dark:text-zinc-100">Demo URL format</p>
-          <p className="mt-1">
-            <span className="bg-zinc-100 px-2 py-1 font-mono dark:bg-zinc-900" style={{ borderRadius: "var(--radius,15px)" }}>
-              /your_username
-            </span>
-          </p>
-        </div>
-      </Card>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/login"
+                className="px-5 py-2.5 text-sm font-semibold transition"
+                style={{
+                  borderRadius: "var(--radius, 999px)",
+                  background: "var(--primary, #49CDBE)", 
+                  color: "var(--button-text, #ffffff)",
+                  boxShadow: "0 10px 24px rgba(73, 205, 190, 0.28)",
+                }}
+              >
+                Login
+              </Link>
+
+              <Link
+                href="/dashboard"
+                className="px-5 py-2.5 text-sm font-semibold transition"
+                style={{
+                  borderRadius: "var(--radius, 999px)",
+                  background: "var(--card, #ffffff)",
+                  color: "var(--text, #111827)",
+                  border: "1px solid var(--border, rgba(17, 24, 39, 0.14))",
+                }}
+              >
+                Dashboard
+              </Link>
+            </div>
+
+            <div className="mt-10">
+              <div className="text-sm font-semibold" style={{ color: "var(--text, #111827)" }}>
+                Your page URL
+              </div>
+
+              <div
+                className="mx-auto mt-2 inline-flex items-center px-3 py-2 text-sm font-mono"
+                style={{
+                  borderRadius: "var(--radius, 999px)",
+                  background: "rgba(17, 24, 39, 0.05)",
+                  color: "var(--text, #111827)",
+                  border: "1px solid rgba(17, 24, 39, 0.08)",
+                }}
+              >
+                /your_username
+              </div>
+
+              <p className="mt-3 text-sm" style={{ color: "var(--muted, rgba(17, 24, 39, 0.62))" }}>
+                Tip: share this link in your Instagram / TikTok bio.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
     </main>
   );
 }

@@ -40,4 +40,19 @@ body {
     --db-active: 255 255 255 / 0.10;
     --db-ring: 255 255 255 / 0.20;
   }
-  
+  /* Fix Chrome autofill grey background */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #0a0a0a !important;
+  caret-color: #0a0a0a !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* Optional: keep border/radius consistent */
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+}

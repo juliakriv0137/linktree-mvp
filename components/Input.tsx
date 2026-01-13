@@ -1,28 +1,61 @@
 "use client";
 
-import React from "react";
-import { cx } from "@/lib/ui";
+import * as React from "react";
 
 type Props = React.InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
   hint?: string;
   error?: string;
+  containerClassName?: string;
+  inputClassName?: string;
 };
 
-export function Input({ label, hint, error, className, ...props }: Props) {
+export function Input({
+  label,
+  hint,
+  error,
+  containerClassName = "",
+  inputClassName = "",
+  className, // оставим для совместимости, но применим к input
+  id,
+  ...props
+}: Props) {
+  const autoId = React.useId();
+  const inputId = id ?? autoId;
+
   return (
-    <label className="block">
-      {label ? <div className="mb-1 text-sm font-medium">{label}</div> : null}
+    <div className={containerClassName}>
+      {label ? (
+        <label
+          htmlFor={inputId}
+          className="mb-2 block text-sm font-semibold text-zinc-900"
+        >
+          {label}
+        </label>
+      ) : null}
+
       <input
-        className={cx(
-          "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-black focus:ring-2 focus:ring-black/10 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-white dark:focus:ring-white/10",
-          error ? "border-red-500 focus:border-red-600 focus:ring-red-500/10" : "",
-          className
-        )}
+        id={inputId}
+        className={[
+          "w-full px-4 py-3 text-base outline-none transition",
+          "border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400",
+          "focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100",
+          "disabled:opacity-60 disabled:cursor-not-allowed",
+          // радиус как в проекте
+          "",
+          className ?? "",
+          inputClassName,
+        ].join(" ")}
+        style={{ borderRadius: "18px" }}
+        aria-invalid={!!error}
         {...props}
       />
-      {error ? <div className="mt-1 text-xs text-red-600">{error}</div> : null}
-      {!error && hint ? <div className="mt-1 text-xs text-zinc-500">{hint}</div> : null}
-    </label>
+
+      {error ? (
+        <div className="mt-2 text-sm text-red-600">{error}</div>
+      ) : hint ? (
+        <div className="mt-2 text-xs text-zinc-500">{hint}</div>
+      ) : null}
+    </div>
   );
 }
