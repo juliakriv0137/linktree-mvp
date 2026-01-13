@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SiteBlockRow as BlockRow } from "@/components/blocks/BlocksRenderer";
 import { Button } from "@/components/dashboard/ui/Button";
 import { DbFieldRow } from "@/components/dashboard/ui/DbFieldRow";
 import { DbInput } from "@/components/dashboard/ui/DbInput";
 import { DbSelect } from "@/components/dashboard/ui/DbSelect";
+import { supabase } from "@/lib/supabaseClient";
 
 type ImageContent = {
   url?: string | null;
@@ -36,6 +37,15 @@ function isValidHttpUrl(raw: any) {
   }
 }
 
+function sanitizeFilename(name: string) {
+  // keep it simple and safe for storage paths
+  return name
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .slice(0, 120);
+}
+
 export function ImageEditor({
   block,
   onSave,
@@ -50,23 +60,131 @@ export function ImageEditor({
   const [shape, setShape] = useState<"circle" | "rounded" | "square">(
     (initial.shape as any) ?? "circle",
   );
+
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string>("");
+
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const c = (block.content ?? {}) as ImageContent;
     setUrl(c.url ?? "");
     setAlt(c.alt ?? "");
     setShape(((c.shape as any) ?? "circle") as any);
+    setUploadErr("");
+    setUploading(false);
+    setSaving(false);
+    if (fileRef.current) fileRef.current.value = "";
   }, [block.id, block.content]);
 
-  const normalizedUrl = normalizeUrl(url);
-  const urlOk = isValidHttpUrl(normalizedUrl);
+  const normalizedUrl = useMemo(() => normalizeUrl(url), [url]);
+  const urlOk = useMemo(() => isValidHttpUrl(normalizedUrl), [normalizedUrl]);
+
   const previewRadius =
     shape === "circle" ? "9999px" : shape === "rounded" ? "24px" : "0px";
+
+  async function uploadToSupabase(file: File) {
+    setUploadErr("");
+    setUploading(true);
+
+    try {
+
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+
+      const user = userRes?.user;
+      if (!user?.id) {
+        throw new Error("Not authenticated. Please log in again.");
+      }
+
+      const safeName = sanitizeFilename(file.name || "image");
+      const ext = safeName.includes(".") ? safeName.split(".").pop() : "";
+      const ts = Date.now();
+      const random = Math.random().toString(16).slice(2);
+      const finalName =
+        ext && safeName.toLowerCase().endsWith(`.${ext.toLowerCase()}`)
+          ? safeName
+          : ext
+            ? `${safeName}.${ext}`
+            : safeName;
+
+      // IMPORTANT for your RLS: first path segment must equal auth.uid()
+      const path = `${user.id}/${ts}-${random}-${finalName}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("site-assets")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+
+      if (upErr) throw upErr;
+
+      const { data: pub } = supabase.storage.from("site-assets").getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+
+      if (!publicUrl) {
+        throw new Error("Could not get public URL for uploaded file.");
+      }
+
+      // Put into URL field so user sees it + preview updates
+      setUrl(publicUrl);
+      return publicUrl;
+    } catch (e: any) {
+      setUploadErr(e?.message ? String(e.message) : "Upload failed");
+      return "";
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="text-xs text-[rgb(var(--db-muted))]">Image block</div>
+
+      {/* Upload control */}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            // optional: simple size guard (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+              setUploadErr("File is too large. Please use an image under 10MB.");
+              if (fileRef.current) fileRef.current.value = "";
+              return;
+            }
+
+            await uploadToSupabase(file);
+          }}
+        />
+
+<Button
+  disabled={uploading || saving}
+  onClick={() => {
+    fileRef.current?.click();
+  }}
+>
+  {uploading ? "Uploading..." : "Upload image"}
+</Button>
+
+
+        {uploadErr ? (
+          <div className="text-sm text-red-600">{uploadErr}</div>
+        ) : (
+          <div className="text-xs text-[rgb(var(--db-muted))]">
+            Upload from your computer (stored in Supabase Storage)
+          </div>
+        )}
+      </div>
 
       <DbFieldRow
         label="Image URL"
@@ -135,7 +253,7 @@ export function ImageEditor({
       <div className="flex gap-2">
         <Button
           variant="primary"
-          disabled={saving || !urlOk}
+          disabled={saving || uploading || !urlOk}
           onClick={async () => {
             const normalized = normalizeUrl(url);
             if (!isValidHttpUrl(normalized)) return;
