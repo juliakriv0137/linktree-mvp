@@ -23,9 +23,15 @@ export function BlockFrame({
   const radiusRaw = s.radius;
   const borderRaw = s.border;
 
+  // NEW: per-block background overrides (priority)
+  const bgColorRaw = s.bg_color;
+  const bgImageRaw = s.bg_image;
+
   const paddingPx = normalizePadding(paddingRaw);
   const widthClass = normalizeWidthClass(widthRaw);
   const alignClass = normalizeAlignClass(alignRaw);
+
+  // base background style from background token
   const bgStyle = normalizeBackgroundStyle(bgRaw);
 
   const radiusValue = normalizeRadius(radiusRaw);
@@ -37,6 +43,30 @@ export function BlockFrame({
     minWidth: 0,
     ...(bgStyle ?? {}),
   };
+
+  // apply per-block overrides with higher priority than theme backgrounds
+  const bgColor = normalizeHexOrNull(bgColorRaw);
+  const bgImage = normalizeUrlOrNull(bgImageRaw);
+
+  if (bgColor) {
+    // priority over normalizeBackgroundStyle background
+    // keep backgroundImage if any (handled below)
+    (frameStyle as any).backgroundColor = bgColor;
+    // if normalizeBackgroundStyle set "background", replace it to avoid overriding bgColor
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete (frameStyle as any).background;
+  }
+
+  if (bgImage) {
+    frameStyle.backgroundImage = `url(${bgImage})`;
+    frameStyle.backgroundRepeat = "no-repeat";
+    frameStyle.backgroundPosition = "center";
+    frameStyle.backgroundSize = "cover";
+    // if bgStyle used shorthand "background", we already removed it above when bgColor set;
+    // but if only image is set, remove background shorthand too to avoid overriding backgroundImage
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete (frameStyle as any).background;
+  }
 
   // применяем только если реально выбрано
   if (paddingPx) frameStyle.padding = paddingPx;
@@ -220,4 +250,31 @@ function normalizeBackgroundStyle(v: any): React.CSSProperties | null {
     default:
       return null;
   }
+}
+
+function normalizeHexOrNull(v: any): string | null {
+  const raw = String(v ?? "").trim();
+  if (!raw) return null;
+
+  // allow css var
+  if (raw.startsWith("var(")) return raw;
+
+  const s = raw.toLowerCase();
+  if (/^#[0-9a-f]{3}$/.test(s)) return raw;
+  if (/^#[0-9a-f]{6}$/.test(s)) return raw;
+
+  return null;
+}
+
+function normalizeUrlOrNull(v: any): string | null {
+  const raw = String(v ?? "").trim();
+  if (!raw) return null;
+
+  // allow css var too (rare but ok)
+  if (raw.startsWith("var(")) return raw;
+
+  // minimal "looks like url" check
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  return null;
 }

@@ -12,7 +12,11 @@ type ImageContent = {
   url?: string | null;
   alt?: string | null;
   shape?: "circle" | "rounded" | "square" | null;
+
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "full" | null;
+  ratio?: "" | "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "2:1" | "21:9" | null;
 };
+
 
 function safeTrim(v: any) {
   return String(v ?? "").trim();
@@ -60,6 +64,9 @@ export function ImageEditor({
   const [shape, setShape] = useState<"circle" | "rounded" | "square">(
     (initial.shape as any) ?? "circle",
   );
+  const [size, setSize] = useState<string>(String((initial as any)?.size ?? ""));
+  const [ratio, setRatio] = useState<string>(String((initial as any)?.ratio ?? ""));
+  
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -251,27 +258,30 @@ export function ImageEditor({
       </div>
 
       <div className="flex gap-2">
-        <Button
-          variant="primary"
-          disabled={saving || uploading || !urlOk}
-          onClick={async () => {
-            const normalized = normalizeUrl(url);
-            if (!isValidHttpUrl(normalized)) return;
+      <Button
+  variant="primary"
+  disabled={saving || uploading || !urlOk}
+  onClick={async () => {
+    const normalized = normalizeUrl(url);
+    if (!isValidHttpUrl(normalized)) return;
 
-            setSaving(true);
-            try {
-              await onSave({
-                url: normalized,
-                alt: safeTrim(alt),
-                shape,
-              });
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? "Saving..." : "Save image"}
-        </Button>
+    setSaving(true);
+    try {
+      await onSave({
+        url: normalized,
+        alt: safeTrim(alt) || null,
+        shape: (shape as any) ?? null,
+        size: size ? (size as any) : null,
+        ratio: ratio !== "" ? (ratio as any) : null,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }}
+>
+  {saving ? "Saving..." : "Save image"}
+</Button>
+
       </div>
     </div>
   );

@@ -16,6 +16,12 @@ export type BlockStyleTokens = {
   radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | string;
   border?: "none" | "subtle" | "strong" | string;
   align?: "left" | "center" | "right" | string;
+
+  // NEW: per-block background overrides (applied via inline style in BlockFrame)
+  // hex like #RRGGBB or #RGB
+  bg_color?: string | null;
+  // any image url
+  bg_image?: string | null;
 };
 
 export type BlockStyle = BlockStyleTokens & {
@@ -129,19 +135,19 @@ function backgroundClass(bg: string) {
 
 /** ---------- normalization ---------- */
 
-export function normalizeBlockStyle(input: any): Required<Pick<BlockStyle, keyof BlockStyleTokens>> & {
+export function normalizeBlockStyle(
+  input: any,
+): Required<Pick<BlockStyle, keyof BlockStyleTokens>> & {
   mobile: Partial<BlockStyleTokens>;
   desktop: Partial<BlockStyleTokens>;
 } {
   const raw = asObj(input) as BlockStyle;
 
   // legacy fallback: bg -> background
-  const backgroundRaw =
-    raw.background ?? raw.bg ?? "none";
+  const backgroundRaw = raw.background ?? raw.bg ?? "none";
 
   // legacy fallback: width compact -> content
-  const widthRaw =
-    raw.width ?? "full";
+  const widthRaw = raw.width ?? "full";
 
   const desktop = asObj(raw.desktop) as Partial<BlockStyleTokens>;
   const mobile = asObj(raw.mobile) as Partial<BlockStyleTokens>;
@@ -153,6 +159,10 @@ export function normalizeBlockStyle(input: any): Required<Pick<BlockStyle, keyof
     radius: String(raw.radius ?? "2xl"),
     border: String(raw.border ?? "subtle"),
     align: String(raw.align ?? "left"),
+
+    // NEW (base level)
+    bg_color: raw.bg_color ?? null,
+    bg_image: raw.bg_image ?? null,
   };
 
   const normalizePartial = (p: any): Partial<BlockStyleTokens> => {
@@ -164,6 +174,12 @@ export function normalizeBlockStyle(input: any): Required<Pick<BlockStyle, keyof
     if ("radius" in o) out.radius = String(o.radius);
     if ("border" in o) out.border = String(o.border);
     if ("align" in o) out.align = String(o.align);
+
+    // NEW: allow overrides per device if we ever need them
+    // (doesn't affect className; used later by BlockFrame inline style if desired)
+    if ("bg_color" in o) out.bg_color = o.bg_color ?? null;
+    if ("bg_image" in o) out.bg_image = o.bg_image ?? null;
+
     return out;
   };
 

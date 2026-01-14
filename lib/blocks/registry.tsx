@@ -429,7 +429,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
       // --- Size (optional) ---
       // style.image.size: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full"
-      const sizeKey = String((imgStyle as any).size ?? "md");
+      const sizeKey = String((imgStyle as any).size ?? c.size ?? "md");
       const sizePx =
         sizeKey === "xs"
           ? 72
@@ -463,7 +463,7 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
       // --- Aspect ratio (optional) ---
       // style.image.ratio: "1:1" | "4:5" | "3:4" | "4:3" | "3:2" | "16:9" | "21:9"
-      const ratioKey = String((imgStyle as any).ratio ?? "");
+      const ratioKey = String((imgStyle as any).ratio ?? c.ratio ?? "");
       const ratioCss =
         ratioKey === "1:1"
           ? "1 / 1"

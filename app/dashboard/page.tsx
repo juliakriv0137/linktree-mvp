@@ -28,7 +28,8 @@ import { DbSummaryButton } from "@/components/dashboard/ui/DbSummaryButton";
 import { DbPopoverPanel } from "@/components/dashboard/ui/DbPopoverPanel";
 import { DbDetails } from "@/components/dashboard/ui/DbDetails";
 import { ThemeInspector } from "@/components/dashboard/inspector/ThemeInspector";
-
+import { DbInput } from "@/components/dashboard/ui/DbInput";
+import { DbFieldRow } from "@/components/dashboard/ui/DbFieldRow";
 
 
 
@@ -182,8 +183,15 @@ type LinksContent = {
 type ImageContent = {
   url?: string;
   alt?: string;
+
+  // existing
   shape?: "circle" | "rounded" | "square";
+
+  // NEW: display controls
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  ratio?: "" | "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "2:1" | "21:9";
 };
+
 
 type TextContent = {
   text?: string;
@@ -668,7 +676,8 @@ export default function DashboardPage() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [blockTab, setBlockTab] = useState<"content" | "style" | "advanced">("content");
   const [anchorDraft, setAnchorDraft] = useState("");
-
+  const bgFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [bgUploading, setBgUploading] = React.useState(false);
   // Site settings
   const [colors, setColors] = useState({
     bg_color: "",
@@ -749,6 +758,7 @@ export default function DashboardPage() {
   }, [blocks, selectedPageId, byPos]);
 
   const selectedBlock = useMemo(() => blocksForPage.find((b) => b.id === selectedBlockId) ?? null, [blocksForPage, selectedBlockId]);
+  const rawStyle = (selectedBlock as any)?.style ?? {};
 
   // Keep inspector state aligned with selection
   useEffect(() => {
@@ -1860,54 +1870,7 @@ export default function DashboardPage() {
                   </div>
                 </Section>
 
-                <Section title="Add blocks" description="Quick add common block types" defaultOpen={true}>
-                  <div className="flex flex-wrap gap-2">
-                    {(["header", "hero", "links", "image", "text", "divider", "products"] as const).map((t) => {
-                      const isBusy = creating === (t as any);
-
-                      return (
-                        <button
-                          key={t}
-                          type="button"
-                          disabled={!site || loading || !!creating || !!inserting}
-                          onClick={async () => {
-                            if (!site) return;
-                            setCreating(t as any);
-                            try {
-                              if (!selectedPageId) throw new Error("No page selected");
-                              await createBlock(site.id, selectedPageId, t as any);
-
-                              const bs = await loadBlocks(site.id);
-                              setBlocks(bs);
-                              const last = bs.reduce((acc, cur) => (cur.position > acc.position ? cur : acc), bs[0]);
-                              if (last?.id) setSelectedBlockId(last.id);
-                            } catch (e: any) {
-                              setError(e?.message ?? String(e));
-                            } finally {
-                              setCreating(null);
-                            }
-                          }}
-                          className={clsx(
-                            "inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
-                            "border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] text-[rgb(var(--db-text))] shadow-sm",
-                            "hover:bg-[rgb(var(--db-soft))] hover:border-[rgb(var(--db-accent)/0.55)]",
-                            "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--db-accent)/0.35)]",
-                            "disabled:cursor-not-allowed disabled:opacity-50",
-                            isBusy && "border-[rgb(var(--db-accent)/0.65)] bg-[rgb(var(--db-accent)/0.12)]",
-                          )}
-                          title={`Add ${t} block`}
-                        >
-                          <span className="text-sm leading-none">＋</span>
-                          <span className="capitalize">{isBusy ? "Adding..." : t}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-3 text-[11px] text-[rgb(var(--db-muted))]">
-                    “Header” is global (page_id = null). Other blocks attach to the selected page.
-                  </div>
-                </Section>
+                
               </div>
             </div>
 
@@ -2458,6 +2421,110 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </Section>
+                      <div className="mt-4 flex flex-col gap-4">
+  {/* Block color */}
+  <div>
+    <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-2">
+      Block color
+    </div>
+
+    <ColorField
+      label=""
+      value={String((rawStyle as any).bg_color ?? "")}
+      onChange={(v) => {
+        onPatchBlockStyle({ bg_color: String(v ?? "") });
+      }}
+    />
+  </div>
+
+  {/* Background image */}
+  <div>
+    <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-2">
+      Background image
+    </div>
+
+    <DbInput
+      value={String((rawStyle as any).bg_image ?? "")}
+      placeholder="https://.../image.jpg"
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+        onPatchBlockStyle({ bg_image: e.target.value });
+      }}
+    />
+
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <input
+        ref={bgFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+
+          setBgUploading(true);
+          try {
+            const { data: userRes, error: userErr } = await supabase.auth.getUser();
+            if (userErr) throw userErr;
+
+            const userId = userRes.user?.id;
+            if (!userId) throw new Error("Not authenticated");
+
+            const ext = (file.name.split(".").pop() || "png").toLowerCase();
+            const blockId = String((selectedBlock as any)?.id ?? "block");
+            const siteId = String((site as any)?.id ?? "site");
+            const fileName = `bg-${blockId}-${Date.now()}.${ext}`;
+            const objectPath = `${userId}/${siteId}/block-bg/${fileName}`;
+
+            const { error: upErr } = await supabase.storage
+              .from("site-assets")
+              .upload(objectPath, file, {
+                upsert: true,
+                contentType: file.type || undefined,
+              });
+            if (upErr) throw upErr;
+
+            const { data: pub } = supabase.storage
+              .from("site-assets")
+              .getPublicUrl(objectPath);
+
+            if (!pub?.publicUrl) throw new Error("Failed to get public URL");
+
+            onPatchBlockStyle({ bg_image: pub.publicUrl });
+            e.target.value = "";
+          } catch (err: any) {
+            setError(err?.message ?? String(err));
+          } finally {
+            setBgUploading(false);
+          }
+        }}
+      />
+
+      <Button
+        variant="pill"
+        disabled={!canAct || bgUploading}
+        onClick={() => bgFileInputRef.current?.click()}
+      >
+        {bgUploading ? "Uploading..." : "Upload image"}
+      </Button>
+
+      {String((rawStyle as any).bg_image ?? "").trim() ? (
+        <Button
+          variant="ghost"
+          disabled={!canAct || bgUploading}
+          onClick={() => onPatchBlockStyle({ bg_image: "" })}
+        >
+          Clear
+        </Button>
+      ) : null}
+    </div>
+
+    <div className="mt-1 text-[11px] text-[rgb(var(--db-muted))]">
+      Cover / center / no-repeat. Leave empty to disable.
+    </div>
+  </div>
+</div>
+
+
                     </div>
                   ) : null}
 
