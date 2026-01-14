@@ -378,60 +378,69 @@ async function getAuthedUserId() {
 }
 
 async function ensureSiteForUser(): Promise<SiteRow> {
-  const uid = await getAuthedUserId();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  const { data: existing, error: selErr } = await supabase
+  if (userError || !user) {
+    throw new Error("User not authenticated");
+  }
+
+  // 1. Проверяем, есть ли уже site
+  const { data: existingSite, error: siteSelectError } = await supabase
     .from("sites")
     .select("*")
-    .eq("owner_id", uid)
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .eq("owner_id", user.id)
     .maybeSingle();
 
-  if (selErr) throw selErr;
-  if (existing) return existing as SiteRow;
+  if (siteSelectError) {
+    throw siteSelectError;
+  }
 
-  const { data: profile, error: profErr } = await supabase
-    .from("profiles")
-    .select("username, display_name")
-    .eq("id", uid)
-    .single();
+  if (existingSite) {
+    return existingSite as SiteRow;
+  }
 
-  if (profErr) throw profErr;
+  // 2. Генерируем username без profiles
+  const username = `user${user.id.replace(/-/g, "").slice(0, 8)}`;
 
-  const slug = String(profile?.username ?? "").trim();
-  if (!slug) throw new Error("Profile username is empty; cannot create site slug.");
-  const name = String(profile?.display_name ?? "").trim() || slug;
+  // 3. Создаём site
+  const { data: site, error: siteUpsertError } = await supabase
+  .from("sites")
+  .upsert(
+    {
+      owner_id: user.id,
+      slug: username,
+      name: "My site",
+    },
+    { onConflict: "owner_id" }
+  )
+  .select()
+  .single();
 
-  const { data: created, error: insErr } = await supabase
-    .from("sites")
+
+  if (siteUpsertError || !site) {
+    throw siteUpsertError ?? new Error("Failed to create site");
+  }
+  
+
+  // 4. Создаём Home page (slug = null)
+  const { error: pageInsertError } = await supabase
+    .from("site_pages")
     .insert({
-      owner_id: uid,
-      slug,
-      name,
-      theme: { mode: "dark" },
-      theme_key: "midnight",
-      button_style: "solid",
-      background_style: "solid",
-      layout_width: "compact",
+      site_id: site.id,
+      slug: null,
+      title: "Home",
+    });
 
-      font_scale: "md",
-      button_radius: "2xl",
-      card_style: "card",
+  if (pageInsertError) {
+    throw pageInsertError;
+  }
 
-      bg_color: null,
-      text_color: null,
-      muted_color: null,
-      border_color: null,
-      button_color: null,
-      button_text_color: null,
-    })
-    .select("*")
-    .single();
-
-  if (insErr) throw insErr;
-  return created as SiteRow;
+  return site as SiteRow;
 }
+
 
 async function loadBlocks(siteId: string): Promise<BlockRow[]> {
   const { data, error } = await supabase

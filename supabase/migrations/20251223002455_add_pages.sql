@@ -1,5 +1,8 @@
 begin;
 
+-- =========================
+-- site_pages table
+-- =========================
 create table if not exists public.site_pages (
   id uuid primary key default gen_random_uuid(),
   site_id uuid not null references public.sites(id) on delete cascade,
@@ -11,6 +14,9 @@ create table if not exists public.site_pages (
   updated_at timestamptz not null default now()
 );
 
+-- =========================
+-- updated_at trigger
+-- =========================
 do $$
 begin
   if not exists (select 1 from pg_proc where proname = 'set_updated_at') then
@@ -35,6 +41,9 @@ begin
   end if;
 end $$;
 
+-- =========================
+-- constraints & indexes
+-- =========================
 alter table public.site_pages
   drop constraint if exists site_pages_slug_not_blank;
 
@@ -53,6 +62,9 @@ create unique index if not exists ux_site_pages_site_slug
 create index if not exists ix_site_pages_site_sort
   on public.site_pages(site_id, sort_order, created_at);
 
+-- =========================
+-- site_blocks.page_id
+-- =========================
 alter table public.site_blocks
   add column if not exists page_id uuid null;
 
@@ -71,35 +83,22 @@ end $$;
 create index if not exists ix_site_blocks_page
   on public.site_blocks(page_id, position, created_at);
 
-with home_pages as (
-  insert into public.site_pages(site_id, slug, title, sort_order, is_published)
-  select s.id, null, 'Home', 0, true
-  from public.sites s
-  where not exists (
-    select 1 from public.site_pages p
-    where p.site_id = s.id and p.slug is null
-  )
-  returning site_id, id
-),
-existing_home as (
-  select p.site_id, p.id
-  from public.site_pages p
-  where p.slug is null
-),
-home_map as (
-  select * from home_pages
-  union all
-  select * from existing_home
-)
+-- =========================
+-- BACKFILL ONLY (NO PAGE CREATION)
+-- =========================
 update public.site_blocks b
-set page_id = hm.id
-from home_map hm
-where b.site_id = hm.site_id
+set page_id = p.id
+from public.site_pages p
+where p.site_id = b.site_id
+  and p.slug is null
   and b.page_id is null;
 
 alter table public.site_blocks
   alter column page_id set not null;
 
+-- =========================
+-- RLS
+-- =========================
 alter table public.site_pages enable row level security;
 
 drop policy if exists "site_pages_select_own" on public.site_pages;
@@ -108,7 +107,8 @@ on public.site_pages
 for select
 using (
   exists (
-    select 1 from public.sites s
+    select 1
+    from public.sites s
     where s.id = site_pages.site_id
       and s.owner_id = auth.uid()
   )
@@ -120,7 +120,8 @@ on public.site_pages
 for insert
 with check (
   exists (
-    select 1 from public.sites s
+    select 1
+    from public.sites s
     where s.id = site_pages.site_id
       and s.owner_id = auth.uid()
   )
@@ -132,14 +133,16 @@ on public.site_pages
 for update
 using (
   exists (
-    select 1 from public.sites s
+    select 1
+    from public.sites s
     where s.id = site_pages.site_id
       and s.owner_id = auth.uid()
   )
 )
 with check (
   exists (
-    select 1 from public.sites s
+    select 1
+    from public.sites s
     where s.id = site_pages.site_id
       and s.owner_id = auth.uid()
   )
@@ -151,7 +154,8 @@ on public.site_pages
 for delete
 using (
   exists (
-    select 1 from public.sites s
+    select 1
+    from public.sites s
     where s.id = site_pages.site_id
       and s.owner_id = auth.uid()
   )
