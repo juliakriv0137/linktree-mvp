@@ -267,33 +267,48 @@ export function SiteShell({
             "--btn-hover-border": "transparent",
           };
 
-  const bgClass =
-    backgroundStyle === "gradient"
-      ? "bg-[radial-gradient(1200px_circle_at_20%_10%,rgb(var(--primary)/0.25),transparent_45%),radial-gradient(900px_circle_at_80%_0%,rgb(var(--primary-2)/0.20),transparent_45%),rgb(var(--bg))]"
-      : backgroundStyle === "dots"
-        ? "bg-[radial-gradient(rgb(var(--text)/0.10)_1px,transparent_1px)] [background-size:16px_16px] bg-[rgb(var(--bg))]"
-        : "bg-[rgb(var(--bg))]";
+  /**
+   * KEY FIX:
+   * We do NOT rely on tailwind `bg-[rgb(var(--bg))]` for the page base background,
+   * because if --bg is missing/invalid, you can end up with a black/ugly default.
+   *
+   * Instead:
+   * - Always set a safe base background color (white fallback)
+   * - Add gradient/spotlight as overlay (backgroundImage), never replacing the base.
+   */
+  const bgStyle = (backgroundStyle ?? "solid") as string;
 
+  const backgroundColor = "rgb(var(--bg, 255 255 255))";
+
+  // Softer, nicer overlays than the previous “linear gradient” (which often looks dirty).
+  const overlayGradient =
+    "radial-gradient(1200px circle at 20% 10%, rgb(var(--primary) / 0.22), transparent 55%), " +
+    "radial-gradient(900px circle at 80% 0%, rgb(var(--primary-2) / 0.16), transparent 55%), " +
+    "radial-gradient(900px circle at 50% 90%, rgb(var(--primary) / 0.10), transparent 60%)";
+
+    const overlaySpotlight =
+    "radial-gradient(1200px 700px at 50% -10%, rgba(0,0,0,0.12), rgba(0,0,0,0) 55%), " +
+    "radial-gradient(800px 500px at 50% 0%, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%)";
   
-        const bgStyle = (backgroundStyle ?? "solid") as string;
 
-        const backgroundColor = "rgb(var(--bg, 255 255 255))";
-        
-        const backgroundImage =
-          bgStyle === "gradient"
-            ? "linear-gradient(135deg, rgb(var(--bg, 255 255 255)) 0%, rgb(var(--muted, 245 245 245)) 100%)"
-            : bgStyle === "spotlight"
-              ? "radial-gradient(900px 600px at 20% 10%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%), radial-gradient(900px 600px at 80% 30%, rgba(255,255,255,0.25), rgba(255,255,255,0) 55%)"
-              : "none";
-        
-        const shellStyle: React.CSSProperties = {
-          backgroundColor,
-          backgroundImage,
-          backgroundRepeat: "no-repeat",
-          backgroundAttachment: "fixed",
-        };
-        
-        return (
+  const backgroundImage =
+    bgStyle === "gradient" ? overlayGradient : bgStyle === "spotlight" ? overlaySpotlight : "none";
+
+  const shellStyle: React.CSSProperties = {
+    backgroundColor,
+    backgroundImage,
+    backgroundRepeat: "no-repeat",
+    backgroundAttachment: "fixed",
+    backgroundSize: "cover",
+  };
+
+  // Keep for compatibility (dots still uses class-based background pattern).
+  const bgClass =
+    backgroundStyle === "dots"
+      ? "bg-[radial-gradient(rgb(var(--text)/0.10)_1px,transparent_1px)] [background-size:16px_16px]"
+      : "";
+
+  return (
     <div
       {...safeRest}
       style={
@@ -301,6 +316,10 @@ export function SiteShell({
           ...(vars as React.CSSProperties),
           ...(cardVars as React.CSSProperties),
           ...(buttonVars as React.CSSProperties),
+
+          // ensure base bg + overlays work reliably
+          ...(shellStyle as React.CSSProperties),
+
           fontSize: rootFontSizePx,
 
           // Typography roles
@@ -319,10 +338,10 @@ export function SiteShell({
           ["--radius" as any]: radiusCss,
         } as React.CSSProperties
       }
-      className={`min-h-screen ${bgClass}`}
+      className={`min-h-screen ${bgClass} relative overflow-hidden`}
     >
       {/* data-layout-width stays as the raw preset key from DB (useful for blocks). */}
-      <div className="group w-full" data-layout-width={layoutWidth ?? "compact"}>
+      <div className="group w-full relative z-10" data-layout-width={layoutWidth ?? "compact"}>
         <div style={layoutContainerStyle}>{children}</div>
       </div>
     </div>

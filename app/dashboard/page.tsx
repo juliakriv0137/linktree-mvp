@@ -33,7 +33,6 @@ import { ThemeInspector } from "@/components/dashboard/inspector/ThemeInspector"
 
 
 
-
 import {
   HeaderEditor,
   HeroEditor,
@@ -980,34 +979,79 @@ export default function DashboardPage() {
     },
     [site, selectedPageId, updateBlock],
   );
-
+  async function persistPositions(opts: {
+    supabase: any;
+    blocks: Array<{ id: string; position: number }>;
+  }) {
+    const { supabase, blocks } = opts;
+  
+    // ВАЖНО: НЕ upsert. Только update по id (не требует INSERT policy).
+    const updates = blocks.map((b) =>
+      supabase
+        .from("site_blocks")
+        .update({ position: b.position })
+        .eq("id", b.id)
+    );
+  
+    const results = await Promise.all(updates);
+  
+    // Если хоть одна операция упала — падаем
+    const firstErr = results.find((r) => r.error)?.error;
+    if (firstErr) throw firstErr;
+  }
+  
+  
   const onDragEnd = useCallback(
     async (event: any) => {
       const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      const oldIndex = blocksForPage.findIndex((b) => b.id === active.id);
-      const newIndex = blocksForPage.findIndex((b) => b.id === over.id);
+      if (!active?.id || !over?.id) return;
+      if (active.id === over.id) return;
+      if (!site) return;
+  
+      setError(null);
+  
+      // работаем только со списком текущей страницы (blocksForPage уже включает global header + page blocks)
+      const prevList = blocksForPage.slice();
+      const oldIndex = prevList.findIndex((b) => b.id === active.id);
+      const newIndex = prevList.findIndex((b) => b.id === over.id);
       if (oldIndex === -1 || newIndex === -1) return;
-
-      const moved = arrayMove(blocksForPage, oldIndex, newIndex).map((b, idx) => ({ ...b, position: idx + 1 }));
-
-      // replace only moved ids in global blocks
-      const movedIds = new Set(moved.map((b) => b.id));
-      const nextAll = blocks.map((b) => (movedIds.has(b.id) ? (moved.find((x) => x.id === b.id) as any) : b));
-
+  
+      const moved = arrayMove(prevList, oldIndex, newIndex).map((b, idx) => ({
+        ...b,
+        position: idx + 1,
+      }));
+  
+      // optimistic: обновляем общий blocks так, чтобы нужные блоки получили новые position
+      setBlocks((allPrev) => {
+        const map = new Map(moved.map((x) => [x.id, x.position]));
+        return allPrev.map((b) => (map.has(b.id) ? { ...b, position: map.get(b.id)! } : b));
+      });
+  
       try {
-        setBlocks(nextAll);
-        await Promise.all(moved.map((b) => updateBlock(b.id, { position: b.position })));
-      } catch (e: any) {
-        setError(e?.message ?? String(e));
-        if (!site) return;
+        // persist to DB (UPDATE, без upsert)
+        await persistPositions({
+          supabase,
+          blocks: moved.map((b) => ({ id: b.id, position: b.position })),
+        });
+  
+        // подстрахуемся: перечитаем из базы, чтобы не было рассинхрона
         const bs = await loadBlocks(site.id);
         setBlocks(bs);
+      } catch (e: any) {
+        console.error("Persist reorder failed:", e);
+        setError(e?.message ?? String(e));
+  
+        // rollback: перечитать с базы
+        try {
+          const bs = await loadBlocks(site.id);
+          setBlocks(bs);
+        } catch {}
       }
     },
-    [blocksForPage, blocks, updateBlock, site],
+    [site, blocksForPage],
   );
+  
+  
 
   function normalizeNavAnchor(raw: string) {
     return normalizeAnchorId(raw);
@@ -1718,19 +1762,234 @@ export default function DashboardPage() {
     setSite={setSite}
     saveColorField={saveColorField}
   />
-</div>
 
   {/* дальше у тебя уже идут карточки Style и Colors (optional) — оставь их как есть */}
 
 
-    
+  <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+    <div className="text-xs font-semibold text-[rgb(var(--db-muted))] mb-3">Style</div>
 
-  </DbPopoverPanel>
+    <div className="space-y-3">
+      <FieldRow label="Background">
+        <DbSelect
+          value={(site?.background_style ?? "solid") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const background_style = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { background_style } as any);
+              setSite({ ...site, background_style } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="solid">{bgStyleLabel("solid")}</option>
+          <option value="gradient">{bgStyleLabel("gradient")}</option>
+        </DbSelect>
+      </FieldRow>
+
+      <FieldRow label="Buttons">
+        <DbSelect
+          value={(site?.button_style ?? "solid") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const button_style = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { button_style } as any);
+              setSite({ ...site, button_style } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="solid">{buttonStyleLabel("solid")}</option>
+          <option value="outline">{buttonStyleLabel("outline")}</option>
+        </DbSelect>
+      </FieldRow>
+
+      <FieldRow label="Text">
+        <DbSelect
+          value={(site?.font_scale ?? "md") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const font_scale = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { font_scale } as any);
+              setSite({ ...site, font_scale } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="sm">{fontScaleLabel("sm")}</option>
+          <option value="md">{fontScaleLabel("md")}</option>
+          <option value="lg">{fontScaleLabel("lg")}</option>
+        </DbSelect>
+      </FieldRow>
+
+      <FieldRow label="Radius">
+        <DbSelect
+          value={(site?.button_radius ?? "2xl") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const button_radius = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { button_radius } as any);
+              setSite({ ...site, button_radius } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="md">{radiusLabel("md")}</option>
+          <option value="xl">{radiusLabel("xl")}</option>
+          <option value="2xl">{radiusLabel("2xl")}</option>
+          <option value="full">{radiusLabel("full")}</option>
+        </DbSelect>
+      </FieldRow>
+
+      <FieldRow label="Cards">
+        <DbSelect
+          value={(site?.card_style ?? "card") as any}
+          disabled={!canAct}
+          onChange={async (e) => {
+            if (!site) return;
+            const card_style = (e.target as HTMLSelectElement).value as any;
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, { card_style } as any);
+              setSite({ ...site, card_style } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          }}
+        >
+          <option value="plain">{cardStyleLabel("plain")}</option>
+          <option value="card">{cardStyleLabel("card")}</option>
+        </DbSelect>
+      </FieldRow>
+    </div>
+  </div>
+
+  <div className="rounded-2xl border border-[rgb(var(--db-border))] bg-[rgb(var(--db-panel))] p-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <div className="text-xs font-semibold text-[rgb(var(--db-muted))]">Colors (optional)</div>
+        <div className="text-[11px] text-[rgb(var(--db-muted))] mt-1">Leave empty to use theme defaults.</div>
+      </div>
+
+      <button
+        type="button"
+        className="text-xs font-semibold text-[rgb(var(--db-muted))] hover:text-[rgb(var(--db-text))]"
+        onClick={() => {
+          setColors({
+            bg_color: "",
+            text_color: "",
+            muted_color: "",
+            border_color: "",
+            button_color: "",
+            button_text_color: "",
+          });
+
+          if (!site) return;
+
+          void (async () => {
+            try {
+              setError(null);
+              await updateSiteTheme(site.id, {
+                bg_color: null,
+                text_color: null,
+                muted_color: null,
+                border_color: null,
+                button_color: null,
+                button_text_color: null,
+              } as any);
+
+              setSite({
+                ...site,
+                bg_color: null,
+                text_color: null,
+                muted_color: null,
+                border_color: null,
+                button_color: null,
+                button_text_color: null,
+              } as any);
+            } catch (err: any) {
+              setError(err?.message ?? String(err));
+            }
+          })();
+        }}
+      >
+        Reset
+      </button>
+    </div>
+
+    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <ColorField
+  label="Background"
+  value={colors.bg_color}
+  onChange={(v) => setColors((s) => ({ ...s, bg_color: v }))}
+ />
+
+      <ColorField
+        label="Text"
+        value={colors.text_color}
+        onChange={(v) => {
+          setColors((p) => ({ ...p, text_color: v }));
+          saveColorField("text_color", v);
+        }}
+      />
+      <ColorField
+        label="Muted"
+        value={colors.muted_color}
+        onChange={(v) => {
+          setColors((p) => ({ ...p, muted_color: v }));
+          saveColorField("muted_color", v);
+        }}
+      />
+      <ColorField
+        label="Border"
+        value={colors.border_color}
+        onChange={(v) => {
+          setColors((p) => ({ ...p, border_color: v }));
+          saveColorField("border_color", v);
+        }}
+      />
+      <ColorField
+        label="Button"
+        value={colors.button_color}
+        onChange={(v) => {
+          setColors((p) => ({ ...p, button_color: v }));
+          saveColorField("button_color", v);
+        }}
+      />
+      <ColorField
+        label="Button text"
+        value={colors.button_text_color}
+        onChange={(v) => {
+          setColors((p) => ({ ...p, button_text_color: v }));
+          saveColorField("button_text_color", v);
+        }}
+      />
+    </div>
+  </div>
+</div>
+
+                  </DbPopoverPanel>
                 </DbDetails>
 
                 <Link href={publicUrl} target="_blank" className="hidden sm:inline-flex">
-                  <Button variant="pill">Open public page ↗</Button>
-                </Link>
+  <Button variant="pill">Open public page ↗</Button>
+</Link>
 
               </div>
             </div>
@@ -1743,7 +2002,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
 
       {/* BODY */}
       <div className="mx-auto max-w-[1400px] px-4 py-6 min-h-0">
@@ -1910,8 +2168,7 @@ export default function DashboardPage() {
               </DndContext>
             </div>
           </Card>
-
-
+          
 
           {/* CENTER: Preview */}
           <Card>

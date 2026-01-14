@@ -1,8 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
+
 import { env } from "@/lib/env";
 import { SiteShell } from "@/components/site/SiteShell";
 import { BlocksRenderer } from "@/components/blocks/BlocksRenderer";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type LayoutWidth = "compact" | "wide" | "xwide" | "xxwide" | "full";
 
@@ -19,7 +24,6 @@ type SiteRow = {
   button_radius?: "md" | "xl" | "2xl" | "full";
   card_style?: "plain" | "card";
 
-  // ✅ align with DB constraint (no "max")
   layout_width?: LayoutWidth | null;
 
   bg_color?: string | null;
@@ -50,7 +54,7 @@ type BlockRow = {
 function layoutToContainerPadding(layout: LayoutWidth | null | undefined) {
   const l = (layout ?? "compact") as LayoutWidth;
 
-  // Важно: max-width / clamp уже делает SiteShell.
+  // max-width / clamp уже делает SiteShell.
   // Здесь — только паддинги/вертикальные отступы “chrome”-контейнера.
   if (l === "full") return "w-full px-6 sm:px-10 lg:px-14 py-12";
   if (l === "wide" || l === "xwide" || l === "xxwide") return "w-full px-6 sm:px-10 lg:px-14 py-12";
@@ -70,6 +74,8 @@ export default async function PublicPage({
   params: Promise<{ username: string }>;
   searchParams?: Promise<{ page?: string; preview?: string }>;
 }) {
+  noStore();
+
   const { username } = await params;
   const sp = (await searchParams) ?? {};
   const pageSlugRaw = (sp.page ?? "").trim();
@@ -100,22 +106,34 @@ export default async function PublicPage({
   if (pageErr) throw pageErr;
   if (!page) return notFound();
 
-  // 3) blocks (ВАЖНО: грузим ВСЕ блоки сайта, чтобы взять global header (page_id = null))
-  const { data: allBlocks, error: blocksErr } = await supabase
+  const pageId = (page as any).id as string;
+
+  // 3A) global header отдельно (page_id IS NULL)
+  const { data: headerRows, error: headerErr } = await supabase
     .from("site_blocks")
     .select("*")
     .eq("site_id", s.id)
+    .eq("type", "header")
+    .is("page_id", null)
+    .order("position", { ascending: true })
+    .limit(1);
+
+  if (headerErr) throw headerErr;
+
+  const globalHeader = (headerRows?.[0] ?? null) as BlockRow | null;
+
+  // 3B) blocks для текущей страницы отдельно (без header)
+  const { data: pageRows, error: blocksErr } = await supabase
+    .from("site_blocks")
+    .select("*")
+    .eq("site_id", s.id)
+    .eq("page_id", pageId)
+    .neq("type", "header")
     .order("position", { ascending: true });
 
   if (blocksErr) throw blocksErr;
 
-  const all = (allBlocks ?? []) as BlockRow[];
-
-  // global header (один на весь сайт): type='header' AND page_id IS NULL
-  const globalHeader = all.find((b) => b.type === "header" && (b.page_id ?? null) === null) ?? null;
-
-  // blocks конкретной страницы (header исключаем, чтобы не было дубля)
-  const pageBlocks = all.filter((b) => b.type !== "header" && b.page_id === (page as any).id);
+  const pageBlocks = (pageRows ?? []) as BlockRow[];
 
   // visibility
   const visibleHeader = globalHeader && globalHeader.is_visible ? globalHeader : null;
@@ -123,7 +141,9 @@ export default async function PublicPage({
 
   // full-bleed header rule: site_blocks.style.full_bleed = true (только для header)
   const headerStyle =
-    visibleHeader && visibleHeader.style && typeof visibleHeader.style === "object" ? (visibleHeader.style as any) : {};
+    visibleHeader && visibleHeader.style && typeof visibleHeader.style === "object"
+      ? (visibleHeader.style as any)
+      : {};
   const isFullBleedHeader = !!visibleHeader && headerStyle?.full_bleed === true;
 
   // если header НЕ full-bleed — рендерим его в составе основной колонки/контейнера
@@ -135,7 +155,7 @@ export default async function PublicPage({
   // если header full-bleed — рендерим отдельно сверху
   const headerBlock = isFullBleedHeader && visibleHeader ? [visibleHeader] : [];
 
-  // Map DB blocks (position/is_visible) -> renderer blocks (sort_order/is_hidden)
+  // Map DB blocks -> renderer blocks
   const mapToRendererBlock = (b: BlockRow) => ({
     id: b.id,
     site_id: b.site_id,
@@ -155,7 +175,6 @@ export default async function PublicPage({
   const containerPadding = layoutToContainerPadding(layoutWidth);
   const fontSize = fontScaleToCss(s.font_scale ?? "md");
 
-  // Раньше логика: если full — без “chrome”
   const hasChrome = layoutWidth !== "full";
 
   return (
@@ -184,7 +203,6 @@ export default async function PublicPage({
               blocks={headerBlockForRenderer}
               mode="public"
               site={{
-                // ✅ cast, потому что тип site.layout_width в рендерере может быть уже
                 layout_width: layoutWidth as any,
                 button_style: (s.button_style ?? "solid") as any,
               }}
@@ -213,7 +231,9 @@ export default async function PublicPage({
                   }}
                 />
 
-                <div className="pt-2 text-center text-xs text-white/35">Powered by Mini-Site Builder</div>
+                <div className="pt-2 text-center text-xs text-[rgb(var(--muted))] opacity-70">
+                  Powered by Mini-Site Builder
+                </div>
               </div>
             </div>
           </div>
@@ -229,7 +249,9 @@ export default async function PublicPage({
                 }}
               />
 
-              <div className="pt-2 text-center text-xs text-white/35">Powered by Mini-Site Builder</div>
+              <div className="pt-2 text-center text-xs text-[rgb(var(--muted))] opacity-70">
+                Powered by Mini-Site Builder
+              </div>
             </div>
           </div>
         )}

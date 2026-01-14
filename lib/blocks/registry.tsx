@@ -3,6 +3,7 @@ import type { SiteBlockRow } from "@/components/blocks/BlocksRenderer";
 import { LinkButton } from "@/components/site/LinkButton";
 import { HeaderBlockClient } from "@/components/site/HeaderBlockClient";
 import ProductsBlock from "@/components/blocks/ProductsBlock";
+import { BlockFrame } from "@/components/blocks/BlockFrame";
 
 
 type RenderProps = {
@@ -272,11 +273,8 @@ export const BlockRegistry: Record<string, BlockEntry> = {
             <div className={overlayClass + " absolute inset-0"} />
 
             <div className={`relative ${heightClass} px-6 md:px-10 min-w-0 flex flex-col ${verticalAlignClass}`}>
-              <div
-                className={`space-y-3 min-w-0 max-w-3xl ${textAlignClass} ${
-                  align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""
-                }`}
-              >
+            <div className={`space-y-3 min-w-0 w-full ${textAlignClass}`}>
+
                 <div className={titleClass + " font-bold text-white leading-tight"}>{title}</div>
 
                 {subtitle ? (
@@ -311,8 +309,8 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
         const textAlignClass =
           splitAlign === "center" ? "text-center" : splitAlign === "right" ? "text-right" : "text-left";
-        const textWrapClass = splitAlign === "center" ? "mx-auto" : splitAlign === "right" ? "ml-auto" : "";
-        const splitCtaJustifyClass =
+          const textWrapClass = "";
+          const splitCtaJustifyClass =
           splitAlign === "center" ? "justify-center" : splitAlign === "right" ? "justify-end" : "justify-start";
 
         // ✅ Radius (style.radius first, then content.radius)
@@ -321,8 +319,8 @@ export const BlockRegistry: Record<string, BlockEntry> = {
 
         const textCol = (
           <div className="min-w-0 w-full">
-            <div className={`space-y-4 min-w-0 max-w-xl ${textAlignClass} ${textWrapClass}`}>
-              <div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
+<div className={`space-y-4 min-w-0 w-full ${textAlignClass} ${textWrapClass}`}>
+<div className={`${titleClass} font-bold text-[rgb(var(--text))] leading-tight`}>{title}</div>
 
               {subtitle ? (
                 <div
